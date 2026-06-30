@@ -586,6 +586,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .pp-empty{font-size:13px;color:var(--muted);padding:6px 4px}
 .pp-note{font-size:12px;color:var(--muted-2);margin-top:9px;line-height:1.45}
 .pp-note b{color:var(--ink)}
+/* Selector de productos desplegable (Nueva comanda) */
+.prod-acc{background:var(--card);border-radius:14px;box-shadow:var(--sh-card);margin:10px 0 4px;overflow:hidden}
+.prod-summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;font-weight:700;font-size:14.5px;color:var(--ink);user-select:none}
+.prod-summary::-webkit-details-marker{display:none}
+.prod-summary .ps-l{display:flex;align-items:center;gap:8px}
+.acc-chev{color:var(--muted-2);transition:transform .2s;display:flex}
+.prod-acc[open] .acc-chev{transform:rotate(90deg)}
+.prod-acc .cat-tabs{padding:0 12px;margin-top:0}
+.prod-acc .prod-grid{padding:6px 12px 14px;margin-top:0}
+/* "Con el carnicero" (Resumen) */
+.carn-info{display:flex;align-items:center;gap:8px;background:#F5F5F7;border:.5px solid var(--line);border-radius:12px;padding:11px 13px;margin:8px 0 2px;font-size:13.5px;color:var(--muted);cursor:pointer}
+.carn-info b{color:var(--ink);font-variant-numeric:tabular-nums}
+.admin-foot{margin-top:4px}
 </style>
 </head>
 <body>
@@ -671,6 +684,10 @@ const PRODUCTS=[]; CAT.forEach(g=>g.items.forEach(([name,d],i)=>{
 }));
 const prodById=id=>PRODUCTS.find(p=>p.id===id);
 const prodByName=n=>PRODUCTS.find(p=>p.name===n);
+// VALIDAR PESO: solo estos cortes premium requieren que el carnicero valide el peso real.
+// El resto vienen pesados exactos → la cantidad pedida es la final (qty × precio).
+const VALIDATE_WEIGHT=new Set(["Rib eye","Entraña","Puyaso","New York","Filete","Bolita","Lomo limpio"]);
+PRODUCTS.forEach(p=>{ p.weigh = VALIDATE_WEIGHT.has(p.name); });
 // Precios editables: override guardado en este dispositivo (clave para precios mes a mes). Se aplica a comandas NUEVAS.
 function applyPriceOverrides(){ try{ const o=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}'); PRODUCTS.forEach(p=>{ if(o[p.id]!==undefined) p.price=o[p.id]; }); }catch(e){} }
 applyPriceOverrides();
@@ -1026,7 +1043,7 @@ function renderAdmin(){
     </nav>`;
   if(adminView==="nueva") initNueva();
 }
-function go(v){ adminView=v; if(v==="nueva") draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null}; renderAdmin(); window.scrollTo(0,0); }
+function go(v){ adminView=v; if(v==="nueva"){ draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null}; prodOpen=false; } renderAdmin(); window.scrollTo(0,0); }
 
 function ocard(o,actionHtml){
   return `<button class="ocard" onclick="openAdminOrder('${o.id}')">
@@ -1072,6 +1089,7 @@ function akcard(o,st){
 /* ----- NUEVA COMANDA ----- */
 let draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null};
 let nuevaCat="Res";
+let prodOpen=false; // selector de productos colapsado por defecto (no estorba la lectura del pedido pegado)
 function draftGrand(){ return draftTotal() + (draft.delivery==='envio'?(+draft.shipping||0):0); }
 // Panel de validación: muestra lo que la IA/parser entendió, para que Ivan compare con el texto pegado.
 function parsePreviewHtml(){
@@ -1114,16 +1132,22 @@ function adminNueva(){
       </div>
     </div>
 
-    <div class="sect-label">Productos</div>
-    <div class="cat-tabs">${CAT.map(g=>`<button class="${nuevaCat===g.cat?'on':''}" onclick="nuevaCat='${g.cat}';initNueva()">${g.cat}</button>`).join("")}</div>
-    <div class="prod-grid">${PRODUCTS.filter(p=>p.cat===nuevaCat).map(p=>`
-      <button class="pchip" onclick="addItem('${p.id}')">
-        <div class="pn">${esc(p.name)}</div>
-        <div class="pp">${p.price==null?'a cotizar':money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div>
-      </button>`).join("")}</div>
-
     <div class="sect-label">En la comanda <span class="cnt" id="cartCount">${draft.items.length}</span></div>
     <div id="cart"></div>
+
+    <details class="prod-acc" ${prodOpen?'open':''}>
+      <summary class="prod-summary" onclick="event.preventDefault();prodOpen=!prodOpen;initNueva()">
+        <span class="ps-l">${ic('plus',16)} Agregar productos manualmente</span>
+        <span class="acc-chev">${ic('right',16)}</span>
+      </summary>
+      ${prodOpen?`
+      <div class="cat-tabs">${CAT.map(g=>`<button class="${nuevaCat===g.cat?'on':''}" onclick="nuevaCat='${g.cat}';initNueva()">${g.cat}</button>`).join("")}</div>
+      <div class="prod-grid">${PRODUCTS.filter(p=>p.cat===nuevaCat).map(p=>`
+        <button class="pchip" onclick="addItem('${p.id}')">
+          <div class="pn">${esc(p.name)}</div>
+          <div class="pp">${p.price==null?'a cotizar':money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div>
+        </button>`).join("")}</div>`:''}
+    </details>
     <div class="field"><label>Nota para el carnicero</label><input class="inp" id="dNote" placeholder="Ej: el rib eye bien rojo" value="${esc(draft.note)}"></div>
     <div class="total-bar"><span class="tl">Estimado${draft.delivery==='envio'&&(+draft.shipping)?' (con envío)':''}</span><span class="tv" id="draftTotal">${money(draftGrand())}</span></div>
     <button class="btn red lg block" onclick="submitOrder()">Enviar al carnicero ▸</button>
@@ -1151,7 +1175,7 @@ function renderCart(){
   if(!draft.items.length){ c.innerHTML=`<div class="cart-empty">Toca un producto para agregarlo</div>`; return; }
   c.innerHTML=draft.items.map((it,i)=>{const p=prodById(it.prodId);
     return `<div class="cartline">
-      <div class="cn"><b>${esc(p.name)}</b><small>${p.price==null?'a cotizar':money(p.price)+' / '+(p.unit==='Libra'?'lb':p.unit)}${p.weigh?' · se pesa':''}</small></div>
+      <div class="cn"><b>${esc(p.name)}</b><small>${p.price==null?'a cotizar':money(p.price)+' / '+(p.unit==='Libra'?'lb':p.unit)}${p.weigh?' · validar peso':''}</small></div>
       <div class="qty"><button onclick="chQty(${i},-1)">–</button><input value="${it.qty}" inputmode="decimal" onchange="setQty(${i},this.value)"><button onclick="chQty(${i},1)">+</button></div>
       <button class="rm" onclick="rmItem(${i})">${ic('x',16)}</button></div>`;}).join("");
   const dt=$("#draftTotal"); if(dt) dt.textContent=money(draftGrand());
@@ -1284,8 +1308,8 @@ function adminResumen(g){
     <div class="act-grid">
       <button class="act-card" onclick="go('bandeja')"><span class="act-ic">${ic('cash',20)}</span><span class="act-n">${g.cobrar.length}</span><span class="act-l">Por cobrar</span></button>
       <button class="act-card" onclick="go('bandeja')"><span class="act-ic">${ic('truck',20)}</span><span class="act-n">${g.entregar.length}</span><span class="act-l">Por entregar</span></button>
-      <button class="act-card" onclick="go('bandeja')"><span class="act-ic">${ic('clock',20)}</span><span class="act-n">${g.proceso.length}</span><span class="act-l">En proceso</span></button>
     </div>
+    <div class="carn-info" onclick="go('bandeja')">${ic('knife',15)} <span>Con el carnicero: <b>${g.proceso.length}</b> en proceso (cotizar / preparación)</span></div>
     <div class="sect-label">Ventas · últimos 7 días <button class="link-btn" onclick="go('reporte')">Reporte del mes ${ic('right',13)}</button></div>
     <div class="card chart-card">
       <div class="chart-top"><div class="kl">Vendido este mes</div><div class="chart-big">${money(ventasMes)}</div></div>
@@ -1337,7 +1361,7 @@ function adminCatalogo(){
       <div class="cat-elist">
       ${PRODUCTS.filter(p=>p.cat===g.cat).map(p=>`
         <div class="cat-erow">
-          <div class="ce-info"><div class="ce-name">${esc(p.name)}</div><div class="ce-unit">${p.unit}${p.weigh?' · se pesa':''}</div></div>
+          <div class="ce-info"><div class="ce-name">${esc(p.name)}</div><div class="ce-unit">${p.unit}${p.weigh?' · validar peso':''}</div></div>
           <label class="ce-price"><span class="ce-l">L</span><input class="ce-inp" inputmode="decimal" value="${p.price==null?'':p.price}" placeholder="cotizar" onchange="setCatalogPrice('${p.id}',this.value)" onfocus="this.select()"><span class="ce-u">/${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></label>
         </div>`).join("")}
       </div>`).join("")}
@@ -1377,7 +1401,10 @@ function openAdminOrder(id){
       <button class="btn ghost block" style="margin-top:8px" onclick="copy(document.getElementById('waBox').innerText);this.innerHTML='Copiado';">${ic('copy',16)} Copiar mensaje de WhatsApp</button>
     `:""}
     <div style="margin-top:14px">${actions}</div>
-    ${["cotizar","espera_pago"].includes(o.status)?`<button class="btn ghost block sm" style="margin-top:10px;color:#b03a3a" onclick="cancelOrder('${o.id}')">Cancelar comanda</button>`:""}
+    <div class="admin-foot">
+      ${o.status!=='cancelada'?`<button class="btn ghost block btn-ic" onclick="openAdminEdit('${o.id}')">${ic('edit',16)} Editar comanda</button>`:""}
+      ${!["entregada","cancelada"].includes(o.status)?`<button class="btn ghost block sm" style="margin-top:10px;color:#b03a3a" onclick="cancelOrder('${o.id}')">Cancelar comanda</button>`:""}
+    </div>
   `);
 }
 function waMessage(o){
@@ -1476,18 +1503,28 @@ function askDelete(id){
 function doDelete(id){ const o=orderById(id); state.orders=state.orders.filter(x=>x.id!==id); dbDelete(id); save(); closeSheet(); toast('Comanda eliminada', ()=>{ if(o){ state.orders.unshift(o); save(); rerender(); } }); }
 
 /* ----- editable order sheet + numpad ----- */
-let editItems=null, editShipping=0, editComment='', activeEdit=null;
+let editItems=null, editShipping=0, editComment='', activeEdit=null, adminEditMode=false;
 const itemAmt=it=>{ if(!it.available||it.price==null) return 0; return (it.weigh?(it.weight||0):it.qty)*it.price; };
 const editSubtotal=()=>editItems.reduce((s,it)=>s+itemAmt(it),0);
 const editGrand=()=>editSubtotal()+(editShipping||0);
 function openCarniceroOrder(id){
   const o=orderById(id); if(!o) return;
+  adminEditMode=false;
   // Editable solo en Por cotizar y Espera pago. Preparación/Lista/Entregada = solo lectura (pedido pagado/final).
   const editable = (o.status==="cotizar" || o.status==="espera_pago");
   editItems=o.items.map(it=>({...it, weight: it.weight!=null?it.weight:(it.weigh?it.qty:null)}));
   editShipping=o.shipping||0; editComment=o.note||''; activeEdit=null;
   renderCarnOrder(o, !editable);
 }
+// ADMIN: editar cualquier comanda en cualquier estado (reusa el editor con numpad).
+function openAdminEdit(id){
+  const o=orderById(id); if(!o) return;
+  adminEditMode=true;
+  editItems=o.items.map(it=>({...it, weight: it.weight!=null?it.weight:(it.weigh?it.qty:null)}));
+  editShipping=o.shipping||0; editComment=o.note||''; activeEdit=null;
+  renderCarnOrder(o, false); // forzar editable
+}
+function guardarAdminEdit(){ persistEdits(); adminEditMode=false; closeCarn(); toast('Comanda actualizada'); }
 function setComment(v){ editComment=v; }
 function oitemRow(it,i,vo){
   const priceTxt = it.price==null?'a cotizar':money(it.price)+'/'+(it.unit==='Libra'?'lb':it.unit);
@@ -1511,7 +1548,7 @@ function oitemRow(it,i,vo){
   return `<div class="oitem ${it.available?'':'unavail'}">
     <div class="oitem-r1">
       ${vo?'':`<button class="btoggle ${it.available?'':'off'}" onclick="togItem(${i})"></button>`}
-      <div class="oitem-main"><div class="oitem-name">${esc(it.name)}${it.weigh?'<span class="line-tag">se pesa</span>':''}</div>
+      <div class="oitem-main"><div class="oitem-name">${esc(it.name)}${it.weigh?'<span class="line-tag">Validar peso</span>':''}</div>
         <div class="oitem-sub">Pedido: ${it.qty} ${it.unit==='Libra'?'lb':unit} · ${priceTxt}</div></div>
       <div class="oitem-amt" id="amt${i}">${it.available?money(itemAmt(it)):'—'}</div>
     </div>
@@ -1528,7 +1565,8 @@ function osumHtml(vo){
 function renderCarnOrder(o,vo){
   currentSheetId=o.id;
   let action='';
-  if(o.status==='cotizar') action=`<button class="btn red lg block btn-ic" onclick="confirmCotizarV2()">${ic('check',18)} Guardar y pasar a pago</button>`;
+  if(adminEditMode) action=`<button class="btn red lg block btn-ic" onclick="guardarAdminEdit()">${ic('check',18)} Guardar cambios</button>`;
+  else if(o.status==='cotizar') action=`<button class="btn red lg block btn-ic" onclick="confirmCotizarV2()">${ic('check',18)} Guardar y pasar a pago</button>`;
   else if(o.status==='espera_pago') action=`<button class="btn red lg block btn-ic" onclick="guardarV2()">${ic('check',18)} Guardar cambios</button>`;
   else if(o.status==='preparacion') action=`<button class="btn green lg block btn-ic" onclick="markReady('${o.id}')">${ic('check',18)} Marcar listo para entrega</button>`;
   const voNote = o.status==='preparacion'?'Pagado · pedido final, solo lectura':o.status==='lista'?'Lista para entrega · solo lectura':'Entregada · solo lectura';
@@ -1625,7 +1663,7 @@ function persistEdits(){ const o=orderById(currentSheetId); if(!o) return;
 function confirmCotizarV2(){ const o=orderById(currentSheetId); const id=o.id; persistEdits(); setStatus(o,'espera_pago'); save(); closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
 function guardarV2(){ persistEdits(); closeCarn(); toast('Cambios guardados'); }
 function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(); closeCarn(); toast('Listo para entrega', ()=>revertStatus(id, x=>{x.listaAt=prevLista;})); }
-function closeCarn(){ $("#overlayHost").innerHTML=''; const h=$("#numpadHost"); if(h) h.innerHTML=''; activeEdit=null; editItems=null; currentSheetId=null; rerender(); }
+function closeCarn(){ $("#overlayHost").innerHTML=''; const h=$("#numpadHost"); if(h) h.innerHTML=''; activeEdit=null; editItems=null; currentSheetId=null; adminEditMode=false; rerender(); }
 /* add product mid-process */
 let addCat="Res";
 function openAddProduct(){
