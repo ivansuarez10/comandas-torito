@@ -607,6 +607,37 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .pin-input{padding:19px 18px;font-size:24px}
 .pin-input::placeholder{font-size:22px}
 .login-go{padding:19px;font-size:17px;margin-top:20px}
+/* Topbar admin: logo tipográfico junto al círculo + ADMIN al lado, más grande */
+.topbar .badge{width:46px;height:46px}
+.tb-brand-h{flex-direction:row!important;align-items:center;gap:12px}
+.topbar .tb-logo{height:26px}
+.tb-role{font-family:var(--font);font-weight:800;font-size:16px;letter-spacing:.1em;color:var(--rojo);padding-left:12px;border-left:2px solid var(--line);line-height:1}
+/* Catálogo: toggle "validar peso" por producto */
+.ce-meta{display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap}
+.ce-wtog{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted-2);cursor:pointer;letter-spacing:.01em}
+.ce-wtog.on{background:#FBECEC;border-color:var(--rojo);color:var(--rojo)}
+/* Carnicero: títulos de columna centrados, más grandes y oscuros */
+.kanban .kcol-head{justify-content:center;position:relative;padding:14px 16px 10px}
+.kanban .kcol-head .kn{font-size:17px;font-weight:800;color:#26262a;text-align:center;text-transform:none;letter-spacing:.01em}
+.kanban .kcol-head .kc{position:absolute;right:14px;top:50%;transform:translateY(-50%);margin-left:0}
+.kanban .kcol-head .kdot{position:absolute;left:14px;top:50%;transform:translateY(-50%)}
+/* Carnicero: botón SYNC (reemplaza la campana) */
+.ctop-sync{display:inline-flex;align-items:center;gap:7px;cursor:pointer;border:none}
+.ctop-sync svg{flex:none}
+.ctop-sync.syncing svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Carnicero: borde de luz que circula en columnas con comandas (sutil, alerta sin estorbar) */
+@property --toroAng{syntax:'<angle>';inherits:false;initial-value:0deg}
+.kcol.urge{position:relative;isolation:isolate}
+.kcol.urge::before{content:"";position:absolute;inset:-1.5px;border-radius:23px;padding:2px;
+  background:conic-gradient(from var(--toroAng), transparent 0 60%, rgba(255,168,74,.85) 74%, rgba(159,38,41,.95) 84%, transparent 92% 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite:exclude;
+  animation:toroSpin 2.8s linear infinite; pointer-events:none; z-index:3}
+@keyframes toroSpin{to{--toroAng:360deg}}
+@media(prefers-reduced-motion:reduce){ .kcol.urge::before{animation:none;opacity:.45} }
+/* En celular angosto: header admin más limpio (el logo grande + En línea + Salir apretaban) */
+@media(max-width:430px){ .topbar .tb-pill{display:none} .topbar .tb-logo{height:22px} .topbar .badge{width:40px;height:40px} .tb-role{font-size:14px;padding-left:9px} .ctop-sync #syncClock{display:none} }
 /* Panel de validación del autollenar */
 .parse-prev{margin-top:11px;background:var(--card);border-radius:13px;box-shadow:var(--sh-card);padding:11px 12px}
 .pp-head{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -675,7 +706,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 /* ============ CONFIG ============ */
 const CREDS = { admin:"1970", carnicero:"0707" };
 const PAY_INFO = "Cliente: IVAN ALEJANDRO SUAREZ VELASQUEZ\nNúmero de cuenta BAC: 729447561";
-const REPARTIDOR_PHONE = ""; // WhatsApp del repartidor (ej. "50499998888"). Vacío = eliges el contacto al enviar.
+const REPARTIDOR_PHONE = "50431565418"; // WhatsApp del repartidor (+504 3156-5418).
 // Abre WhatsApp Web (en la compu, con la sesión Business) o la app, con el mensaje ya escrito. No auto-envía.
 function _waPhone(p){ let d=(p||'').replace(/\D/g,''); if(!d) return ''; if(d.length===8) d='504'+d; return d; }
 function waSend(phone,text){ const t=encodeURIComponent(text||''); const p=_waPhone(phone);
@@ -730,7 +761,7 @@ const CAT_NAMES=()=>CAT.map(g=>g.cat);
 const CATALOG_VERSION='2026-06';
 if(localStorage.getItem('ct_v2_cat_ver')!==CATALOG_VERSION){ localStorage.removeItem('ct_v2_prices'); localStorage.setItem('ct_v2_cat_ver',CATALOG_VERSION); }
 // Ediciones del catálogo (nombres, productos nuevos, quitados) persistidas en este dispositivo.
-function loadCatMeta(){ try{ return Object.assign({names:{},custom:[],removed:[]}, JSON.parse(localStorage.getItem('ct_v2_catmeta')||'{}')); }catch(e){ return {names:{},custom:[],removed:[]}; } }
+function loadCatMeta(){ try{ return Object.assign({names:{},custom:[],removed:[],weigh:{}}, JSON.parse(localStorage.getItem('ct_v2_catmeta')||'{}')); }catch(e){ return {names:{},custom:[],removed:[],weigh:{}}; } }
 let CATMETA=loadCatMeta();
 function saveCatMeta(){ localStorage.setItem('ct_v2_catmeta', JSON.stringify(CATMETA)); }
 function applyPriceOverrides(){ try{ const o=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}'); PRODUCTS.forEach(p=>{ if(o[p.id]!==undefined) p.price=o[p.id]; }); }catch(e){} }
@@ -745,7 +776,8 @@ function rebuildCatalog(){
   }));
   (CATMETA.custom||[]).forEach(c=>{ if(CATMETA.removed.includes(c.id)) return;
     PRODUCTS.push({id:c.id, cat:c.cat, name:CATMETA.names[c.id]||c.name, unit:c.unit||'Libra', price:(c.price==null?null:c.price), weigh:false, custom:true}); });
-  PRODUCTS.forEach(p=>{ p.weigh = VALIDATE_WEIGHT.has(p.name); }); // premium = validar peso
+  const wov=(CATMETA&&CATMETA.weigh)||{};
+  PRODUCTS.forEach(p=>{ p.weigh = (wov[p.id]!==undefined) ? !!wov[p.id] : VALIDATE_WEIGHT.has(p.name); }); // premium por defecto, editable por producto
   applyPriceOverrides();
 }
 rebuildCatalog();
@@ -768,7 +800,10 @@ function addCatalogProduct(cat){
 function removeCatalogProduct(id){ const p=prodById(id); if(!p) return;
   if(!confirm('¿Quitar "'+p.name+'" del catálogo?')) return;
   if(p.custom){ CATMETA.custom=CATMETA.custom.filter(c=>c.id!==id); } else if(!CATMETA.removed.includes(id)){ CATMETA.removed.push(id); }
-  delete CATMETA.names[id]; saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); rerender(); toast('Producto quitado'); }
+  delete CATMETA.names[id]; if(CATMETA.weigh) delete CATMETA.weigh[id]; saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); rerender(); toast('Producto quitado'); }
+function setCatalogWeigh(id,on){ const p=prodById(id); if(!p) return; if(!CATMETA.weigh) CATMETA.weigh={};
+  CATMETA.weigh[id]=!!on; saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); rerender();
+  toast(on?(p.name+' → se valida el peso'):(p.name+' → sin validar peso')); }
 
 /* ============ PARSER DE PEDIDO (autollenar desde texto pegado) ============ */
 // Diccionario de apodos/coloquialismos → producto del catálogo. ORDEN IMPORTA (específico antes que genérico).
@@ -990,14 +1025,14 @@ async function dbFetchCatalog(){
     const {data,error}=await supa.from('app_config').select('value').eq('key','catalog').maybeSingle();
     if(error||!data||!data.value) return;
     const v=data.value;
-    CATMETA={names:v.names||{}, custom:v.custom||[], removed:v.removed||[]};
+    CATMETA={names:v.names||{}, custom:v.custom||[], removed:v.removed||[], weigh:v.weigh||{}};
     localStorage.setItem('ct_v2_catmeta', JSON.stringify(CATMETA));
     localStorage.setItem('ct_v2_prices', JSON.stringify(v.prices||{}));
     rebuildCatalog();
   }catch(e){ /* tabla aún no existe → sigue en modo local */ }
 }
 function catalogBlob(){ let prices={}; try{prices=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}');}catch(e){}
-  return {names:CATMETA.names||{}, custom:CATMETA.custom||[], removed:CATMETA.removed||[], prices}; }
+  return {names:CATMETA.names||{}, custom:CATMETA.custom||[], removed:CATMETA.removed||[], weigh:CATMETA.weigh||{}, prices}; }
 let catSaveT=null;
 function dbSaveCatalog(){ if(!USE_SUPA) return; clearTimeout(catSaveT); catSaveT=setTimeout(async()=>{
   try{ await supa.from('app_config').upsert({key:'catalog', value:catalogBlob(), updated_at:new Date().toISOString()}); }
@@ -1034,9 +1069,20 @@ function doUndo(){ if(toastUndo){ const fn=toastUndo; toastUndo=null; $("#toast"
 // revierte el último cambio de estado (pop del historial) + reversión extra opcional
 function revertStatus(id, extra){ const o=orderById(id); if(!o) return; if(o.hist&&o.hist.length>1){ o.hist.pop(); o.status=o.hist[o.hist.length-1].s; } if(extra) extra(o); save(); rerender(); }
 // sonido suave de aviso (Web Audio, sin assets) + control de mute
-let soundOn=true, prevCotizar=null, alertC1=false;
-function playDing(){ if(!soundOn) return; try{ const A=window.AudioContext||window.webkitAudioContext; const a=new A(); [0,0.13].forEach((d,i)=>{ const o=a.createOscillator(),g=a.createGain(); o.type='sine'; o.frequency.value=i?1175:880; o.connect(g); g.connect(a.destination); const t=a.currentTime+d; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.16,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+0.22); o.start(t); o.stop(t+0.24); }); }catch(e){} }
-function toggleSound(){ soundOn=!soundOn; if(session.role==='carnicero') renderCarnicero(); }
+let soundOn=true, prevCotizar=null, alertC1=false, _actx=null;
+// El audio en móvil/iPad requiere un gesto del usuario para activarse → se desbloquea al hacer login.
+function unlockAudio(){ try{ const A=window.AudioContext||window.webkitAudioContext; if(!_actx) _actx=new A(); if(_actx.state==='suspended') _actx.resume(); }catch(e){} }
+// Campana identificable y fuerte: 4 notas ascendentes (tipo timbre de mostrador), se repite 2 veces.
+function playDing(){ if(!soundOn) return; try{ unlockAudio(); const a=_actx; if(!a) return;
+  const seq=[784,1047,1319,1047]; // Sol-Do-Mi-Do
+  const round=(base)=>seq.forEach((f,i)=>{ const o=a.createOscillator(),g=a.createGain(); o.type='triangle'; o.frequency.value=f; o.connect(g); g.connect(a.destination);
+    const t=a.currentTime+base+i*0.15; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.42,t+0.018); g.gain.exponentialRampToValueAtTime(0.0001,t+0.34); o.start(t); o.stop(t+0.36); });
+  round(0); round(0.95);
+}catch(e){} }
+// Botón SYNC del carnicero: refresca el tablero desde la nube y confirma que está al día.
+function manualSync(){ const b=$("#syncBtn"); if(b) b.classList.add('syncing');
+  const done=()=>{ lastSync=Date.now(); rerender(); toast('Tablero actualizado'); };
+  if(USE_SUPA){ dbFetch().then(done).catch(done); } else { load(); done(); } }
 function copy(txt){ navigator.clipboard&&navigator.clipboard.writeText(txt); }
 const esc=s=>(s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function ic(n,s=20){const p={
@@ -1067,7 +1113,8 @@ function ic(n,s=20){const p={
   tag:'<path d="M4 4h7l9 9-7 7-9-9zM8.5 8.5h.01"/>',
   home:'<path d="M4 11l8-7 8 7M6 9.5V20h12V9.5M10 20v-6h4v6"/>',
   history:'<path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7M4 4v3.5h3.5M12 7.5V12l3 1.8"/>',
-  trend:'<path d="M3 17l5-5 4 4 8-8M16 8h5v5"/>'
+  trend:'<path d="M3 17l5-5 4 4 8-8M16 8h5v5"/>',
+  sync:'<path d="M20 12a8 8 0 01-14 5.7M4 12a8 8 0 0114-5.7M18 4v3h-3M6 20v-3h3"/>'
  }[n]||'';
  return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px;flex:none">${p}</svg>`;
 }
@@ -1089,6 +1136,7 @@ function doLogin(){
   const pin=$("#pinInput").value;
   if(pin!==CREDS[selRole]){ $("#loginErr").textContent="PIN incorrecto. Intenta de nuevo."; $("#pinInput").value=""; $("#pinInput").focus(); return; }
   session.role=selRole; if(!USE_SUPA){ load(); } archiveStaleListas();
+  unlockAudio(); // activar sonido dentro del gesto del login (necesario en iPad)
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   startClock(); rerender();
 }
@@ -1124,7 +1172,7 @@ function rerender(){
 function topbar(extra=""){
   return `<div class="topbar">
     <img src="assets/torito-badge.png" class="badge" alt="">
-    <div class="tb-brand"><img src="assets/torito-wordmark.svg" class="tb-logo" alt="El Torito Carnicería"><div class="tb-sub">${session.role==="admin"?"Admin":"Producción"}</div></div>
+    <div class="tb-brand tb-brand-h"><img src="assets/torito-wordmark.svg" class="tb-logo" alt="El Torito Carnicería"><span class="tb-role">${session.role==="admin"?"ADMIN":"PRODUCCIÓN"}</span></div>
     <div class="tb-spacer"></div>${extra}
     <button class="tb-out" onclick="logout()">Salir</button>
   </div>`;
@@ -1509,7 +1557,10 @@ function adminCatalogo(){
         <div class="cat-erow">
           <div class="ce-info">
             <input class="ce-nameinp" data-catname="${p.id}" value="${esc(p.name)}" onchange="setCatalogName('${p.id}',this.value)">
-            <div class="ce-unit">${p.unit}${p.weigh?' · validar peso':''}${p.custom?' · nuevo':''}</div>
+            <div class="ce-meta">
+              <span class="ce-unit">${p.unit}${p.custom?' · nuevo':''}</span>
+              <button class="ce-wtog ${p.weigh?'on':''}" onclick="setCatalogWeigh('${p.id}',${p.weigh?'false':'true'})">${p.weigh?ic('check',11)+' ':''}validar peso</button>
+            </div>
           </div>
           <label class="ce-price"><span class="ce-l">L</span><input class="ce-inp" inputmode="decimal" value="${p.price==null?'':p.price}" placeholder="encargo" onchange="setCatalogPrice('${p.id}',this.value)" onfocus="this.select()"><span class="ce-u">/${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></label>
           <button class="ce-del" onclick="removeCatalogProduct('${p.id}')" aria-label="Quitar producto">${ic('trash',15)}</button>
@@ -1603,17 +1654,15 @@ function renderCarnicero(){
    `<div class="ctop">
       <button class="ctop-out" onclick="logout()">${ic('left',18)} Salir</button>
       <div class="ctop-brand"><img src="assets/torito-wordmark.svg" class="ctop-logo" alt="El Torito Carnicería"><div class="ctop-sub">Producción</div></div>
-      <button class="ctop-snd ${soundOn?'on':''}" onclick="toggleSound()" aria-label="${soundOn?'Silenciar avisos':'Activar avisos'}">${ic(soundOn?'bell':'belloff',19)}</button>
-      <span class="ctop-sync" id="syncClock">actualizado ahora</span>
+      <button class="ctop-sync" id="syncBtn" onclick="manualSync()" aria-label="Actualizar tablero">${ic('sync',16)}<span id="syncClock">actualizado ahora</span></button>
    </div>
    <div class="kanban-wrap">
-     <img src="assets/torito-bull.png" class="kan-watermark" alt="">
      <div class="kanban">
     ${C_COLS.map(([cls,label,st])=>{
       const arr=state.orders.filter(o=>o.status===st);
-      const dot = (st==='cotizar'&&arr.length)?'<span class="kdot"></span>':'';
-      return `<div class="kcol ${cls} ${st==='cotizar'&&alertC1?'alerted':''}" id="col${cls.toUpperCase()}">
-        <div class="kcol-head">${dot}<span class="kn">${label}</span><span class="kc">${arr.length}</span></div>
+      const urge = (st==='cotizar'||st==='preparacion') && arr.length ? ' urge':'';
+      return `<div class="kcol ${cls}${urge} ${st==='cotizar'&&alertC1?'alerted':''}" id="col${cls.toUpperCase()}">
+        <div class="kcol-head"><span class="kn">${label}</span><span class="kc">${arr.length}</span></div>
         <div class="kcol-body">
           ${arr.length?arr.map(o=>kcard(o,st)).join(""):`<div class="kempty"><div class="ke-ic">${ic('check',24)}</div>${C_EMPTY[st]}</div>`}
         </div></div>`;
@@ -1747,6 +1796,7 @@ function updateSummary(){ const a=$("#sumSub"); if(a)a.textContent=money(editSub
   const g=$("#sumGrand"); if(g)g.textContent=money(editGrand()); }
 function startEdit(i,field){
   const cur = field==='weight'?editItems[i].weight : field==='qty'?editItems[i].qty : field==='price'?editItems[i].price : editShipping;
+  if(field==='weight' && i>=0 && editItems[i]) editItems[i]._wtouched=true; // marca que sí validó el peso
   activeEdit={i,field,buffer:(cur!=null&&!isNaN(cur))?String(cur):'',fresh:true};
   rerenderOitems(); renderNumpadPop();
 }
@@ -1813,7 +1863,12 @@ function closeNumpad(){ activeEdit=null; const h=$("#numpadHost"); if(h) h.inner
 function persistEdits(){ const o=orderById(currentSheetId); if(!o) return;
   o.items=editItems.map(it=>({...it, weight: it.weigh?(it.weight!=null?it.weight:it.qty):null}));
   o.shipping=editShipping; o.note=editComment; save(); }
-function confirmCotizarV2(){ const o=orderById(currentSheetId); const id=o.id; persistEdits(); setStatus(o,'espera_pago'); save(); closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
+function confirmCotizarV2(){ const o=orderById(currentSheetId);
+  // No dejar avanzar sin haber validado el peso de los productos que lo requieren.
+  const faltan=editItems.filter(it=>it.available && it.weigh && !it._wtouched);
+  if(faltan.length){ toast('Valida el peso de: '+faltan.map(f=>f.name).join(', '));
+    const idx=editItems.indexOf(faltan[0]); if(idx>=0) startEdit(idx,'weight'); return; }
+  const id=o.id; persistEdits(); setStatus(o,'espera_pago'); save(); closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
 function guardarV2(){ persistEdits(); closeCarn(); toast('Cambios guardados'); }
 function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(); closeCarn(); toast('Listo para entrega', ()=>revertStatus(id, x=>{x.listaAt=prevLista;})); }
 function closeCarn(){ $("#overlayHost").innerHTML=''; const h=$("#numpadHost"); if(h) h.innerHTML=''; activeEdit=null; editItems=null; currentSheetId=null; adminEditMode=false; rerender(); }
