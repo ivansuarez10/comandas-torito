@@ -578,6 +578,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .ce-inp{width:64px;border:none;background:transparent;font-size:15.5px;font-weight:700;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums;outline:none}
 .ce-price .ce-u{font-size:11.5px;color:var(--muted-2)}
 .ce-price:focus-within{box-shadow:0 0 0 2px var(--rojo) inset;background:#fff}
+.ce-nameinp{width:100%;border:none;background:transparent;font-weight:600;font-size:14.5px;color:var(--ink);outline:none;padding:2px 4px;border-radius:7px;margin:-2px -4px}
+.ce-nameinp:focus{background:#F5F5F7;box-shadow:0 0 0 2px var(--rojo) inset}
+.ce-del{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--muted-2);border-radius:9px;cursor:pointer}
+.ce-del:hover{background:#FBECEC;color:var(--rojo)}
+.cat-add{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border:none;background:transparent;color:var(--rojo);font-weight:700;font-size:13.5px;cursor:pointer;border-top:.5px solid var(--line)}
+.cat-add:hover{background:#FBF1F1}
+/* Desambiguación res/cerdo en el preview */
+.pp-row.amb{flex-wrap:wrap;gap:6px}
+.pp-row.amb .pp-ic{color:#A9741A}
+.pp-row.amb .pp-name{flex:1 1 auto}
+.amb-q{color:#A9741A;font-weight:700;font-size:12.5px;margin-left:4px}
+.amb-opts{display:flex;gap:6px;flex:none}
+.amb-btn{border:1px solid var(--rojo);background:#fff;color:var(--rojo);font-weight:700;font-size:12.5px;padding:5px 12px;border-radius:9px;cursor:pointer}
+.amb-btn:hover{background:var(--rojo);color:#fff}
 /* Panel de validación del autollenar */
 .parse-prev{margin-top:11px;background:var(--card);border-radius:13px;box-shadow:var(--sh-card);padding:11px 12px}
 .pp-head{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -685,27 +699,53 @@ const CAT=[
    ["Papas",L(33)],["Manteca de cerdo",L(40)],["Papas tornillo",L(40)],
    ["Papas sazonadas",L(45)],["Camarón (5 lb)",{unit:"5 lb",price:625,weigh:false}] ]},
 ];
-// flatten -> products with ids
-const PRODUCTS=[]; CAT.forEach(g=>g.items.forEach(([name,d],i)=>{
-  PRODUCTS.push({id:g.cat.slice(0,2).toLowerCase()+"_"+PRODUCTS.length, cat:g.cat, name, unit:d.unit, price:d.price, weigh:d.weigh});
-}));
-const prodById=id=>PRODUCTS.find(p=>p.id===id);
-const prodByName=n=>PRODUCTS.find(p=>p.name===n);
 // VALIDAR PESO: solo estos cortes premium requieren que el carnicero valide el peso real.
 // El resto vienen pesados exactos → la cantidad pedida es la final (qty × precio).
 const VALIDATE_WEIGHT=new Set(["Rib eye","Entraña","Puyaso","New York","Filete","Bolita","Lomo limpio"]);
-PRODUCTS.forEach(p=>{ p.weigh = VALIDATE_WEIGHT.has(p.name); });
-// Precios editables: override guardado en este dispositivo (clave para precios mes a mes). Se aplica a comandas NUEVAS.
+const CAT_NAMES=()=>CAT.map(g=>g.cat);
 // Al cambiar el menú base, los overrides viejos (por id) quedarían desalineados → se limpian al subir de versión.
 const CATALOG_VERSION='2026-06';
 if(localStorage.getItem('ct_v2_cat_ver')!==CATALOG_VERSION){ localStorage.removeItem('ct_v2_prices'); localStorage.setItem('ct_v2_cat_ver',CATALOG_VERSION); }
+// Ediciones del catálogo (nombres, productos nuevos, quitados) persistidas en este dispositivo.
+function loadCatMeta(){ try{ return Object.assign({names:{},custom:[],removed:[]}, JSON.parse(localStorage.getItem('ct_v2_catmeta')||'{}')); }catch(e){ return {names:{},custom:[],removed:[]}; } }
+let CATMETA=loadCatMeta();
+function saveCatMeta(){ localStorage.setItem('ct_v2_catmeta', JSON.stringify(CATMETA)); }
 function applyPriceOverrides(){ try{ const o=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}'); PRODUCTS.forEach(p=>{ if(o[p.id]!==undefined) p.price=o[p.id]; }); }catch(e){} }
-applyPriceOverrides();
+// PRODUCTS se reconstruye desde CAT + ediciones. Se muta EN SITIO para no romper referencias.
+const PRODUCTS=[];
+function rebuildCatalog(){
+  PRODUCTS.length=0; let idx=0;
+  CAT.forEach(g=>g.items.forEach(([name,d])=>{
+    const id=g.cat.slice(0,2).toLowerCase()+"_"+idx; idx++;
+    if(CATMETA.removed.includes(id)) return;
+    PRODUCTS.push({id, cat:g.cat, name:CATMETA.names[id]||name, unit:d.unit, price:d.price, weigh:!!d.weigh, custom:false});
+  }));
+  (CATMETA.custom||[]).forEach(c=>{ if(CATMETA.removed.includes(c.id)) return;
+    PRODUCTS.push({id:c.id, cat:c.cat, name:CATMETA.names[c.id]||c.name, unit:c.unit||'Libra', price:(c.price==null?null:c.price), weigh:false, custom:true}); });
+  PRODUCTS.forEach(p=>{ p.weigh = VALIDATE_WEIGHT.has(p.name); }); // premium = validar peso
+  applyPriceOverrides();
+}
+rebuildCatalog();
+const prodById=id=>PRODUCTS.find(p=>p.id===id);
+const prodByName=n=>PRODUCTS.find(p=>p.name===n);
 function setCatalogPrice(id,val){ const p=prodById(id); if(!p) return;
   let n=(val===''||val==null)?null:parseFloat(String(val).replace(',','.')); if(n!=null&&isNaN(n)) return;
   p.price=n; let o={}; try{o=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}');}catch(e){}
   if(n==null) delete o[id]; else o[id]=n; localStorage.setItem('ct_v2_prices',JSON.stringify(o));
   toast(p.name+(n==null?' → por encargo':' → '+money(n))); }
+function setCatalogName(id,val){ val=(val||'').trim(); const p=prodById(id); if(!p) return;
+  if(!val){ toast('El nombre no puede quedar vacío'); rerender(); return; }
+  CATMETA.names[id]=val; saveCatMeta(); rebuildCatalog(); rerender(); toast('Nombre actualizado'); }
+function addCatalogProduct(cat){
+  const id='cst_'+Date.now().toString(36);
+  CATMETA.custom.push({id, cat, name:'Nuevo producto', unit:'Libra', price:null});
+  saveCatMeta(); rebuildCatalog(); rerender();
+  setTimeout(()=>{ const el=document.querySelector('[data-catname="'+id+'"]'); if(el){ el.focus(); el.select(); } },60);
+  toast('Producto agregado — ponle nombre y precio'); }
+function removeCatalogProduct(id){ const p=prodById(id); if(!p) return;
+  if(!confirm('¿Quitar "'+p.name+'" del catálogo?')) return;
+  if(p.custom){ CATMETA.custom=CATMETA.custom.filter(c=>c.id!==id); } else if(!CATMETA.removed.includes(id)){ CATMETA.removed.push(id); }
+  delete CATMETA.names[id]; saveCatMeta(); rebuildCatalog(); rerender(); toast('Producto quitado'); }
 
 /* ============ PARSER DE PEDIDO (autollenar desde texto pegado) ============ */
 // Diccionario de apodos/coloquialismos → producto del catálogo. ORDEN IMPORTA (específico antes que genérico).
@@ -754,7 +794,20 @@ const ALIASES=[
   [['papas sazonadas','papa sazonada'],'Papas sazonadas'],[['papas tornillo','papa tornillo'],'Papas tornillo'],
   [['papas','papa'],'Papas'],[['manteca'],'Manteca de cerdo'],[['camaron','camarón'],'Camarón (5 lb)'],
 ];
+// Términos AMBIGUOS: existen en más de una carne. Si el cliente no especifica, se pregunta.
+// has = palabras que disparan; q = calificadores que SÍ resuelven (entonces no es ambiguo); options = [etiqueta, nombre exacto].
+const AMBIG=[
+  {has:['asar'], q:['res','cerdo','puerco','pollo'], options:[['Res','Carne de asar'],['Cerdo','Cerdo para asar']]},
+  {has:['molida'], q:['res','cerdo','puerco'], options:[['Res','Molida'],['Cerdo','Molida de cerdo']]},
+  {has:['costilla'], q:['res','cerdo','puerco'], options:[['Res','Costilla de res'],['Cerdo','Costilla de cerdo']]},
+  {has:['estofado'], q:['res','cerdo','puerco'], options:[['Res','Estofado'],['Cerdo','Estofado de cerdo']]},
+  {has:['tajo'], q:['res','cerdo','puerco','negro'], options:[['Res','Tajo negro'],['Cerdo','Tajo de cerdo']]},
+  {has:['lomo'], q:['res','cerdo','puerco','limpio'], options:[['Res','Lomo limpio'],['Cerdo','Lomo de cerdo']]},
+  {has:['patas','pata'], q:['cerdo','puerco','pollo','res'], options:[['Cerdo','Patas de cerdo'],['Pollo','Patas de pollo']]},
+];
 const _norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+function _ambig(rest){ const n=_norm(rest);
+  return AMBIG.find(a=> a.has.some(h=>n.split(' ').includes(h)) && !a.q.some(qw=>n.includes(qw))) || null; }
 function _extractQty(line){
   const m=line.match(/(\d+(?:[.,]\d+)?)/);
   const qty=m?parseFloat(m[1].replace(',','.')):1;
@@ -775,15 +828,17 @@ function _matchProduct(rest){
 }
 function parseOrderText(text){
   const lines=(text||'').split(/[\n\r]+/).map(l=>l.trim()).filter(Boolean);
-  const items=[], unknown=[];
+  const items=[], unknown=[], ambiguous=[];
   for(const raw of lines){
     if(/^(hola|buenas|buenos|gracias|mi orden|orden seria|orden sería|pedido|por favor)\b/i.test(raw) && !/\d/.test(raw) && raw.split(' ').length<4) continue;
     const {qty,rest}=_extractQty(raw);
+    const amb=_ambig(rest);
+    if(amb){ ambiguous.push({line:raw, qty, options:amb.options}); continue; } // res o cerdo → preguntar
     const name=_matchProduct(rest);
     if(name){ const ex=items.find(x=>x.name===name); if(ex) ex.qty+=qty; else items.push({name,qty}); }
     else if(_norm(raw).replace(/\s/g,'').length>1) unknown.push(raw);
   }
-  return {items, unknown};
+  return {items, unknown, ambiguous};
 }
 
 /* ============ STATE ============ */
@@ -1120,13 +1175,31 @@ function parsePreviewHtml(){
       ? `${it.qty} ${u} × ${money(p.price)} = <b>${money(it.qty*p.price)}</b>`
       : `× ${it.qty} · por encargo`;
     return `<div class="pp-row ok"><span class="pp-ic">${ic('check',14)}</span><span class="pp-name">${esc(it.name)}</span><span class="pp-qty">${desg}</span></div>`;}).join("");
+  const amb=(lp.ambiguous||[]).map((a,idx)=>`<div class="pp-row amb">
+      <span class="pp-ic">${ic('clock',14)}</span>
+      <span class="pp-name">${esc(a.line)} <span class="amb-q">¿cuál?</span></span>
+      <span class="amb-opts">${a.options.map((o,oi)=>`<button class="amb-btn" onclick="resolveAmbiguous(${idx},${oi})">${esc(o[0])}</button>`).join('')}</span>
+    </div>`).join("");
   const unk=(lp.unknown||[]).map(l=>`<div class="pp-row warn"><span class="pp-ic">${ic('clock',14)}</span><span class="pp-name">${esc(l)}</span><span class="pp-qty">revisar</span></div>`).join("");
   return `<div class="parse-prev">
     <div class="pp-head">${ic('eye',14)} Lo que entendí <span class="pp-src">${lp.ai?'IA':'local'}</span></div>
     ${ok||`<div class="pp-empty">No reconocí productos en el texto.</div>`}
+    ${amb?`<div class="pp-sep amb-sep">${ic('clock',13)} Confirma de qué carne es (para que el carnicero no pregunte):</div>${amb}`:''}
     ${unk?`<div class="pp-sep">${ic('clock',13)} No estoy seguro de estas líneas — revísalas y agrégalas a mano si hace falta:</div>${unk}`:''}
     <div class="pp-note">Compara con tu mensaje de arriba. Si algo falta o quedó mal, tócalo en <b>Productos</b> o ajústalo abajo en la comanda.</div>
   </div>`;
+}
+// Resuelve una línea ambigua (res/cerdo/pollo): agrega el producto exacto al pedido y lo saca de "por confirmar".
+function resolveAmbiguous(ambIdx, optIdx){
+  const lp=draft.lastParse; if(!lp||!lp.ambiguous) return;
+  const a=lp.ambiguous[ambIdx]; if(!a) return;
+  const name=a.options[optIdx] && a.options[optIdx][1]; const p=prodByName(name); if(!p){ toast('Producto no encontrado'); return; }
+  const ex=draft.items.find(x=>x.prodId===p.id); if(ex) ex.qty+=a.qty; else draft.items.push({prodId:p.id, qty:a.qty});
+  lp.items=lp.items||[]; lp.items.push({name:p.name, qty:a.qty});
+  lp.ambiguous.splice(ambIdx,1);
+  initNueva();
+  const cart=$("#cart"); if(cart) cart.scrollIntoView({block:'center',behavior:'smooth'});
+  toast(p.name+' × '+a.qty+' agregado');
 }
 function adminNueva(){
   return `<div class="view-head"><div><h2>Nueva comanda</h2><div class="vh-sub">Captura lo que pidió el cliente</div></div>
@@ -1246,7 +1319,8 @@ async function aiParse(text){
     if(d.error) throw new Error(d.error);
     const items=(d.items||[]).filter(it=>prodByName(it.name)); // solo nombres válidos del catálogo
     if(!items.length && (d.items||[]).length) throw new Error('sin coincidencias'); // respuesta inútil → fallback
-    return {items, unknown:d.unknown||[]};
+    const ambiguous=(d.ambiguous||[]).filter(a=>Array.isArray(a.options)&&a.options.length);
+    return {items, unknown:d.unknown||[], ambiguous};
   }catch(e){ clearTimeout(to); throw e; }
 }
 async function autollenarPedido(btn){
@@ -1254,13 +1328,13 @@ async function autollenarPedido(btn){
   const phone=(($("#dPastePhone")||{}).value||'').trim();
   draft.pasteText=text; draft.pastePhone=phone; // preservar lo pegado (no se borra al re-renderizar)
   if(!text.trim() && !phone){ toast("Pega el pedido o el teléfono primero"); return; }
-  let items=[], unknown=[], usedAI=false;
+  let items=[], unknown=[], ambiguous=[], usedAI=false;
   if(text.trim()){
     const old=btn?btn.innerHTML:''; if(btn){ btn.disabled=true; btn.innerHTML=ic('clock',17)+' Leyendo…'; }
-    try{ const r=await aiParse(text); items=r.items; unknown=r.unknown; usedAI=true; }
-    catch(e){ const r=parseOrderText(text); items=r.items; unknown=r.unknown; } // fallback local
+    try{ const r=await aiParse(text); items=r.items; unknown=r.unknown; ambiguous=r.ambiguous||[]; usedAI=true; }
+    catch(e){ const r=parseOrderText(text); items=r.items; unknown=r.unknown; ambiguous=r.ambiguous||[]; } // fallback local
     if(btn){ btn.disabled=false; btn.innerHTML=old; }
-    draft.lastParse={items, unknown, ai:usedAI}; // alimenta el panel de validación
+    draft.lastParse={items, unknown, ambiguous, ai:usedAI}; // alimenta el panel de validación
   }
   // fusionar con lo que ya estaba (no pisar productos agregados a mano): los del texto se vuelven la base
   if(items.length){ draft.items=items.map(it=>{const p=prodByName(it.name); return p?{prodId:p.id,qty:it.qty}:null;}).filter(Boolean); }
@@ -1269,6 +1343,7 @@ async function autollenarPedido(btn){
   initNueva();
   const cart=$("#cart"); if(cart) cart.scrollIntoView({block:'center',behavior:'smooth'});
   let msg=items.length? (items.length+" productos cargados"+(usedAI?" (IA)":"")) : "No reconocí productos";
+  if(ambiguous.length) msg+=" · "+ambiguous.length+" por confirmar (res/cerdo)";
   if(unknown.length) msg+=" · "+unknown.length+" por revisar";
   if(foundClient) msg+=" · cliente identificado";
   else if(phone) msg+=" · cliente nuevo";
@@ -1378,16 +1453,21 @@ function adminReporte(){
 
 /* ----- CATÁLOGO ----- */
 function adminCatalogo(){
-  return `<div class="view-head"><div><h2>Menú y precios</h2><div class="vh-sub">${PRODUCTS.length} productos · edita el precio por libra/unidad</div></div></div>
-    <div class="cat-note">${ic('tag',15)} Los cambios se aplican a las comandas <b>nuevas</b>. Las ya creadas conservan su precio. Deja el precio vacío para marcarlo “por encargo”.</div>
-    ${CAT.map(g=>`
-      <div class="sect-label">${g.cat}</div>
+  return `<div class="view-head"><div><h2>Menú y precios</h2><div class="vh-sub">${PRODUCTS.length} productos · edita nombre y precio, agrega o quita</div></div></div>
+    <div class="cat-note">${ic('tag',15)} Los cambios se aplican a las comandas <b>nuevas</b>. Las ya creadas conservan su precio y nombre. Precio vacío = “por encargo”.</div>
+    ${CAT_NAMES().map(cat=>`
+      <div class="sect-label">${esc(cat)}</div>
       <div class="cat-elist">
-      ${PRODUCTS.filter(p=>p.cat===g.cat).map(p=>`
+      ${PRODUCTS.filter(p=>p.cat===cat).map(p=>`
         <div class="cat-erow">
-          <div class="ce-info"><div class="ce-name">${esc(p.name)}</div><div class="ce-unit">${p.unit}${p.weigh?' · validar peso':''}</div></div>
+          <div class="ce-info">
+            <input class="ce-nameinp" data-catname="${p.id}" value="${esc(p.name)}" onchange="setCatalogName('${p.id}',this.value)">
+            <div class="ce-unit">${p.unit}${p.weigh?' · validar peso':''}${p.custom?' · nuevo':''}</div>
+          </div>
           <label class="ce-price"><span class="ce-l">L</span><input class="ce-inp" inputmode="decimal" value="${p.price==null?'':p.price}" placeholder="encargo" onchange="setCatalogPrice('${p.id}',this.value)" onfocus="this.select()"><span class="ce-u">/${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></label>
+          <button class="ce-del" onclick="removeCatalogProduct('${p.id}')" aria-label="Quitar producto">${ic('trash',15)}</button>
         </div>`).join("")}
+      <button class="cat-add btn-ic" onclick="addCatalogProduct('${esc(cat)}')">${ic('plus',15)} Agregar producto a ${esc(cat)}</button>
       </div>`).join("")}
     <div style="height:28px"></div>`;
 }
