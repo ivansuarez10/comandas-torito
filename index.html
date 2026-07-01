@@ -668,6 +668,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .kanban .kcard2 .kitems b{font-weight:700}
 .kanban .kcol-head .kn{font-weight:700;font-size:18px}
 @media(max-width:430px){ .ctop-brand-h .ctop-logo{height:22px} .ctop-badge{width:36px;height:36px} .ctop-role{font-size:13px;padding-left:8px} }
+/* Botón "Tomar foto del pedido" en la caja de autollenar */
+.cam-btn{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border-radius:12px;border:1.5px dashed var(--line);background:#fff;color:var(--muted);font-weight:700;font-size:13.5px;cursor:pointer}
+.cam-btn:hover{border-color:var(--rojo);color:var(--rojo);background:#FBF1F1}
+.cam-btn:disabled{opacity:.7;cursor:default}
 /* Panel de validación del autollenar */
 .parse-prev{margin-top:11px;background:var(--card);border-radius:13px;box-shadow:var(--sh-card);padding:11px 12px}
 .pp-head{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -1174,7 +1178,8 @@ function ic(n,s=20){const p={
   home:'<path d="M4 11l8-7 8 7M6 9.5V20h12V9.5M10 20v-6h4v6"/>',
   history:'<path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7M4 4v3.5h3.5M12 7.5V12l3 1.8"/>',
   trend:'<path d="M3 17l5-5 4 4 8-8M16 8h5v5"/>',
-  sync:'<path d="M20 12a8 8 0 01-14 5.7M4 12a8 8 0 0114-5.7M18 4v3h-3M6 20v-3h3"/>'
+  sync:'<path d="M20 12a8 8 0 01-14 5.7M4 12a8 8 0 0114-5.7M18 4v3h-3M6 20v-3h3"/>',
+  camera:'<path d="M3 8.5A1.5 1.5 0 014.5 7H7l1.2-1.8h7.6L17 7h2.5A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/><circle cx="12" cy="13" r="3.3"/>'
  }[n]||'';
  return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px;flex:none">${p}</svg>`;
 }
@@ -1337,7 +1342,7 @@ function parsePreviewHtml(){
     </div>`).join("");
   const unk=(lp.unknown||[]).map(l=>`<div class="pp-row warn"><span class="pp-ic">${ic('clock',14)}</span><span class="pp-name">${esc(l)}</span><span class="pp-qty">revisar</span></div>`).join("");
   return `<div class="parse-prev">
-    <div class="pp-head">${ic('eye',14)} Lo que entendí <span class="pp-src">${lp.ai?'IA':'local'}</span></div>
+    <div class="pp-head">${ic('eye',14)} Lo que entendí <span class="pp-src">${lp.source==='foto'?'FOTO · IA':(lp.ai?'IA':'local')}</span></div>
     ${ok||`<div class="pp-empty">No reconocí productos en el texto.</div>`}
     ${amb?`<div class="pp-sep amb-sep">${ic('clock',13)} Confirma de qué carne es (para que el carnicero no pregunte):</div>${amb}`:''}
     ${unk?`<div class="pp-sep">${ic('clock',13)} No estoy seguro de estas líneas — revísalas y agrégalas a mano si hace falta:</div>${unk}`:''}
@@ -1366,6 +1371,8 @@ function adminNueva(){
         <input class="inp" id="dPastePhone" inputmode="tel" placeholder="Teléfono del cliente" value="${esc(draft.pastePhone||'')}">
         <button class="btn red btn-ic" onclick="autollenarPedido(this)">${ic('check',17)} Autollenar</button>
       </div>
+      <input type="file" id="camInput" accept="image/*" capture="environment" style="display:none" onchange="tomarFotoPedido(this)">
+      <button class="cam-btn btn-ic" id="camBtn" onclick="document.getElementById('camInput').click()">${ic('camera',16)} Tomar foto del pedido (papelito)</button>
       ${parsePreviewHtml()}
     </div>
     <div class="field"><label>Cliente</label><input class="inp" id="dName" placeholder="Nombre del cliente" value="${esc(draft.clientName)}"></div>
@@ -1503,6 +1510,55 @@ async function autollenarPedido(btn){
   if(foundClient) msg+=" · cliente identificado";
   else if(phone) msg+=" · cliente nuevo";
   toast(msg);
+}
+/* ----- FOTO DEL PEDIDO (cámara + IA de visión) ----- */
+// Encoge la imagen antes de mandarla (menos tokens/datos). Devuelve dataURL jpeg.
+function _resizeImage(file, maxSide, quality){
+  return new Promise((res,rej)=>{ const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{ try{ URL.revokeObjectURL(url); let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+      const s=Math.min(1, maxSide/Math.max(w,h)); w=Math.max(1,Math.round(w*s)); h=Math.max(1,Math.round(h*s));
+      const c=document.createElement('canvas'); c.width=w; c.height=h; const ctx=c.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+      res(c.toDataURL('image/jpeg', quality||0.72)); }catch(e){ rej(e); } };
+    img.onerror=()=>rej(new Error('img')); img.src=url; });
+}
+// Manda la foto a la Edge Function con visión. Sin fallback local (una foto no se puede leer offline).
+async function aiParseImage(dataUrl){
+  const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),25000); // visión tarda más
+  try{
+    const r=await fetch(SUPA_URL+'/functions/v1/parse-order',{ method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY,'apikey':SUPA_KEY},
+      body:JSON.stringify({image:dataUrl, catalog:PRODUCTS.filter(p=>!p.disabled).map(p=>p.name)}), signal:ctrl.signal });
+    clearTimeout(to);
+    if(!r.ok) throw new Error('http '+r.status);
+    const d=await r.json(); if(d.error) throw new Error(d.error);
+    const items=(d.items||[]).filter(it=>prodByName(it.name));
+    const ambiguous=(d.ambiguous||[]).filter(a=>Array.isArray(a.options)&&a.options.length);
+    return {items, unknown:d.unknown||[], ambiguous};
+  }catch(e){ clearTimeout(to); throw e; }
+}
+async function tomarFotoPedido(input){
+  const file = input && input.files && input.files[0]; if(input) input.value='';
+  if(!file) return;
+  const btn=$("#camBtn"); const old=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.innerHTML=ic('clock',16)+' Leyendo la foto…'; }
+  try{
+    const dataUrl=await _resizeImage(file, 1280, 0.72);
+    const r=await aiParseImage(dataUrl);
+    draft.lastParse={items:r.items, unknown:r.unknown, ambiguous:r.ambiguous, ai:true, source:'foto'};
+    if(r.items.length){ draft.items=r.items.map(it=>{const p=prodByName(it.name); return p?{prodId:p.id,qty:it.qty}:null;}).filter(Boolean); }
+    initNueva();
+    const cart=$("#cart"); if(cart) cart.scrollIntoView({block:'center',behavior:'smooth'});
+    let msg=r.items.length? (r.items.length+" productos leídos de la foto (IA)") : "No reconocí productos en la foto";
+    if(r.ambiguous.length) msg+=" · "+r.ambiguous.length+" por confirmar";
+    if(r.unknown.length) msg+=" · "+r.unknown.length+" por revisar";
+    toast(msg);
+  }catch(e){
+    const m=String(e&&e.message||e);
+    if(btn){ btn.disabled=false; btn.innerHTML=old; }
+    toast(/http 4|no_key|Failed to fetch|Load failed|abort/i.test(m) ? 'La lectura por foto necesita desplegar la función de IA (ver guía).' : 'No pude leer la foto. Intenta de nuevo o pega el texto.');
+    return;
+  }
+  if(btn){ btn.disabled=false; btn.innerHTML=old; }
 }
 
 /* ----- CLIENTES ----- */
