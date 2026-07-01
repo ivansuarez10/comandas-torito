@@ -592,6 +592,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .amb-opts{display:flex;gap:6px;flex:none}
 .amb-btn{border:1px solid var(--rojo);background:#fff;color:var(--rojo);font-weight:700;font-size:12.5px;padding:5px 12px;border-radius:9px;cursor:pointer}
 .amb-btn:hover{background:var(--rojo);color:#fff}
+/* Pantalla de inicio más grande */
+.login-card{max-width:480px}
+.login-badge{width:176px;height:176px;margin-bottom:26px}
+.login-card h1{font-size:26px;letter-spacing:.14em}
+.login-card .sub{font-size:15px;margin-top:6px}
+.roles{gap:14px}
+.role-btn{padding:24px 16px}
+.role-btn .ri svg{width:34px;height:34px}
+.role-btn .rt{font-size:17px}
+.role-btn .rd{font-size:13px}
+.pin-wrap{margin-top:16px}
+.pin-wrap label{font-size:13.5px;margin-bottom:9px}
+.pin-input{padding:19px 18px;font-size:24px}
+.pin-input::placeholder{font-size:22px}
+.login-go{padding:19px;font-size:17px;margin-top:20px}
 /* Panel de validación del autollenar */
 .parse-prev{margin-top:11px;background:var(--card);border-radius:13px;box-shadow:var(--sh-card);padding:11px 12px}
 .pp-head{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -740,20 +755,20 @@ function setCatalogPrice(id,val){ const p=prodById(id); if(!p) return;
   let n=(val===''||val==null)?null:parseFloat(String(val).replace(',','.')); if(n!=null&&isNaN(n)) return;
   p.price=n; let o={}; try{o=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}');}catch(e){}
   if(n==null) delete o[id]; else o[id]=n; localStorage.setItem('ct_v2_prices',JSON.stringify(o));
-  toast(p.name+(n==null?' → por encargo':' → '+money(n))); }
+  dbSaveCatalog(); toast(p.name+(n==null?' → por encargo':' → '+money(n))); }
 function setCatalogName(id,val){ val=(val||'').trim(); const p=prodById(id); if(!p) return;
   if(!val){ toast('El nombre no puede quedar vacío'); rerender(); return; }
-  CATMETA.names[id]=val; saveCatMeta(); rebuildCatalog(); rerender(); toast('Nombre actualizado'); }
+  CATMETA.names[id]=val; saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); rerender(); toast('Nombre actualizado'); }
 function addCatalogProduct(cat){
   const id='cst_'+Date.now().toString(36);
   CATMETA.custom.push({id, cat, name:'Nuevo producto', unit:'Libra', price:null});
-  saveCatMeta(); rebuildCatalog(); rerender();
+  saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); rerender();
   setTimeout(()=>{ const el=document.querySelector('[data-catname="'+id+'"]'); if(el){ el.focus(); el.select(); } },60);
   toast('Producto agregado — ponle nombre y precio'); }
 function removeCatalogProduct(id){ const p=prodById(id); if(!p) return;
   if(!confirm('¿Quitar "'+p.name+'" del catálogo?')) return;
   if(p.custom){ CATMETA.custom=CATMETA.custom.filter(c=>c.id!==id); } else if(!CATMETA.removed.includes(id)){ CATMETA.removed.push(id); }
-  delete CATMETA.names[id]; saveCatMeta(); rebuildCatalog(); rerender(); toast('Producto quitado'); }
+  delete CATMETA.names[id]; saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); rerender(); toast('Producto quitado'); }
 
 /* ============ PARSER DE PEDIDO (autollenar desde texto pegado) ============ */
 // Diccionario de apodos/coloquialismos → producto del catálogo. ORDEN IMPORTA (específico antes que genérico).
@@ -959,11 +974,35 @@ function scheduleRefetch(){ clearTimeout(refetchT); refetchT=setTimeout(async()=
 async function initSupa(){
   supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);
   USE_SUPA=true; state={orders:[],history:[],clients:[],seq:43};
+  await dbFetchCatalog(); // catálogo de la nube antes de renderizar
   await dbFetch();
   if(state.orders.length===0 && state.history.length===0){ await seedToDb(); await dbFetch(); }
   archiveStaleListas(); rerender();
   supa.channel('orders-rt').on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>scheduleRefetch()).subscribe();
+  supa.channel('config-rt').on('postgres_changes',{event:'*',schema:'public',table:'app_config'},()=>{
+    dbFetchCatalog().then(()=>{ if(editingCatalog()) return; if(session.role==='admin' && !safeToRefreshAdmin()) return; rerender(); });
+  }).subscribe();
 }
+/* ===== Sync del CATÁLOGO en la nube (tabla app_config, opcional; funciona antes/después de crearla) ===== */
+const editingCatalog=()=>adminView==='catalogo' && document.activeElement && (document.activeElement.classList.contains('ce-inp')||document.activeElement.classList.contains('ce-nameinp'));
+async function dbFetchCatalog(){
+  try{
+    const {data,error}=await supa.from('app_config').select('value').eq('key','catalog').maybeSingle();
+    if(error||!data||!data.value) return;
+    const v=data.value;
+    CATMETA={names:v.names||{}, custom:v.custom||[], removed:v.removed||[]};
+    localStorage.setItem('ct_v2_catmeta', JSON.stringify(CATMETA));
+    localStorage.setItem('ct_v2_prices', JSON.stringify(v.prices||{}));
+    rebuildCatalog();
+  }catch(e){ /* tabla aún no existe → sigue en modo local */ }
+}
+function catalogBlob(){ let prices={}; try{prices=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}');}catch(e){}
+  return {names:CATMETA.names||{}, custom:CATMETA.custom||[], removed:CATMETA.removed||[], prices}; }
+let catSaveT=null;
+function dbSaveCatalog(){ if(!USE_SUPA) return; clearTimeout(catSaveT); catSaveT=setTimeout(async()=>{
+  try{ await supa.from('app_config').upsert({key:'catalog', value:catalogBlob(), updated_at:new Date().toISOString()}); }
+  catch(e){ console.warn('Sync catálogo (¿falta tabla app_config?):', e.message); }
+},250); }
 
 /* ============ HELPERS ============ */
 const $=(s,el=document)=>el.querySelector(s);
