@@ -1,6 +1,6 @@
 /* Comandas/Pedidos El Torito — Service Worker (app-shell offline).
    NUNCA cachea Supabase (datos + realtime deben ir siempre a la red). */
-const CACHE = 'torito-v1';
+const CACHE = 'torito-v2';
 const SHELL = [
   './',
   './index.html',
@@ -26,13 +26,22 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // Datos/realtime de Supabase: siempre a la red, nunca cache.
   if (url.hostname.includes('supabase.co')) return;
-  // App-shell: cache-first, con actualización en segundo plano.
+  const isNav = e.request.mode === 'navigate' || e.request.destination === 'document';
+  if (isNav) {
+    // HTML: network-first → siempre la última versión si hay señal; cache solo como respaldo offline.
+    e.respondWith(
+      fetch(e.request).then(resp => { const cp = resp.clone(); caches.open(CACHE).then(c => c.put(e.request, cp)); return resp; })
+        .catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
+    );
+    return;
+  }
+  // Recursos (imágenes, librería): cache-first con actualización en segundo plano.
   e.respondWith(
     caches.match(e.request).then(cached => {
       const net = fetch(e.request).then(resp => {
         if (resp && resp.status === 200) { const cp = resp.clone(); caches.open(CACHE).then(c => c.put(e.request, cp)); }
         return resp;
-      }).catch(() => cached || caches.match('./index.html'));
+      }).catch(() => cached);
       return cached || net;
     })
   );

@@ -660,6 +660,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 /* ============ CONFIG ============ */
 const CREDS = { admin:"1970", carnicero:"0707" };
 const PAY_INFO = "Cliente: IVAN ALEJANDRO SUAREZ VELASQUEZ\nNúmero de cuenta BAC: 729447561";
+const REPARTIDOR_PHONE = ""; // WhatsApp del repartidor (ej. "50499998888"). Vacío = eliges el contacto al enviar.
+// Abre WhatsApp Web (en la compu, con la sesión Business) o la app, con el mensaje ya escrito. No auto-envía.
+function _waPhone(p){ let d=(p||'').replace(/\D/g,''); if(!d) return ''; if(d.length===8) d='504'+d; return d; }
+function waSend(phone,text){ const t=encodeURIComponent(text||''); const p=_waPhone(phone);
+  const url = p ? ('https://web.whatsapp.com/send?phone='+p+'&text='+t) : ('https://wa.me/?text='+t);
+  window.open(url,'_blank','noopener'); }
+function waSendClient(id){ const o=orderById(id); if(!o) return; waSend(o.phone, waMessage(o)); }
+function waSendRepartidor(id){ const o=orderById(id); if(!o) return; waSend(REPARTIDOR_PHONE, repartidorFicha(o)); }
 /* ============ SUPABASE (nube + tiempo real) ============ */
 const SUPA_URL = "https://dnyzokgmjuvbrcxxdatr.supabase.co";
 const SUPA_KEY = "sb_publishable_jO4pGdkTBporf_cndos9OA_K_8tVn3A";
@@ -1502,7 +1510,8 @@ function openAdminOrder(id){
     ${cotizado? `
       <div class="sect-label" style="margin-top:6px">Mensaje para el cliente</div>
       <div class="msgbox" id="waBox">${esc(msg)}</div>
-      <button class="btn ghost block" style="margin-top:8px" onclick="copy(document.getElementById('waBox').innerText);this.innerHTML='Copiado';">${ic('copy',16)} Copiar mensaje de WhatsApp</button>
+      <button class="btn green block btn-ic" style="margin-top:8px" onclick="waSendClient('${o.id}')">${ic('send',16)} Enviar por WhatsApp</button>
+      <button class="btn ghost block sm" style="margin-top:8px" onclick="copy(document.getElementById('waBox').innerText);this.innerHTML='Copiado';">${ic('copy',16)} Copiar mensaje</button>
     `:""}
     <div style="margin-top:14px">${actions}</div>
     <div class="admin-foot">
@@ -1534,7 +1543,8 @@ function sendRepartidor(id){ const o=orderById(id); const f=repartidorFicha(o);
   // open a sub view in sheet
   sheet(o,`<div class="sect-label" style="margin-top:0">Ficha para el repartidor</div>
     <div class="msgbox" id="ficha">${esc(f)}</div>
-    <button class="btn lg block" style="margin-top:10px" onclick="copy(document.getElementById('ficha').innerText);this.innerHTML='Copiado'">${ic('copy',16)} Copiar ficha</button>
+    <button class="btn lg block btn-ic" style="margin-top:10px" onclick="waSendRepartidor('${o.id}')">${ic('send',18)} Enviar por WhatsApp</button>
+    <button class="btn ghost block sm" style="margin-top:8px" onclick="copy(document.getElementById('ficha').innerText);this.innerHTML='Copiado'">${ic('copy',16)} Copiar ficha</button>
     <button class="btn green lg block" style="margin-top:10px" onclick="confirmRuta('${o.id}')">${ic('truck',18)} Enviado al repartidor</button>`);
 }
 function confirmRuta(id){ const o=orderById(id); setStatus(o,"en_ruta"); save(); closeSheet(); toast("Comanda en ruta", ()=>revertStatus(id)); }
