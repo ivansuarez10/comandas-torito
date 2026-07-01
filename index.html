@@ -1493,8 +1493,14 @@ async function autollenarPedido(btn){
   let items=[], unknown=[], ambiguous=[], usedAI=false;
   if(text.trim()){
     const old=btn?btn.innerHTML:''; if(btn){ btn.disabled=true; btn.innerHTML=ic('clock',17)+' Leyendo…'; }
-    try{ const r=await aiParse(text); items=r.items; unknown=r.unknown; ambiguous=r.ambiguous||[]; usedAI=true; }
-    catch(e){ const r=parseOrderText(text); items=r.items; unknown=r.unknown; ambiguous=r.ambiguous||[]; } // fallback local
+    // Las líneas AMBIGUAS (res/cerdo/pollo) se detectan local (determinista) y NO se mandan a la IA → SIEMPRE se confirman (la IA tiende a adivinar res).
+    const lines=text.split(/[\n\r]+/).map(l=>l.trim()).filter(Boolean);
+    const ambLocal=[], clearLines=[];
+    for(const raw of lines){ const {qty,rest}=_extractQty(raw); const a=_ambig(rest); if(a) ambLocal.push({line:raw,qty,options:a.options}); else clearLines.push(raw); }
+    const clearText=clearLines.join('\n');
+    try{ const r = clearText.trim()? await aiParse(clearText) : {items:[],unknown:[],ambiguous:[]};
+      items=r.items; unknown=r.unknown; ambiguous=(r.ambiguous||[]).concat(ambLocal); usedAI=true; }
+    catch(e){ const r=parseOrderText(text); items=r.items; unknown=r.unknown; ambiguous=r.ambiguous||[]; } // fallback local (todo)
     if(btn){ btn.disabled=false; btn.innerHTML=old; }
     draft.lastParse={items, unknown, ambiguous, ai:usedAI}; // alimenta el panel de validación
   }
