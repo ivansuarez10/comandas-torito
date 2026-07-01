@@ -9,8 +9,9 @@
   "background_color": "#F5F5F7",
   "theme_color": "#9F2629",
   "icons": [
-    { "src": "assets/torito-badge.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "assets/torito-badge.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "assets/torito-badge.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "assets/torito-icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/torito-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/torito-icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" },
+    { "src": "assets/torito-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
