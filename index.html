@@ -638,6 +638,36 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 @media(prefers-reduced-motion:reduce){ .kcol.urge::before{animation:none;opacity:.45} }
 /* En celular angosto: header admin más limpio (el logo grande + En línea + Salir apretaban) */
 @media(max-width:430px){ .topbar .tb-pill{display:none} .topbar .tb-logo{height:22px} .topbar .badge{width:40px;height:40px} .tb-role{font-size:14px;padding-left:9px} .ctop-sync #syncClock{display:none} }
+/* Login: footer de derechos reservados */
+.login-foot{margin-top:26px;font-size:11.5px;color:var(--muted-2);line-height:1.6;letter-spacing:.02em}
+.login-foot span{font-size:10.5px;opacity:.8}
+/* Catálogo: fila con lápiz + basura, agotados en gris */
+.cat-erow .ce-name{font-weight:600;font-size:14.5px;color:var(--ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ce-offtag{font-size:10px;font-weight:800;color:#8a5a06;background:#FBF0D9;padding:1px 7px;border-radius:6px;letter-spacing:.03em;text-transform:uppercase}
+.ce-newtag{font-size:10px;font-weight:700;color:var(--rojo);background:#FBECEC;padding:1px 7px;border-radius:6px}
+.cat-erow.off{opacity:.55}
+.cat-erow.off .ce-name{color:var(--muted)}
+.ce-icon{flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--muted-2);border-radius:9px;cursor:pointer}
+.ce-icon:hover{background:#F0F0F3;color:var(--ink)}
+.ce-icon.ce-del:hover{background:#FBECEC;color:var(--rojo)}
+/* Editor de producto (modal): unidad + toggles */
+.unit-seg button{flex:1;padding:11px 6px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:600;font-size:13.5px;color:var(--muted);cursor:pointer}
+.unit-seg button.on{background:var(--rojo);border-color:var(--rojo);color:#fff}
+.cat-tgs{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.cat-tg{flex:1;min-width:140px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:700;padding:11px;border-radius:11px;border:1.5px solid var(--line);background:#fff;color:var(--muted);cursor:pointer}
+.cat-tg.on{background:#FBECEC;border-color:var(--rojo);color:var(--rojo)}
+.cat-tg.danger.on{background:#FBF0D9;border-color:#A9741A;color:#8a5a06}
+/* Carnicero: header con logo del torito centrado + PRODUCCIÓN al lado (como admin), más grande */
+.ctop-brand-h{flex-direction:row!important;align-items:center;justify-content:center;gap:12px}
+.ctop-badge{width:42px;height:42px;border-radius:50%;flex:none}
+.ctop-brand-h .ctop-logo{height:26px;width:auto}
+.ctop-role{font-family:var(--font);font-weight:800;font-size:15px;letter-spacing:.1em;color:var(--rojo);padding-left:11px;border-left:2px solid var(--line);line-height:1}
+/* Carnicero: menos "negritas", font un poco más grande */
+.kanban .kcard2 .kname{font-weight:700;font-size:22px}
+.kanban .kcard2 .kitems{font-size:15.5px}
+.kanban .kcard2 .kitems b{font-weight:700}
+.kanban .kcol-head .kn{font-weight:700;font-size:18px}
+@media(max-width:430px){ .ctop-brand-h .ctop-logo{height:22px} .ctop-badge{width:36px;height:36px} .ctop-role{font-size:13px;padding-left:8px} }
 /* Panel de validación del autollenar */
 .parse-prev{margin-top:11px;background:var(--card);border-radius:13px;box-shadow:var(--sh-card);padding:11px 12px}
 .pp-head{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -691,6 +721,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
     </div>
     <button class="login-go" id="loginGo" disabled>Entrar</button>
     <div class="login-err" id="loginErr"></div>
+    <div class="login-foot">© 2026 El Torito Carnicería · Todos los derechos reservados<br><span>Uso interno · acceso autorizado</span></div>
   </div>
 </div>
 
@@ -761,7 +792,7 @@ const CAT_NAMES=()=>CAT.map(g=>g.cat);
 const CATALOG_VERSION='2026-06';
 if(localStorage.getItem('ct_v2_cat_ver')!==CATALOG_VERSION){ localStorage.removeItem('ct_v2_prices'); localStorage.setItem('ct_v2_cat_ver',CATALOG_VERSION); }
 // Ediciones del catálogo (nombres, productos nuevos, quitados) persistidas en este dispositivo.
-function loadCatMeta(){ try{ return Object.assign({names:{},custom:[],removed:[],weigh:{}}, JSON.parse(localStorage.getItem('ct_v2_catmeta')||'{}')); }catch(e){ return {names:{},custom:[],removed:[],weigh:{}}; } }
+function loadCatMeta(){ const def={names:{},custom:[],removed:[],weigh:{},units:{},disabled:{}}; try{ return Object.assign({},def, JSON.parse(localStorage.getItem('ct_v2_catmeta')||'{}')); }catch(e){ return def; } }
 let CATMETA=loadCatMeta();
 function saveCatMeta(){ localStorage.setItem('ct_v2_catmeta', JSON.stringify(CATMETA)); }
 function applyPriceOverrides(){ try{ const o=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}'); PRODUCTS.forEach(p=>{ if(o[p.id]!==undefined) p.price=o[p.id]; }); }catch(e){} }
@@ -769,13 +800,14 @@ function applyPriceOverrides(){ try{ const o=JSON.parse(localStorage.getItem('ct
 const PRODUCTS=[];
 function rebuildCatalog(){
   PRODUCTS.length=0; let idx=0;
+  const uov=(CATMETA&&CATMETA.units)||{}, dis=(CATMETA&&CATMETA.disabled)||{};
   CAT.forEach(g=>g.items.forEach(([name,d])=>{
     const id=g.cat.slice(0,2).toLowerCase()+"_"+idx; idx++;
     if(CATMETA.removed.includes(id)) return;
-    PRODUCTS.push({id, cat:g.cat, name:CATMETA.names[id]||name, unit:d.unit, price:d.price, weigh:!!d.weigh, custom:false});
+    PRODUCTS.push({id, cat:g.cat, name:CATMETA.names[id]||name, unit:uov[id]||d.unit, price:d.price, weigh:!!d.weigh, custom:false, disabled:!!dis[id]});
   }));
   (CATMETA.custom||[]).forEach(c=>{ if(CATMETA.removed.includes(c.id)) return;
-    PRODUCTS.push({id:c.id, cat:c.cat, name:CATMETA.names[c.id]||c.name, unit:c.unit||'Libra', price:(c.price==null?null:c.price), weigh:false, custom:true}); });
+    PRODUCTS.push({id:c.id, cat:c.cat, name:CATMETA.names[c.id]||c.name, unit:uov[c.id]||c.unit||'Libra', price:(c.price==null?null:c.price), weigh:false, custom:true, disabled:!!dis[c.id]}); });
   const wov=(CATMETA&&CATMETA.weigh)||{};
   PRODUCTS.forEach(p=>{ p.weigh = (wov[p.id]!==undefined) ? !!wov[p.id] : VALIDATE_WEIGHT.has(p.name); }); // premium por defecto, editable por producto
   applyPriceOverrides();
@@ -795,15 +827,42 @@ function addCatalogProduct(cat){
   const id='cst_'+Date.now().toString(36);
   CATMETA.custom.push({id, cat, name:'Nuevo producto', unit:'Libra', price:null});
   saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); rerender();
-  setTimeout(()=>{ const el=document.querySelector('[data-catname="'+id+'"]'); if(el){ el.focus(); el.select(); } },60);
-  toast('Producto agregado — ponle nombre y precio'); }
+  openCatalogEdit(id); // abrir el editor de una vez para el producto nuevo
+  toast('Producto nuevo — edita nombre, unidad y precio'); }
 function removeCatalogProduct(id){ const p=prodById(id); if(!p) return;
   if(!confirm('¿Quitar "'+p.name+'" del catálogo?')) return;
   if(p.custom){ CATMETA.custom=CATMETA.custom.filter(c=>c.id!==id); } else if(!CATMETA.removed.includes(id)){ CATMETA.removed.push(id); }
-  delete CATMETA.names[id]; if(CATMETA.weigh) delete CATMETA.weigh[id]; saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); rerender(); toast('Producto quitado'); }
-function setCatalogWeigh(id,on){ const p=prodById(id); if(!p) return; if(!CATMETA.weigh) CATMETA.weigh={};
-  CATMETA.weigh[id]=!!on; saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); rerender();
-  toast(on?(p.name+' → se valida el peso'):(p.name+' → sin validar peso')); }
+  ['names','weigh','units','disabled'].forEach(k=>{ if(CATMETA[k]) delete CATMETA[k][id]; });
+  saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); rerender(); toast('Producto quitado'); }
+/* Editor por producto (lápiz): nombre, unidad, precio, validar-peso, agotado */
+const UNITS=["Libra","Media","Paquete","Unidad"];
+let currentCatEdit=null, ceUnit='Libra';
+function openCatalogEdit(id){ const p=prodById(id); if(!p) return; currentCatEdit=id; ceUnit=p.unit;
+  $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeCatEdit()">
+    <div class="sheet" style="max-width:460px"><div class="sheet-head"><span class="sh-name">Editar producto</span><button class="x" onclick="closeCatEdit()">${ic('x',16)}</button></div>
+    <div class="sheet-body">
+      <div class="field"><label>Nombre</label><input class="inp" id="ceName" value="${esc(p.name)}"></div>
+      <div class="field"><label>Unidad de venta</label>
+        <div class="seg unit-seg">${UNITS.map(u=>`<button type="button" class="${p.unit===u?'on':''}" onclick="ceUnit='${u}';document.querySelectorAll('.unit-seg button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${u}</button>`).join('')}</div></div>
+      <div class="field"><label>Precio (L) — vacío = por encargo</label><input class="inp" id="cePrice" inputmode="decimal" value="${p.price==null?'':p.price}"></div>
+      <div class="cat-tgs">
+        <button type="button" class="cat-tg ${p.weigh?'on':''}" id="ceWeigh" onclick="this.classList.toggle('on')">${ic('check',14)} Validar peso</button>
+        <button type="button" class="cat-tg danger ${p.disabled?'on':''}" id="ceOff" onclick="this.classList.toggle('on')">${ic('x',14)} Agotado (deshabilitar)</button>
+      </div>
+      <button class="btn red lg block" style="margin-top:14px" onclick="saveCatEdit()">${ic('check',17)} Guardar</button>
+    </div></div></div>`;
+}
+function closeCatEdit(){ $("#overlayHost").innerHTML=''; currentCatEdit=null; }
+function saveCatEdit(){ const id=currentCatEdit; const p=prodById(id); if(!p) return;
+  const name=(($("#ceName")||{}).value||'').trim(); if(!name){ toast('El nombre no puede quedar vacío'); return; }
+  const priceRaw=($("#cePrice")||{}).value; const weigh=$("#ceWeigh").classList.contains('on'); const off=$("#ceOff").classList.contains('on');
+  CATMETA.names[id]=name;
+  if(!CATMETA.units) CATMETA.units={}; CATMETA.units[id]=ceUnit;
+  if(!CATMETA.weigh) CATMETA.weigh={}; CATMETA.weigh[id]=weigh;
+  if(!CATMETA.disabled) CATMETA.disabled={}; if(off) CATMETA.disabled[id]=true; else delete CATMETA.disabled[id];
+  let n=(priceRaw===''||priceRaw==null)?null:parseFloat(String(priceRaw).replace(',','.')); if(n!=null&&isNaN(n)) n=null;
+  let po={}; try{po=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}');}catch(e){} if(n==null) delete po[id]; else po[id]=n; localStorage.setItem('ct_v2_prices',JSON.stringify(po));
+  saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); closeCatEdit(); rerender(); toast('Producto actualizado'); }
 
 /* ============ PARSER DE PEDIDO (autollenar desde texto pegado) ============ */
 // Diccionario de apodos/coloquialismos → producto del catálogo. ORDEN IMPORTA (específico antes que genérico).
@@ -874,12 +933,13 @@ function _extractQty(line){
     .trim();
   return {qty:qty>0?qty:1, rest};
 }
+const _isEnabled=name=>{ const p=prodByName(name); return p && !p.disabled; };
 function _matchProduct(rest){
   const n=_norm(rest); if(n.replace(/\s/g,'').length<2) return null;
-  for(const [keys,prod] of ALIASES){ for(const k of keys){ if(n.includes(_norm(k))) return prod; } }
-  // coincidencia difusa por tokens
+  for(const [keys,prod] of ALIASES){ for(const k of keys){ if(n.includes(_norm(k))) return _isEnabled(prod)?prod:null; } } // agotado → no lo mapea
+  // coincidencia difusa por tokens (ignora agotados)
   let best=null,bs=0;
-  for(const p of PRODUCTS){ const b=_norm(p.name); const A=n.split(' '),B=b.split(' ');
+  for(const p of PRODUCTS){ if(p.disabled) continue; const b=_norm(p.name); const A=n.split(' '),B=b.split(' ');
     let c=0; A.forEach(t=>{ if(t.length>2 && B.some(u=>u.includes(t)||t.includes(u))) c++; });
     const sc=c/Math.max(A.length,B.length); if(sc>bs){bs=sc;best=p.name;} }
   return bs>=0.5?best:null;
@@ -1025,14 +1085,14 @@ async function dbFetchCatalog(){
     const {data,error}=await supa.from('app_config').select('value').eq('key','catalog').maybeSingle();
     if(error||!data||!data.value) return;
     const v=data.value;
-    CATMETA={names:v.names||{}, custom:v.custom||[], removed:v.removed||[], weigh:v.weigh||{}};
+    CATMETA={names:v.names||{}, custom:v.custom||[], removed:v.removed||[], weigh:v.weigh||{}, units:v.units||{}, disabled:v.disabled||{}};
     localStorage.setItem('ct_v2_catmeta', JSON.stringify(CATMETA));
     localStorage.setItem('ct_v2_prices', JSON.stringify(v.prices||{}));
     rebuildCatalog();
   }catch(e){ /* tabla aún no existe → sigue en modo local */ }
 }
 function catalogBlob(){ let prices={}; try{prices=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}');}catch(e){}
-  return {names:CATMETA.names||{}, custom:CATMETA.custom||[], removed:CATMETA.removed||[], weigh:CATMETA.weigh||{}, prices}; }
+  return {names:CATMETA.names||{}, custom:CATMETA.custom||[], removed:CATMETA.removed||[], weigh:CATMETA.weigh||{}, units:CATMETA.units||{}, disabled:CATMETA.disabled||{}, prices}; }
 let catSaveT=null;
 function dbSaveCatalog(){ if(!USE_SUPA) return; clearTimeout(catSaveT); catSaveT=setTimeout(async()=>{
   try{ await supa.from('app_config').upsert({key:'catalog', value:catalogBlob(), updated_at:new Date().toISOString()}); }
@@ -1334,7 +1394,7 @@ function adminNueva(){
       </summary>
       ${prodOpen?`
       <div class="cat-tabs">${CAT.map(g=>`<button class="${nuevaCat===g.cat?'on':''}" onclick="nuevaCat='${g.cat}';initNueva()">${g.cat}</button>`).join("")}</div>
-      <div class="prod-grid">${PRODUCTS.filter(p=>p.cat===nuevaCat).map(p=>`
+      <div class="prod-grid">${PRODUCTS.filter(p=>p.cat===nuevaCat && !p.disabled).map(p=>`
         <button class="pchip" onclick="addItem('${p.id}')">
           <div class="pn">${esc(p.name)}</div>
           <div class="pp">${p.price==null?'por encargo':money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div>
@@ -1405,7 +1465,7 @@ async function aiParse(text){
     const r=await fetch(SUPA_URL+'/functions/v1/parse-order',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY,'apikey':SUPA_KEY},
-      body:JSON.stringify({text, catalog:PRODUCTS.map(p=>p.name)}),
+      body:JSON.stringify({text, catalog:PRODUCTS.filter(p=>!p.disabled).map(p=>p.name)}),
       signal:ctrl.signal
     });
     clearTimeout(to);
@@ -1548,22 +1608,20 @@ function adminReporte(){
 
 /* ----- CATÁLOGO ----- */
 function adminCatalogo(){
-  return `<div class="view-head"><div><h2>Menú y precios</h2><div class="vh-sub">${PRODUCTS.length} productos · edita nombre y precio, agrega o quita</div></div></div>
-    <div class="cat-note">${ic('tag',15)} Los cambios se aplican a las comandas <b>nuevas</b>. Las ya creadas conservan su precio y nombre. Precio vacío = “por encargo”.</div>
+  const uAbbr=u=>u==='Libra'?'lb':u==='Unidad'?'u':u;
+  return `<div class="view-head"><div><h2>Menú y precios</h2><div class="vh-sub">${PRODUCTS.length} productos · toca el lápiz para editar</div></div></div>
+    <div class="cat-note">${ic('tag',15)} Los cambios se aplican a las comandas <b>nuevas</b>. Producto <b>agotado</b> = la IA no lo interpreta y no aparece para pedir (lo re-activas cuando vuelva).</div>
     ${CAT_NAMES().map(cat=>`
       <div class="sect-label">${esc(cat)}</div>
       <div class="cat-elist">
       ${PRODUCTS.filter(p=>p.cat===cat).map(p=>`
-        <div class="cat-erow">
+        <div class="cat-erow${p.disabled?' off':''}">
           <div class="ce-info">
-            <input class="ce-nameinp" data-catname="${p.id}" value="${esc(p.name)}" onchange="setCatalogName('${p.id}',this.value)">
-            <div class="ce-meta">
-              <span class="ce-unit">${p.unit}${p.custom?' · nuevo':''}</span>
-              <button class="ce-wtog ${p.weigh?'on':''}" onclick="setCatalogWeigh('${p.id}',${p.weigh?'false':'true'})">${p.weigh?ic('check',11)+' ':''}validar peso</button>
-            </div>
+            <div class="ce-name">${esc(p.name)}${p.disabled?' <span class="ce-offtag">Agotado</span>':''}${p.custom?' <span class="ce-newtag">nuevo</span>':''}</div>
+            <div class="ce-unit">${p.unit} · ${p.price==null?'por encargo':money(p.price)+'/'+uAbbr(p.unit)}${p.weigh?' · validar peso':''}</div>
           </div>
-          <label class="ce-price"><span class="ce-l">L</span><input class="ce-inp" inputmode="decimal" value="${p.price==null?'':p.price}" placeholder="encargo" onchange="setCatalogPrice('${p.id}',this.value)" onfocus="this.select()"><span class="ce-u">/${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></label>
-          <button class="ce-del" onclick="removeCatalogProduct('${p.id}')" aria-label="Quitar producto">${ic('trash',15)}</button>
+          <button class="ce-icon" onclick="openCatalogEdit('${p.id}')" aria-label="Editar">${ic('edit',15)}</button>
+          <button class="ce-icon ce-del" onclick="removeCatalogProduct('${p.id}')" aria-label="Quitar">${ic('trash',15)}</button>
         </div>`).join("")}
       <button class="cat-add btn-ic" onclick="addCatalogProduct('${esc(cat)}')">${ic('plus',15)} Agregar producto a ${esc(cat)}</button>
       </div>`).join("")}
@@ -1592,12 +1650,13 @@ function openAdminOrder(id){
     actions=`<div class="kempty">${ic('knife',16)} En preparación.</div>`;
   }
   const msg = waMessage(o);
+  const showClientMsg = ["espera_pago","preparacion"].includes(o.status); // en Por entregar/En ruta ya no se le pide pago
   sheet(o, `
     ${lines}
     ${o.shipping?`<div class="kv"><span class="k">Subtotal productos</span><span class="v">${money(orderTotal(o))}</span></div>
     <div class="kv"><span class="k">${ic('truck',15)} Envío</span><span class="v">${money(o.shipping)}</span></div>`:""}
     <div class="total-bar"><span class="tl">Total${o.paid?' · PAGADO':''}</span><span class="tv">${money(fullTotal(o))}</span></div>
-    ${cotizado? `
+    ${showClientMsg? `
       <div class="sect-label" style="margin-top:6px">Mensaje para el cliente</div>
       <div class="msgbox" id="waBox">${esc(msg)}</div>
       <button class="btn green block btn-ic" style="margin-top:8px" onclick="waSendClient('${o.id}')">${ic('send',16)} Enviar por WhatsApp</button>
@@ -1653,7 +1712,7 @@ function renderCarnicero(){
   $("#app").innerHTML =
    `<div class="ctop">
       <button class="ctop-out" onclick="logout()">${ic('left',18)} Salir</button>
-      <div class="ctop-brand"><img src="assets/torito-wordmark.svg" class="ctop-logo" alt="El Torito Carnicería"><div class="ctop-sub">Producción</div></div>
+      <div class="ctop-brand ctop-brand-h"><img src="assets/torito-badge.png" class="ctop-badge" alt=""><img src="assets/torito-wordmark.svg" class="ctop-logo" alt="El Torito Carnicería"><span class="ctop-role">PRODUCCIÓN</span></div>
       <button class="ctop-sync" id="syncBtn" onclick="manualSync()" aria-label="Actualizar tablero">${ic('sync',16)}<span id="syncClock">actualizado ahora</span></button>
    </div>
    <div class="kanban-wrap">
@@ -1884,7 +1943,7 @@ function openAddProduct(){
 function renderAddGrid(){
   const t=$("#addTabs"); if(t) t.innerHTML=CAT.map(g=>`<button class="${addCat===g.cat?'on':''}" onclick="addCat='${g.cat}';renderAddGrid()">${g.cat}</button>`).join('');
   const g=$("#addGrid"); if(!g) return;
-  g.innerHTML=PRODUCTS.filter(p=>p.cat===addCat).map(p=>`<button class="pchip" onclick="pickAdd('${p.id}')"><div class="pn">${esc(p.name)}</div><div class="pp">${p.price==null?'por encargo':money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div></button>`).join('');
+  g.innerHTML=PRODUCTS.filter(p=>p.cat===addCat && !p.disabled).map(p=>`<button class="pchip" onclick="pickAdd('${p.id}')"><div class="pn">${esc(p.name)}</div><div class="pp">${p.price==null?'por encargo':money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div></button>`).join('');
 }
 function pickAdd(id){ const p=prodById(id);
   editItems.push({prodId:p.id,name:p.name,unit:p.unit,price:p.price,weigh:p.weigh,qty:1,available:true,weight:p.weigh?1:null,note:''});
