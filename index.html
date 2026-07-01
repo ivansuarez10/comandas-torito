@@ -1130,10 +1130,13 @@ async function togglePush(){
   }catch(e){ toast('No pude activar los avisos: '+(e.message||e)); }
 }
 // Al crear una comanda nueva, dispara el push al dispositivo del carnicero (fire-and-forget).
-function notifyNewOrder(o){ if(!USE_SUPA||!o) return;
+// exclude = la suscripción de ESTE dispositivo → nunca se avisa a sí mismo (el que crea no suena).
+async function notifyNewOrder(o){ if(!USE_SUPA||!o) return;
+  let exclude='';
+  try{ if(pushSupported()){ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if(sub) exclude=sub.endpoint; } }catch(e){}
   try{ fetch(SUPA_URL+'/functions/v1/notify-order',{ method:'POST',
     headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},
-    body:JSON.stringify({folio:o.folio, clientName:o.clientName, count:(o.items||[]).length}) }).catch(()=>{}); }catch(e){} }
+    body:JSON.stringify({folio:o.folio, clientName:o.clientName, count:(o.items||[]).length, exclude}) }).catch(()=>{}); }catch(e){} }
 
 /* ============ HELPERS ============ */
 const $=(s,el=document)=>el.querySelector(s);
