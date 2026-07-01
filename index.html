@@ -726,7 +726,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
     </div>
     <div class="pin-wrap">
       <label id="pinLabel">Selecciona un acceso</label>
-      <input class="pin-input" id="pinInput" type="tel" inputmode="numeric" maxlength="4" placeholder="• • • •" disabled autocomplete="off">
+      <input class="pin-input" id="pinInput" type="password" placeholder="Contraseña" disabled autocomplete="current-password">
     </div>
     <button class="login-go" id="loginGo" disabled>Entrar</button>
     <div class="login-err" id="loginErr"></div>
@@ -744,7 +744,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 <script>
 "use strict";
 /* ============ CONFIG ============ */
-const CREDS = { admin:"1970", carnicero:"0707" };
+const CREDS = { admin:"1970", carnicero:"0707" }; // fallback SOLO si no hay nube (Supabase Auth es el login real)
+const AUTH_EMAILS = { admin:"admin@eltorito.hn", carnicero:"carnicero@eltorito.hn" }; // cuentas reales en Supabase
 const PAY_INFO = "Cliente: IVAN ALEJANDRO SUAREZ VELASQUEZ\nNúmero de cuenta BAC: 729447561";
 const REPARTIDOR_PHONE = "50431565418"; // WhatsApp del repartidor (+504 3156-5418).
 // Abre WhatsApp Web (en la compu, con la sesión Business) o la app, con el mensaje ya escrito. No auto-envía.
@@ -1075,17 +1076,29 @@ function dbSyncAll(){ clearTimeout(syncT); syncT=setTimeout(async()=>{
 function dbDelete(id){ if(USE_SUPA) supa.from('orders').delete().eq('id',id).then(({error})=>{ if(error) console.warn('Supabase delete:',error.message); }); }
 let refetchT=null;
 function scheduleRefetch(){ clearTimeout(refetchT); refetchT=setTimeout(async()=>{ await dbFetch(); lastSync=Date.now(); if(session.role==='admin' && !safeToRefreshAdmin()) return; rerender(); },250); }
+let realtimeSubbed=false;
 async function initSupa(){
   supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);
   USE_SUPA=true; state={orders:[],history:[],clients:[],seq:43};
-  await dbFetchCatalog(); // catálogo de la nube antes de renderizar
+  // ¿hay sesión guardada? → entrar directo sin pedir contraseña de nuevo
+  try{ const {data}=await supa.auth.getSession(); const sess=data&&data.session;
+    if(sess){ const role=(sess.user&&sess.user.email===AUTH_EMAILS.carnicero)?'carnicero':'admin'; await enterApp(role); }
+  }catch(e){}
+}
+// Trae datos + se suscribe a tiempo real. Corre DESPUÉS de autenticar (con RLS cerrada requiere sesión).
+async function initSupaData(){
+  await dbFetchCatalog();
   await dbFetch();
   if(state.orders.length===0 && state.history.length===0){ await seedToDb(); await dbFetch(); }
-  archiveStaleListas(); rerender();
-  supa.channel('orders-rt').on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>scheduleRefetch()).subscribe();
-  supa.channel('config-rt').on('postgres_changes',{event:'*',schema:'public',table:'app_config'},()=>{
-    dbFetchCatalog().then(()=>{ if(editingCatalog()) return; if(session.role==='admin' && !safeToRefreshAdmin()) return; rerender(); });
-  }).subscribe();
+  archiveStaleListas();
+  // pasar el token de sesión al tiempo real (necesario cuando la base está cerrada por RLS)
+  try{ const {data}=await supa.auth.getSession(); if(data&&data.session&&supa.realtime&&supa.realtime.setAuth) supa.realtime.setAuth(data.session.access_token); }catch(e){}
+  if(!realtimeSubbed){ realtimeSubbed=true;
+    supa.channel('orders-rt').on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>scheduleRefetch()).subscribe();
+    supa.channel('config-rt').on('postgres_changes',{event:'*',schema:'public',table:'app_config'},()=>{
+      dbFetchCatalog().then(()=>{ if(editingCatalog()) return; if(session.role==='admin' && !safeToRefreshAdmin()) return; rerender(); });
+    }).subscribe();
+  }
 }
 /* ===== Sync del CATÁLOGO en la nube (tabla app_config, opcional; funciona antes/después de crearla) ===== */
 const editingCatalog=()=>adminView==='catalogo' && document.activeElement && (document.activeElement.classList.contains('ce-inp')||document.activeElement.classList.contains('ce-nameinp'));
@@ -1232,23 +1245,42 @@ document.querySelectorAll(".role-btn").forEach(b=>b.onclick=()=>{
   selRole=b.dataset.role;
   document.querySelectorAll(".role-btn").forEach(x=>x.classList.toggle("sel",x===b));
   const pin=$("#pinInput"); pin.disabled=false; pin.value=""; pin.focus();
-  $("#pinLabel").textContent = selRole==="admin"?"PIN de Administrador":"PIN de Carniceros";
+  $("#pinLabel").textContent = selRole==="admin"?"Contraseña de Administrador":"Contraseña de Carniceros";
   $("#loginErr").textContent=""; $("#loginGo").disabled=false;
 });
-$("#pinInput").addEventListener("input",e=>{ e.target.value=e.target.value.replace(/\D/g,""); $("#loginErr").textContent=""; });
+$("#pinInput").addEventListener("input",()=>{ $("#loginErr").textContent=""; });
 $("#pinInput").addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
 $("#loginGo").onclick=doLogin;
-function doLogin(){
+async function doLogin(){
   if(!selRole) return;
-  const pin=$("#pinInput").value;
-  if(pin!==CREDS[selRole]){ $("#loginErr").textContent="PIN incorrecto. Intenta de nuevo."; $("#pinInput").value=""; $("#pinInput").focus(); return; }
-  session.role=selRole; if(!USE_SUPA){ load(); } archiveStaleListas();
+  const pw=$("#pinInput").value;
+  if(!pw){ $("#loginErr").textContent="Escribe la contraseña."; $("#pinInput").focus(); return; }
+  if(!USE_SUPA){ // sin nube → fallback local con PIN
+    if(pw!==CREDS[selRole]){ $("#loginErr").textContent="Contraseña incorrecta."; $("#pinInput").value=""; return; }
+    load(); await enterApp(selRole); return;
+  }
+  const go=$("#loginGo"); go.disabled=true; $("#loginErr").textContent="Entrando…";
+  try{
+    const {error}=await supa.auth.signInWithPassword({email:AUTH_EMAILS[selRole], password:pw});
+    if(error){ const m=(error.message||'').toLowerCase();
+      $("#loginErr").textContent = m.includes('confirm')?'La cuenta no está confirmada en Supabase (márcala como confirmada).'
+        : m.includes('credential')?'Contraseña incorrecta (o el correo de la cuenta no coincide).'
+        : ('No pude entrar: '+error.message);
+      $("#pinInput").value=""; $("#pinInput").focus(); go.disabled=false; return; }
+    await enterApp(selRole);
+  }catch(e){ $("#loginErr").textContent="No pude entrar. Revisa la conexión."; go.disabled=false; }
+}
+async function enterApp(role){
+  session.role=role;
+  if(USE_SUPA) await initSupaData(); else archiveStaleListas();
   unlockAudio(); // activar sonido dentro del gesto del login (necesario en iPad)
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
+  $("#loginErr").textContent=""; $("#loginGo").disabled=false;
   startClock(); rerender();
-  if(selRole==='carnicero') refreshPushState().then(()=>{ if(session.role==='carnicero') renderCarnicero(); });
+  if(role==='carnicero') refreshPushState().then(()=>{ if(session.role==='carnicero') renderCarnicero(); });
 }
 function logout(){ session.role=null; clearInterval(clockT);
+  if(USE_SUPA && supa){ try{ supa.auth.signOut(); }catch(e){} }
   $("#app").classList.add("hidden"); $("#overlayHost").innerHTML=""; $("#login").classList.remove("hidden");
   selRole=null; document.querySelectorAll(".role-btn").forEach(x=>x.classList.remove("sel"));
   $("#pinInput").value=""; $("#pinInput").disabled=true; $("#loginGo").disabled=true; $("#pinLabel").textContent="Selecciona un acceso";
@@ -2100,8 +2132,8 @@ function sheet(o,bodyHtml,titleOverride){
 function closeSheet(){ $("#overlayHost").innerHTML=""; currentSheetId=null; editItems=null; rerender(); }
 
 /* ============ INIT ============ */
-if(window.supabase && SUPA_URL){ initSupa().catch(e=>{ console.warn('Supabase init falló, modo local:',e); load(); archiveStaleListas(); }); }
-else { load(); archiveStaleListas(); }
+if(window.supabase && SUPA_URL){ initSupa().catch(e=>{ console.warn('Supabase init falló, modo local:',e); USE_SUPA=false; load(); archiveStaleListas(); }); }
+else { USE_SUPA=false; load(); archiveStaleListas(); }
 
 /* ===== PWA: instalable + offline (service worker) ===== */
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
