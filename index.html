@@ -1114,7 +1114,14 @@ let pushOn=false;
 const pushSupported=()=>('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
 function urlB64ToU8(b){ const pad='='.repeat((4-b.length%4)%4); const s=(b+pad).replace(/-/g,'+').replace(/_/g,'/'); const raw=atob(s); const a=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++)a[i]=raw.charCodeAt(i); return a; }
 async function refreshPushState(){ try{ if(!pushSupported()) return; const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); pushOn=!!sub; }catch(e){ pushOn=false; } }
-async function savePushSub(sub){ if(!USE_SUPA) return; const j=sub.toJSON();
+function deviceLabel(){ const u=navigator.userAgent||'';
+  if(/iPhone/.test(u)) return 'iPhone';
+  if(/iPad/.test(u)) return 'iPad';
+  if(/Android/.test(u)) return 'Android';
+  if(/Macintosh|Mac OS/.test(u)) return 'Mac';
+  if(/Windows/.test(u)) return 'PC Windows';
+  return 'Dispositivo'; }
+async function savePushSub(sub){ if(!USE_SUPA) return; const j=sub.toJSON(); j.label=deviceLabel();
   try{ await supa.from('push_subs').upsert({endpoint:j.endpoint, sub:j, created_at:new Date().toISOString()}); }catch(e){ console.warn('push sub:',e.message); } }
 async function removePushSub(endpoint){ if(!USE_SUPA) return; try{ await supa.from('push_subs').delete().eq('endpoint',endpoint); }catch(e){} }
 async function togglePush(){
@@ -1297,6 +1304,7 @@ function renderAdmin(){
   else if(adminView==="reporte") content=adminReporte();
   else if(adminView==="historico") content=adminHistorico();
   else if(adminView==="catalogo") content=adminCatalogo();
+  else if(adminView==="dispositivos") content=adminDispositivos();
 
   $("#app").innerHTML = topbar(
     `<span class="tb-pill"><span class="tb-dot"></span> En línea</span>`
@@ -1672,8 +1680,35 @@ function adminResumen(g){
     <div class="sect-label">Top clientes</div><div class="rank">${rank(byCli,4)||'<div class="kempty">Sin datos</div>'}</div>
     <div class="sect-label">Histórico</div>
     <button class="hist-link card" onclick="go('historico')"><span class="act-ic">${ic('history',20)}</span><span class="hist-tx"><b>${(state.history||[]).length} comandas archivadas</b><small>Entregadas de días anteriores</small></span><span class="hist-ch">${ic('right',18)}</span></button>
+    <div class="sect-label">Avisos</div>
+    <button class="hist-link card" onclick="go('dispositivos')"><span class="act-ic">${ic('bell',20)}</span><span class="hist-tx"><b>Dispositivos con avisos</b><small>Ver y quitar dónde suenan las comandas</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div style="height:24px"></div>`;
 }
+/* ----- DISPOSITIVOS CON AVISOS (push) ----- */
+function adminDispositivos(){ loadDispositivos();
+  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Dispositivos con avisos</h2><div class="vh-sub">Aquí suenan las comandas nuevas (el carnicero)</div></div></div>
+    <div class="cat-note">${ic('bell',15)} Cada dispositivo que tocó “Activar avisos” aparece aquí. Puedes quitar los que ya no uses. El dispositivo que <b>crea</b> la comanda no se avisa a sí mismo.</div>
+    <div id="devList"><div class="kempty">${ic('sync',18)} Cargando…</div></div>
+    <div style="height:24px"></div>`;
+}
+async function loadDispositivos(){
+  const el=()=>$("#devList"); if(!USE_SUPA){ if(el())el().innerHTML='<div class="kempty">Solo disponible en modo nube.</div>'; return; }
+  try{
+    const {data,error}=await supa.from('push_subs').select('endpoint,sub,created_at').order('created_at',{ascending:false});
+    if(error) throw error;
+    const c=el(); if(!c) return;
+    if(!data||!data.length){ c.innerHTML=`<div class="empty-state"><div class="es-ic">${ic('belloff',34)}</div><p>Ningún dispositivo con avisos.<br>En el dispositivo del carnicero: entra como Carnicero → <b>Activar avisos</b>.</p></div>`; return; }
+    c.innerHTML=`<div class="cat-elist">${data.map(d=>{
+      const label=(d.sub&&d.sub.label)|| (String(d.endpoint).includes('apple')?'Apple (iPhone/Mac)':'Android/Chrome');
+      const when=new Date(d.created_at).toLocaleString('es-HN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      return `<div class="cat-erow"><div class="ce-info"><div class="ce-name">${ic('bell',14)} ${esc(label)}</div><div class="ce-unit">Activado ${esc(when)}</div></div>
+        <button class="ce-icon ce-del" onclick="removeDispositivo('${esc(d.endpoint)}')" aria-label="Quitar">${ic('trash',15)}</button></div>`;
+    }).join('')}</div>`;
+  }catch(e){ const c=el(); if(c) c.innerHTML='<div class="kempty">No pude cargar los dispositivos.</div>'; }
+}
+async function removeDispositivo(endpoint){ if(!confirm('¿Quitar este dispositivo de los avisos?')) return;
+  try{ await supa.from('push_subs').delete().eq('endpoint',endpoint); }catch(e){}
+  toast('Dispositivo quitado'); loadDispositivos(); }
 /* ----- HISTÓRICO ----- */
 function adminHistorico(){
   const h=(state.history||[]).slice().sort((a,b)=>(b.paidAt||b.createdAt)-(a.paidAt||a.createdAt));
