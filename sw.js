@@ -1,6 +1,6 @@
 /* Comandas/Pedidos El Torito — Service Worker (app-shell offline).
    NUNCA cachea Supabase (datos + realtime deben ir siempre a la red). */
-const CACHE = 'torito-v2';
+const CACHE = 'torito-v3';
 const SHELL = [
   './',
   './index.html',
@@ -19,6 +19,34 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
   self.clients.claim();
+});
+
+/* ===== WEB PUSH: aviso de comanda nueva (funciona con app cerrada / pantalla bloqueada) ===== */
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
+  const title = d.title || 'Nueva comanda';
+  const opts = {
+    body: d.body || 'Entró un pedido nuevo',
+    icon: './assets/torito-badge.png',
+    badge: './assets/torito-badge.png',
+    tag: 'comanda-nueva',
+    renotify: true,
+    requireInteraction: true,          // la notificación queda hasta que la toquen (no se desvanece)
+    vibrate: [250, 120, 250, 120, 250], // vibración (Android)
+    data: { url: './' }
+  };
+  e.waitUntil(self.registration.showNotification(title, opts));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) { if ('focus' in c) return c.focus(); }
+      if (clients.openWindow) return clients.openWindow('./');
+    })
+  );
 });
 
 self.addEventListener('fetch', e => {

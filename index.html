@@ -672,6 +672,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .cam-btn{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border-radius:12px;border:1.5px dashed var(--line);background:#fff;color:var(--muted);font-weight:700;font-size:13.5px;cursor:pointer}
 .cam-btn:hover{border-color:var(--rojo);color:var(--rojo);background:#FBF1F1}
 .cam-btn:disabled{opacity:.7;cursor:default}
+/* Carnicero: botón "Activar avisos" (Web Push) */
+.ctop-push{display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;font-size:13px;font-weight:700;background:#EFEFF3;color:var(--muted);padding:8px 13px;border-radius:999px;flex:none}
+.ctop-push.on{background:#E6F4EA;color:#1f6b45}
+.ctop-push .cp-lbl{white-space:nowrap}
+@media(max-width:560px){ .ctop-push .cp-lbl{display:none} }
 /* Panel de validación del autollenar */
 .parse-prev{margin-top:11px;background:var(--card);border-radius:13px;box-shadow:var(--sh-card);padding:11px 12px}
 .pp-head{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -1103,6 +1108,33 @@ function dbSaveCatalog(){ if(!USE_SUPA) return; clearTimeout(catSaveT); catSaveT
   catch(e){ console.warn('Sync catálogo (¿falta tabla app_config?):', e.message); }
 },250); }
 
+/* ===== WEB PUSH (avisos con app cerrada / bloqueada — Android + iOS 16.4+) ===== */
+const VAPID_PUBLIC="BLtlaO2aaJp3fys_xuX7qVla79QXqi8haOm_I7wAkGU9_cnC6rahdPIoB5NvKGDLmxpJMZ8QYOh80rYqXejv_zY";
+let pushOn=false;
+const pushSupported=()=>('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
+function urlB64ToU8(b){ const pad='='.repeat((4-b.length%4)%4); const s=(b+pad).replace(/-/g,'+').replace(/_/g,'/'); const raw=atob(s); const a=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++)a[i]=raw.charCodeAt(i); return a; }
+async function refreshPushState(){ try{ if(!pushSupported()) return; const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); pushOn=!!sub; }catch(e){ pushOn=false; } }
+async function savePushSub(sub){ if(!USE_SUPA) return; const j=sub.toJSON();
+  try{ await supa.from('push_subs').upsert({endpoint:j.endpoint, sub:j, created_at:new Date().toISOString()}); }catch(e){ console.warn('push sub:',e.message); } }
+async function removePushSub(endpoint){ if(!USE_SUPA) return; try{ await supa.from('push_subs').delete().eq('endpoint',endpoint); }catch(e){} }
+async function togglePush(){
+  if(!pushSupported()){ toast('Este dispositivo/navegador no soporta avisos push'); return; }
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    if(pushOn){ const sub=await reg.pushManager.getSubscription(); if(sub){ await removePushSub(sub.endpoint); await sub.unsubscribe(); } pushOn=false; renderCarnicero(); toast('Avisos desactivados en este dispositivo'); return; }
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){ toast(perm==='denied'?'Permiso bloqueado. Actívalo en ajustes del navegador.':'Permiso de avisos no concedido'); return; }
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64ToU8(VAPID_PUBLIC)});
+    await savePushSub(sub);
+    pushOn=true; renderCarnicero(); toast('✓ Avisos activados en este dispositivo');
+  }catch(e){ toast('No pude activar los avisos: '+(e.message||e)); }
+}
+// Al crear una comanda nueva, dispara el push al dispositivo del carnicero (fire-and-forget).
+function notifyNewOrder(o){ if(!USE_SUPA||!o) return;
+  try{ fetch(SUPA_URL+'/functions/v1/notify-order',{ method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},
+    body:JSON.stringify({folio:o.folio, clientName:o.clientName, count:(o.items||[]).length}) }).catch(()=>{}); }catch(e){} }
+
 /* ============ HELPERS ============ */
 const $=(s,el=document)=>el.querySelector(s);
 const _num=n=>(Math.round(n*100)/100).toLocaleString("es-HN",{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2});
@@ -1204,6 +1236,7 @@ function doLogin(){
   unlockAudio(); // activar sonido dentro del gesto del login (necesario en iPad)
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   startClock(); rerender();
+  if(selRole==='carnicero') refreshPushState().then(()=>{ if(session.role==='carnicero') renderCarnicero(); });
 }
 function logout(){ session.role=null; clearInterval(clockT);
   $("#app").classList.add("hidden"); $("#overlayHost").innerHTML=""; $("#login").classList.remove("hidden");
@@ -1455,6 +1488,7 @@ function submitOrder(){
     hist:[{s:"cotizar",at:Date.now()}] };
   state.orders.unshift(o); save();
   upsertClient({phone:draft.phone, name:draft.clientName.trim(), zone:draft.zone, addr:draft.addr});
+  notifyNewOrder(o); // aviso push al dispositivo del carnicero
   toast("Comanda #"+folio+" enviada al carnicero"); go("bandeja");
 }
 /* ----- AUTOLLENAR (pegar pedido) + clientes por teléfono ----- */
@@ -1775,6 +1809,7 @@ function renderCarnicero(){
    `<div class="ctop">
       <button class="ctop-out" onclick="logout()">${ic('left',18)} Salir</button>
       <div class="ctop-brand ctop-brand-h"><img src="assets/torito-badge.png" class="ctop-badge" alt=""><img src="assets/torito-wordmark.svg" class="ctop-logo" alt="El Torito Carnicería"><span class="ctop-role">PRODUCCIÓN</span></div>
+      <button class="ctop-push ${pushOn?'on':''}" onclick="togglePush()" aria-label="${pushOn?'Avisos activados':'Activar avisos'}">${ic(pushOn?'bell':'belloff',18)}<span class="cp-lbl">${pushOn?'Avisos ON':'Activar avisos'}</span></button>
       <button class="ctop-sync" id="syncBtn" onclick="manualSync()" aria-label="Actualizar tablero">${ic('sync',16)}<span id="syncClock">actualizado ahora</span></button>
    </div>
    <div class="kanban-wrap">
