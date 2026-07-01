@@ -1,0 +1,16 @@
+{
+  "name": "Pedidos El Torito",
+  "short_name": "El Torito",
+  "description": "Gestión de pedidos — El Torito Carnicería",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F5F7",
+  "theme_color": "#9F2629",
+  "icons": [
+    { "src": "assets/torito-badge.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/torito-badge.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/torito-badge.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

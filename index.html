@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Comandas · El Torito Carnicería</title>
+<title>Pedidos · El Torito Carnicería</title>
+<link rel="icon" type="image/png" href="assets/torito-badge.png">
+<link rel="apple-touch-icon" href="assets/torito-badge.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#9F2629">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pedidos El Torito">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -607,11 +615,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 <div id="login">
   <div class="login-card">
     <img src="assets/torito-badge.png" class="login-badge" alt="El Torito Carnicería">
-    <h1>Comandas</h1>
+    <h1>Pedidos</h1>
     <div class="sub">El Torito Carnicería · Desde 1970</div>
     <div class="roles">
       <button class="role-btn" data-role="admin">
-        <span class="ri"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h7l4.5 4.5V20.5h-11.5zM13 3.5V8h4.5M8.5 12h7M8.5 15.5h7"/></svg></span><span class="rt">Admin</span><span class="rd">Mostrador</span>
+        <span class="ri"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h7l4.5 4.5V20.5h-11.5zM13 3.5V8h4.5M8.5 12h7M8.5 15.5h7"/></svg></span><span class="rt">Admin</span><span class="rd">Administrador</span>
       </button>
       <button class="role-btn" data-role="carnicero">
         <span class="ri"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16.5L16.5 4c2.2 1.6 2.4 4.6.6 6.8L9 18.5zM4 16.5l3.5 3.5"/></svg></span><span class="rt">Carniceros</span><span class="rd">Producción</span>
@@ -623,7 +631,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
     </div>
     <button class="login-go" id="loginGo" disabled>Entrar</button>
     <div class="login-err" id="loginErr"></div>
-    <div class="login-hint">Demo · Admin: 1970 · Carniceros: 0707</div>
   </div>
 </div>
 
@@ -649,34 +656,34 @@ let supa=null, USE_SUPA=false;
 const L=(n)=>({unit:"Libra",price:n,weigh:true});
 const U=(n)=>({unit:"Unidad",price:n,weigh:false});
 const P=(n)=>({unit:"Paquete",price:n,weigh:false});
-const COT=()=>({unit:"Libra",price:null,weigh:true}); // a cotizar
+const COT=()=>({unit:"Libra",price:null,weigh:true}); // por encargo
+/* Menú El Torito — JUNIO 2026 (fuente: PDF oficial). Ver MENU_JUNIO_2026.md */
 const CAT=[
  {cat:"Res", items:[
-   ["Bistec",L(98)],["Fajitas",L(100)],["Carne de asar",L(98)],["Milanesa",L(100)],
-   ["Costilla de res",L(85)],["Molida",L(97)],["Estofado",L(98)],["Puyaso",L(175)],
-   ["New York",L(165)],["Rib eye",L(180)],["Entraña",L(175)],["Mano de piedra",L(100)],
-   ["Cabeza de lomo",L(100)],["Bolita",L(100)],["Falda",L(98)],["Tajo negro",L(100)],
-   ["Lomo limpio",L(140)],["Filete",L(190)],["Carne salada",L(115)] ]},
+   ["Costilla de res",L(90)],["Molida",L(110)],["Bistec",L(110)],["Carne de asar",L(110)],
+   ["Falda",L(110)],["Estofado",L(110)],["Fajitas",L(115)],["Mano de piedra",L(120)],
+   ["Milanesa",L(110)],["Bolita",L(120)],["Cabeza de lomo",L(120)],["Tajo negro",L(120)],
+   ["Carne salada",L(125)],["Lomo limpio",L(150)],["New York",L(175)],["Puyaso",L(195)],
+   ["Entraña",L(185)],["Rib eye",L(195)],["Filete",L(210)] ]},
  {cat:"Cerdo", items:[
-   ["Cerdo para asar",L(78)],["Molida de cerdo",L(78)],["Costilla de cerdo",L(78)],
-   ["Estofado de cerdo",L(78)],["Lomo de cerdo",L(80)],["Tajo de cerdo",L(78)],
-   ["Patas de cerdo",L(45)],["Chuleta",L(75)],["Tocino (lonja carnuda)",L(55)] ]},
+   ["Lonja carnuda",L(60)],["Patas de cerdo",L(45)],["Tocino",L(120)],["Chuleta",L(80)],
+   ["Lomo de cerdo",L(85)],["Cerdo para asar",L(80)],["Molida de cerdo",L(80)],
+   ["Costilla de cerdo",L(80)],["Estofado de cerdo",L(80)],["Tajo de cerdo",L(80)] ]},
  {cat:"Pollo", items:[
-   ["Menudo de pollo",L(24)],["Pollo entero",L(39)],["Pollo en pieza",L(40)],
-   ["Patas de pollo",L(24)],["Mollejas",L(40)],["Pechuga/ala",L(44)],
-   ["Pechugas sin hueso",L(80)],["Pierna/muslo",L(40)],["Medallones",U(78)],
-   ["Pechuguitas",U(98)],["Chicken finger",U(98)],["Hot dog de pollo",P(66)] ]},
- {cat:"Vísceras", items:[
-   ["Pulmón",COT()],["Corazón",COT()],["Hígado",L(45)],["Lengua",L(80)],
-   ["Vaso",COT()],["Mondongo",L(38)] ]},
+   ["Menudo de pollo",L(25)],["Patas de pollo",L(25)],["Pollo entero",L(40)],["Pierna/muslo",L(40)],
+   ["Pollo en pieza",L(40)],["Mollejas",L(40)],["Pechuga/ala",L(45)],["Hot dog de pollo",P(66)],
+   ["Medallones",L(80)],["Pechugas sin hueso",L(82)],["Pechuguitas",L(98)],
+   ["Trocitos de pollo en caja",L(98)],["Chicken finger",L(100)] ]},
  {cat:"Embutidos", items:[
-   ["Chorizo Suelto",L(50)],["Chorizo Barbacoa",L(60)],["Chorizo Indio",L(45)],
-   ["Chorizo Cervecero",L(40)],["Chorizo Criollo",L(50)],
-   ["Chorizo Barbacoa (paquete)",P(60)],["Chorizo Criollo (paquete)",P(60)],
-   ["Chorizo Parrillero (paquete)",P(60)] ]},
+   ["Chorizo Cervecero",L(40)],["Chorizo Indio",L(50)],["Chorizo Suelto",L(60)],["Chorizo Criollo",L(55)],
+   ["Chorizo Barbacoa",L(65)],["Chorizo Barbacoa (paquete)",P(60)],
+   ["Chorizo Parrillero (paquete)",P(60)],["Chorizo Criollo (paquete)",P(60)] ]},
+ {cat:"Vísceras", items:[
+   ["Mondongo",L(38)],["Hígado",L(45)],["Lengua",L(82)],
+   ["Pulmón",COT()],["Corazón",COT()],["Vaso",COT()] ]},
  {cat:"Extras", items:[
-   ["Papas",L(33)],["Manteca de cerdo",L(40)],["Camarón (5 lb)",{unit:"5 lb",price:600,weigh:false}],
-   ["Papas sazonadas",L(45)],["Papas tornillo",L(40)] ]},
+   ["Papas",L(33)],["Manteca de cerdo",L(40)],["Papas tornillo",L(40)],
+   ["Papas sazonadas",L(45)],["Camarón (5 lb)",{unit:"5 lb",price:625,weigh:false}] ]},
 ];
 // flatten -> products with ids
 const PRODUCTS=[]; CAT.forEach(g=>g.items.forEach(([name,d],i)=>{
@@ -689,13 +696,16 @@ const prodByName=n=>PRODUCTS.find(p=>p.name===n);
 const VALIDATE_WEIGHT=new Set(["Rib eye","Entraña","Puyaso","New York","Filete","Bolita","Lomo limpio"]);
 PRODUCTS.forEach(p=>{ p.weigh = VALIDATE_WEIGHT.has(p.name); });
 // Precios editables: override guardado en este dispositivo (clave para precios mes a mes). Se aplica a comandas NUEVAS.
+// Al cambiar el menú base, los overrides viejos (por id) quedarían desalineados → se limpian al subir de versión.
+const CATALOG_VERSION='2026-06';
+if(localStorage.getItem('ct_v2_cat_ver')!==CATALOG_VERSION){ localStorage.removeItem('ct_v2_prices'); localStorage.setItem('ct_v2_cat_ver',CATALOG_VERSION); }
 function applyPriceOverrides(){ try{ const o=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}'); PRODUCTS.forEach(p=>{ if(o[p.id]!==undefined) p.price=o[p.id]; }); }catch(e){} }
 applyPriceOverrides();
 function setCatalogPrice(id,val){ const p=prodById(id); if(!p) return;
   let n=(val===''||val==null)?null:parseFloat(String(val).replace(',','.')); if(n!=null&&isNaN(n)) return;
   p.price=n; let o={}; try{o=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}');}catch(e){}
   if(n==null) delete o[id]; else o[id]=n; localStorage.setItem('ct_v2_prices',JSON.stringify(o));
-  toast(p.name+(n==null?' → a cotizar':' → '+money(n))); }
+  toast(p.name+(n==null?' → por encargo':' → '+money(n))); }
 
 /* ============ PARSER DE PEDIDO (autollenar desde texto pegado) ============ */
 // Diccionario de apodos/coloquialismos → producto del catálogo. ORDEN IMPORTA (específico antes que genérico).
@@ -717,7 +727,7 @@ const ALIASES=[
   [['lomo de cerdo','lomo cerdo'],'Lomo de cerdo'],
   [['tajo de cerdo','tajo cerdo'],'Tajo de cerdo'],
   [['patas de cerdo','patas cerdo','manitas de cerdo'],'Patas de cerdo'],
-  [['chuleta'],'Chuleta'],[['tocino','lonja carnuda','lonja'],'Tocino (lonja carnuda)'],
+  [['chuleta'],'Chuleta'],[['lonja carnuda','lonja'],'Lonja carnuda'],[['tocino'],'Tocino'],
   // POLLO (deshuesado antes que pechuga)
   [['pechuga sin hueso','pechugas sin hueso','pollo deshuesado','deshuesado','sin hueso','pechuga deshuesada','pechugas deshuesadas'],'Pechugas sin hueso'],
   [['pechuga','ala','alas'],'Pechuga/ala'],[['pierna','muslo'],'Pierna/muslo'],
@@ -725,6 +735,7 @@ const ALIASES=[
   [['pollo en pieza','pollo pieza','pieza de pollo','pollo en piezas'],'Pollo en pieza'],
   [['mollejas','molleja'],'Mollejas'],[['menudo'],'Menudo de pollo'],
   [['medallones','medallon'],'Medallones'],[['pechuguitas','pechuguita'],'Pechuguitas'],
+  [['trocitos de pollo','trocitos','pollo en caja','trocitos en caja'],'Trocitos de pollo en caja'],
   [['chicken finger','chicken','finger'],'Chicken finger'],
   [['hot dog de pollo','hotdog de pollo','hot dog','hotdog'],'Hot dog de pollo'],
   [['patas de pollo','patas pollo'],'Patas de pollo'],
@@ -881,7 +892,7 @@ function dbSyncAll(){ clearTimeout(syncT); syncT=setTimeout(async()=>{
 },120); }
 function dbDelete(id){ if(USE_SUPA) supa.from('orders').delete().eq('id',id).then(({error})=>{ if(error) console.warn('Supabase delete:',error.message); }); }
 let refetchT=null;
-function scheduleRefetch(){ clearTimeout(refetchT); refetchT=setTimeout(async()=>{ await dbFetch(); lastSync=Date.now(); rerender(); },250); }
+function scheduleRefetch(){ clearTimeout(refetchT); refetchT=setTimeout(async()=>{ await dbFetch(); lastSync=Date.now(); if(session.role==='admin' && !safeToRefreshAdmin()) return; rerender(); },250); }
 async function initSupa(){
   supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);
   USE_SUPA=true; state={orders:[],history:[],clients:[],seq:43};
@@ -990,8 +1001,17 @@ let adminView="nueva";
 let clock=0, clockT;
 function startClock(){ clockT=setInterval(()=>{ if(session.role==="carnicero") updateClock(); },1000); }
 function updateClock(){ const el=$("#syncClock"); if(el) el.textContent="actualizado "+timeAgo(lastSync).replace("hace ","hace ").replace("instantes","ahora"); }
-// 30s auto-refresh (carnicero)
-setInterval(()=>{ archiveStaleListas(); if(session.role==="carnicero"){ rerender(); } },30000);
+// Refresco automático cada 30s. NO hace logout; el logout es por inactividad (2h, abajo).
+// No refresca al admin si está capturando una comanda o con una hoja/editor abierto (perdería lo escrito).
+function safeToRefreshAdmin(){ if(adminView==='nueva') return false; if(document.querySelector('.overlay')) return false; return true; }
+setInterval(()=>{ archiveStaleListas();
+  if(session.role==="carnicero"){ rerender(); }
+  else if(session.role==="admin" && safeToRefreshAdmin()){ rerender(); }
+},30000);
+// Cierre de sesión SOLO por inactividad (mínimo 2 horas sin interacción).
+let lastActivity=Date.now();
+['click','keydown','touchstart','pointerdown'].forEach(ev=>window.addEventListener(ev,()=>{ lastActivity=Date.now(); },{passive:true}));
+setInterval(()=>{ if(session.role && Date.now()-lastActivity>2*3600*1000){ logout(); } },60000);
 
 function rerender(){
   if(!session.role) return;
@@ -1002,7 +1022,7 @@ function rerender(){
 function topbar(extra=""){
   return `<div class="topbar">
     <img src="assets/torito-badge.png" class="badge" alt="">
-    <div class="tb-brand"><img src="assets/torito-wordmark.svg" class="tb-logo" alt="El Torito Carnicería"><div class="tb-sub">${session.role==="admin"?"Mostrador":"Producción"}</div></div>
+    <div class="tb-brand"><img src="assets/torito-wordmark.svg" class="tb-logo" alt="El Torito Carnicería"><div class="tb-sub">${session.role==="admin"?"Admin":"Producción"}</div></div>
     <div class="tb-spacer"></div>${extra}
     <button class="tb-out" onclick="logout()">Salir</button>
   </div>`;
@@ -1095,7 +1115,11 @@ function draftGrand(){ return draftTotal() + (draft.delivery==='envio'?(+draft.s
 function parsePreviewHtml(){
   const lp=draft.lastParse; if(!lp) return '';
   const ok=(lp.items||[]).map(it=>{ const p=prodByName(it.name);
-    return `<div class="pp-row ok"><span class="pp-ic">${ic('check',14)}</span><span class="pp-name">${esc(it.name)}</span><span class="pp-qty">× ${it.qty}${p&&p.price!=null?' · '+money(it.qty*p.price):''}</span></div>`;}).join("");
+    const u = p?(p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit==='Paquete'?'paq':p.unit):'';
+    const desg = (p&&p.price!=null&&p.price>0)
+      ? `${it.qty} ${u} × ${money(p.price)} = <b>${money(it.qty*p.price)}</b>`
+      : `× ${it.qty} · por encargo`;
+    return `<div class="pp-row ok"><span class="pp-ic">${ic('check',14)}</span><span class="pp-name">${esc(it.name)}</span><span class="pp-qty">${desg}</span></div>`;}).join("");
   const unk=(lp.unknown||[]).map(l=>`<div class="pp-row warn"><span class="pp-ic">${ic('clock',14)}</span><span class="pp-name">${esc(l)}</span><span class="pp-qty">revisar</span></div>`).join("");
   return `<div class="parse-prev">
     <div class="pp-head">${ic('eye',14)} Lo que entendí <span class="pp-src">${lp.ai?'IA':'local'}</span></div>
@@ -1145,7 +1169,7 @@ function adminNueva(){
       <div class="prod-grid">${PRODUCTS.filter(p=>p.cat===nuevaCat).map(p=>`
         <button class="pchip" onclick="addItem('${p.id}')">
           <div class="pn">${esc(p.name)}</div>
-          <div class="pp">${p.price==null?'a cotizar':money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div>
+          <div class="pp">${p.price==null?'por encargo':money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div>
         </button>`).join("")}</div>`:''}
     </details>
     <div class="field"><label>Nota para el carnicero</label><input class="inp" id="dNote" placeholder="Ej: el rib eye bien rojo" value="${esc(draft.note)}"></div>
@@ -1175,7 +1199,7 @@ function renderCart(){
   if(!draft.items.length){ c.innerHTML=`<div class="cart-empty">Toca un producto para agregarlo</div>`; return; }
   c.innerHTML=draft.items.map((it,i)=>{const p=prodById(it.prodId);
     return `<div class="cartline">
-      <div class="cn"><b>${esc(p.name)}</b><small>${p.price==null?'a cotizar':money(p.price)+' / '+(p.unit==='Libra'?'lb':p.unit)}${p.weigh?' · validar peso':''}</small></div>
+      <div class="cn"><b>${esc(p.name)}</b><small>${p.price==null?'por encargo':money(p.price)+' / '+(p.unit==='Libra'?'lb':p.unit)}${p.weigh?' · validar peso':''}</small></div>
       <div class="qty"><button onclick="chQty(${i},-1)">–</button><input value="${it.qty}" inputmode="decimal" onchange="setQty(${i},this.value)"><button onclick="chQty(${i},1)">+</button></div>
       <button class="rm" onclick="rmItem(${i})">${ic('x',16)}</button></div>`;}).join("");
   const dt=$("#draftTotal"); if(dt) dt.textContent=money(draftGrand());
@@ -1355,14 +1379,14 @@ function adminReporte(){
 /* ----- CATÁLOGO ----- */
 function adminCatalogo(){
   return `<div class="view-head"><div><h2>Menú y precios</h2><div class="vh-sub">${PRODUCTS.length} productos · edita el precio por libra/unidad</div></div></div>
-    <div class="cat-note">${ic('tag',15)} Los cambios se aplican a las comandas <b>nuevas</b>. Las ya creadas conservan su precio. Deja el precio vacío para marcarlo “a cotizar”.</div>
+    <div class="cat-note">${ic('tag',15)} Los cambios se aplican a las comandas <b>nuevas</b>. Las ya creadas conservan su precio. Deja el precio vacío para marcarlo “por encargo”.</div>
     ${CAT.map(g=>`
       <div class="sect-label">${g.cat}</div>
       <div class="cat-elist">
       ${PRODUCTS.filter(p=>p.cat===g.cat).map(p=>`
         <div class="cat-erow">
           <div class="ce-info"><div class="ce-name">${esc(p.name)}</div><div class="ce-unit">${p.unit}${p.weigh?' · validar peso':''}</div></div>
-          <label class="ce-price"><span class="ce-l">L</span><input class="ce-inp" inputmode="decimal" value="${p.price==null?'':p.price}" placeholder="cotizar" onchange="setCatalogPrice('${p.id}',this.value)" onfocus="this.select()"><span class="ce-u">/${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></label>
+          <label class="ce-price"><span class="ce-l">L</span><input class="ce-inp" inputmode="decimal" value="${p.price==null?'':p.price}" placeholder="encargo" onchange="setCatalogPrice('${p.id}',this.value)" onfocus="this.select()"><span class="ce-u">/${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></label>
         </div>`).join("")}
       </div>`).join("")}
     <div style="height:28px"></div>`;
@@ -1527,7 +1551,7 @@ function openAdminEdit(id){
 function guardarAdminEdit(){ persistEdits(); adminEditMode=false; closeCarn(); toast('Comanda actualizada'); }
 function setComment(v){ editComment=v; }
 function oitemRow(it,i,vo){
-  const priceTxt = it.price==null?'a cotizar':money(it.price)+'/'+(it.unit==='Libra'?'lb':it.unit);
+  const priceTxt = it.price==null?'por encargo':money(it.price)+'/'+(it.unit==='Libra'?'lb':it.unit);
   const unit = it.unit==='Unidad'?'u':it.unit==='Paquete'?'paq':it.unit==='Libra'?'lb':it.unit;
   let r2='';
   if(it.available && !vo){
@@ -1540,7 +1564,7 @@ function oitemRow(it,i,vo){
     }
     if(it.price==null){
       r2+=`<span class="lbl">Precio/lb</span>
-        <button class="numbox ${activeEdit&&activeEdit.i===i&&activeEdit.field==='price'?'active':''}" id="pb${i}" onclick="startEdit(${i},'price')">L<span class="nbu">cotizar</span></button>`;
+        <button class="numbox ${activeEdit&&activeEdit.i===i&&activeEdit.field==='price'?'active':''}" id="pb${i}" onclick="startEdit(${i},'price')">L<span class="nbu">encargo</span></button>`;
     }
   } else if(it.available && vo){
     r2=`<span class="lbl">${it.weigh?(it.weight!=null?it.weight+' lb':'—'):it.qty+' '+unit}</span>`;
@@ -1676,7 +1700,7 @@ function openAddProduct(){
 function renderAddGrid(){
   const t=$("#addTabs"); if(t) t.innerHTML=CAT.map(g=>`<button class="${addCat===g.cat?'on':''}" onclick="addCat='${g.cat}';renderAddGrid()">${g.cat}</button>`).join('');
   const g=$("#addGrid"); if(!g) return;
-  g.innerHTML=PRODUCTS.filter(p=>p.cat===addCat).map(p=>`<button class="pchip" onclick="pickAdd('${p.id}')"><div class="pn">${esc(p.name)}</div><div class="pp">${p.price==null?'a cotizar':money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div></button>`).join('');
+  g.innerHTML=PRODUCTS.filter(p=>p.cat===addCat).map(p=>`<button class="pchip" onclick="pickAdd('${p.id}')"><div class="pn">${esc(p.name)}</div><div class="pp">${p.price==null?'por encargo':money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div></button>`).join('');
 }
 function pickAdd(id){ const p=prodById(id);
   editItems.push({prodId:p.id,name:p.name,unit:p.unit,price:p.price,weigh:p.weigh,qty:1,available:true,weight:p.weigh?1:null,note:''});
@@ -1700,6 +1724,9 @@ function closeSheet(){ $("#overlayHost").innerHTML=""; currentSheetId=null; edit
 /* ============ INIT ============ */
 if(window.supabase && SUPA_URL){ initSupa().catch(e=>{ console.warn('Supabase init falló, modo local:',e); load(); archiveStaleListas(); }); }
 else { load(); archiveStaleListas(); }
+
+/* ===== PWA: instalable + offline (service worker) ===== */
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
 </script>
 </body>
 </html>
