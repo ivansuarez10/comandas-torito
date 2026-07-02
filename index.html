@@ -702,6 +702,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .prod-acc[open] .acc-chev{transform:rotate(90deg)}
 .prod-acc .cat-tabs{padding:0 12px;margin-top:0}
 .prod-acc .prod-grid{padding:6px 12px 14px;margin-top:0}
+/* Buscador de la bandeja (admin) */
+.ab-search{display:flex;align-items:center;gap:9px;background:#fff;border:.5px solid var(--line);border-radius:14px;box-shadow:var(--sh);padding:11px 14px;margin-bottom:14px}
+.ab-search svg{color:var(--muted-2);flex:none}
+.ab-search input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:15px;color:var(--ink);font-family:var(--font)}
+.ab-search input::placeholder{color:var(--muted-2)}
+.ab-search input::-webkit-search-cancel-button{display:none}
+.ab-search:focus-within{border-color:var(--rojo);box-shadow:0 0 0 4px rgba(159,38,41,.1)}
+.ab-clear{flex:none;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#EFEFF3;color:var(--muted);cursor:pointer}
+.ab-clear:active{transform:scale(.92)}
 /* "Con el carnicero" (Resumen) */
 .carn-info{display:flex;align-items:center;gap:8px;background:#F5F5F7;border:.5px solid var(--line);border-radius:12px;padding:11px 13px;margin:8px 0 2px;font-size:13.5px;color:var(--muted);cursor:pointer}
 .carn-info b{color:var(--ink);font-variant-numeric:tabular-nums}
@@ -1248,7 +1257,8 @@ function ic(n,s=20){const p={
   history:'<path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7M4 4v3.5h3.5M12 7.5V12l3 1.8"/>',
   trend:'<path d="M3 17l5-5 4 4 8-8M16 8h5v5"/>',
   sync:'<path d="M20 12a8 8 0 01-14 5.7M4 12a8 8 0 0114-5.7M18 4v3h-3M6 20v-3h3"/>',
-  camera:'<path d="M3 8.5A1.5 1.5 0 014.5 7H7l1.2-1.8h7.6L17 7h2.5A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/><circle cx="12" cy="13" r="3.3"/>'
+  camera:'<path d="M3 8.5A1.5 1.5 0 014.5 7H7l1.2-1.8h7.6L17 7h2.5A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/><circle cx="12" cy="13" r="3.3"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8L20.5 20.5"/>'
  }[n]||'';
  return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px;flex:none">${p}</svg>`;
 }
@@ -1307,7 +1317,9 @@ function startClock(){ clockT=setInterval(()=>{ if(session.role==="carnicero") u
 function updateClock(){ const el=$("#syncClock"); if(el) el.textContent="actualizado "+timeAgo(lastSync).replace("hace ","hace ").replace("instantes","ahora"); }
 // Refresco automático cada 30s. NO hace logout; el logout es por inactividad (2h, abajo).
 // No refresca al admin si está capturando una comanda o con una hoja/editor abierto (perdería lo escrito).
-function safeToRefreshAdmin(){ if(adminView==='nueva') return false; if(document.querySelector('.overlay')) return false; return true; }
+function safeToRefreshAdmin(){ if(adminView==='nueva') return false; if(document.querySelector('.overlay')) return false;
+  const ae=document.activeElement; if(ae && ae.id==='abSearch') return false; // no interrumpir mientras busca
+  return true; }
 setInterval(()=>{ archiveStaleListas();
   // Modo nube: bajar datos de verdad (red de seguridad si el realtime se cae). scheduleRefetch ya
   // respeta al admin cuando está capturando/editando y re-pinta al carnicero (suena si entró comanda).
@@ -1372,7 +1384,7 @@ function renderAdmin(){
     </nav>`;
   if(adminView==="nueva") initNueva();
 }
-function go(v){ adminView=v; if(v==="nueva"){ draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null}; prodOpen=false; } renderAdmin(); window.scrollTo(0,0); }
+function go(v){ adminView=v; if(v==="nueva"){ draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null}; prodOpen=false; } if(v==="bandeja") bandejaQ=''; renderAdmin(); window.scrollTo(0,0); }
 
 function ocard(o,actionHtml){
   return `<button class="ocard" onclick="openAdminOrder('${o.id}')">
@@ -1384,19 +1396,40 @@ function ocard(o,actionHtml){
 }
 const A_COLS=[["c1","Por cotizar","cotizar"],["c2","Por cobrar","espera_pago"],["c3","En preparación","preparacion"],["c4","Por entregar","lista"],["c5","En ruta","en_ruta"]];
 const A_EMPTY={cotizar:"Nada por cotizar",espera_pago:"Nada por cobrar",preparacion:"Nada en preparación",lista:"Nada por entregar",en_ruta:"Nada en ruta"};
+/* Buscador de la bandeja: filtra por nombre, folio o teléfono (con 40 comandas, escanear columnas es lento). */
+let bandejaQ='';
+function bandejaMatch(o){
+  const q=_norm(bandejaQ); if(!q) return true;
+  if(_norm(o.clientName).includes(q)) return true;
+  const qd=q.replace(/[^0-9]/g,'');
+  return qd.length>=2 && (String(o.folio).includes(qd) || _digits(o.phone).includes(qd));
+}
+function abColsHtml(){
+  return A_COLS.map(([cls,label,st])=>{
+    const arr=state.orders.filter(o=>o.status===st && bandejaMatch(o));
+    return `<div class="kcol ${cls}">
+      <div class="kcol-head"><span class="kn">${label}</span><span class="kc">${arr.length}</span></div>
+      <div class="kcol-body">
+        ${arr.length?arr.map(o=>akcard(o,st)).join(""):`<div class="kempty"><div class="ke-ic">${ic(bandejaQ?'search':'inbox',22)}</div>${bandejaQ?'Sin coincidencias':A_EMPTY[st]}</div>`}
+      </div></div>`;
+  }).join("");
+}
+// Solo re-pinta las columnas (el input no se re-crea → no pierde el foco al escribir).
+function bandejaSearch(v){ bandejaQ=v;
+  const c=$("#abClear"); if(c) c.style.display=bandejaQ?'':'none';
+  const k=$("#abKanban"); if(k) k.innerHTML=abColsHtml(); }
+function abClear(){ bandejaQ=''; const i=$("#abSearch"); if(i){ i.value=''; i.focus(); }
+  const c=$("#abClear"); if(c) c.style.display='none';
+  const k=$("#abKanban"); if(k) k.innerHTML=abColsHtml(); }
 function adminBandeja(g){
   return `<div class="view-head"><div><h2>Comandas</h2><div class="vh-sub">Tablero de pedidos en curso · toca una para ver el detalle</div></div></div>
+   <div class="ab-search">${ic('search',17)}
+     <input id="abSearch" type="search" placeholder="Buscar cliente, folio o teléfono…" autocomplete="off" value="${esc(bandejaQ)}" oninput="bandejaSearch(this.value)">
+     <button class="ab-clear" id="abClear" style="${bandejaQ?'':'display:none'}" onclick="abClear()" aria-label="Limpiar búsqueda">${ic('x',14)}</button>
+   </div>
    <div class="kanban-wrap admin-board">
-     <div class="kanban">
-    ${A_COLS.map(([cls,label,st])=>{
-      const arr=state.orders.filter(o=>o.status===st);
-      return `<div class="kcol ${cls}">
-        <div class="kcol-head"><span class="kn">${label}</span><span class="kc">${arr.length}</span></div>
-        <div class="kcol-body">
-          ${arr.length?arr.map(o=>akcard(o,st)).join(""):`<div class="kempty"><div class="ke-ic">${ic('inbox',22)}</div>${A_EMPTY[st]}</div>`}
-        </div></div>`;
-    }).join("")}
-   </div></div>`;
+     <div class="kanban" id="abKanban">${abColsHtml()}</div>
+   </div>`;
 }
 function akcard(o,st){
   let footer='', tag='';
@@ -1907,6 +1940,9 @@ function renderCarnicero(){
      <div class="kanban">
     ${C_COLS.map(([cls,label,st])=>{
       const arr=state.orders.filter(o=>o.status===st);
+      // Cola FIFO en "Por cotizar": el pedido más VIEJO arriba (primero en llegar, primero en salir),
+      // para que ninguno se quede olvidado hasta abajo cuando se acumulan.
+      if(st==='cotizar') arr.sort((a,b)=>a.createdAt-b.createdAt);
       const urge = (st==='cotizar'||st==='preparacion') && arr.length ? ' urge':'';
       return `<div class="kcol ${cls}${urge} ${st==='cotizar'&&alertC1?'alerted':''}" id="col${cls.toUpperCase()}">
         <div class="kcol-head"><span class="kn">${label}</span><span class="kc">${arr.length}</span></div>
