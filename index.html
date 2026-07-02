@@ -1099,7 +1099,6 @@ function dbSyncAll(){ clearTimeout(syncT); syncT=setTimeout(async()=>{
   const rows=[...state.orders,...(state.history||[])].map(toRow);
   const {error}=await supa.from('orders').upsert(rows); if(error) syncFailed('upsert all: '+error.message);
 },120); }
-function dbDelete(id){ if(USE_SUPA) supa.from('orders').delete().eq('id',id).then(({error})=>{ if(error) console.warn('Supabase delete:',error.message); }); }
 let refetchT=null;
 function scheduleRefetch(){ clearTimeout(refetchT); refetchT=setTimeout(async()=>{ await dbFetch(); lastSync=Date.now(); if(session.role==='admin' && !safeToRefreshAdmin()) return; tapSafeRerender(); },250); }
 let realtimeSubbed=false;
@@ -1148,6 +1147,19 @@ function dbSaveCatalog(){ if(!USE_SUPA) return; clearTimeout(catSaveT); catSaveT
   try{ await supa.from('app_config').upsert({key:'catalog', value:catalogBlob(), updated_at:new Date().toISOString()}); }
   catch(e){ console.warn('Sync catálogo (¿falta tabla app_config?):', e.message); }
 },250); }
+
+/* ===== WAKE LOCK: la pantalla del carnicero NO se duerme mientras la app esté abierta =====
+   El timbre y el tiempo real solo funcionan con la pantalla encendida. Soportado en iPad
+   (iOS 16.4+) y Android; donde no, no hace nada (queda el consejo: auto-bloqueo en "nunca"). */
+let _wakeLock=null;
+async function keepAwake(){
+  try{
+    if(!('wakeLock' in navigator) || _wakeLock) return;
+    _wakeLock=await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release',()=>{ _wakeLock=null; });
+  }catch(e){ _wakeLock=null; }
+}
+function releaseWake(){ try{ if(_wakeLock){ _wakeLock.release(); _wakeLock=null; } }catch(e){} }
 
 /* ===== WEB PUSH (avisos con app cerrada / bloqueada — Android + iOS 16.4+) ===== */
 const VAPID_PUBLIC="BLtlaO2aaJp3fys_xuX7qVla79QXqi8haOm_I7wAkGU9_cnC6rahdPIoB5NvKGDLmxpJMZ8QYOh80rYqXejv_zY";
@@ -1329,9 +1341,12 @@ async function enterApp(role){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   $("#loginErr").textContent=""; $("#loginGo").disabled=false;
   startClock(); rerender();
-  if(role==='carnicero') refreshPushState().then(()=>{ if(session.role==='carnicero') renderCarnicero(); });
+  if(role==='carnicero'){
+    keepAwake(); // pantalla siempre despierta en el puesto del carnicero
+    refreshPushState().then(()=>{ if(session.role==='carnicero') renderCarnicero(); });
+  }
 }
-function logout(){ session.role=null; clearInterval(clockT);
+function logout(){ session.role=null; clearInterval(clockT); releaseWake();
   if(USE_SUPA && supa){ try{ supa.auth.signOut(); }catch(e){} }
   $("#app").classList.add("hidden"); $("#overlayHost").innerHTML=""; $("#login").classList.remove("hidden");
   selRole=null; document.querySelectorAll(".role-btn").forEach(x=>x.classList.remove("sel"));
@@ -1358,8 +1373,9 @@ setInterval(()=>{ archiveStaleListas();
 // Cierre de sesión SOLO por inactividad (mínimo 2 horas sin interacción).
 let lastActivity=Date.now();
 ['click','keydown','touchstart','pointerdown'].forEach(ev=>window.addEventListener(ev,()=>{ lastActivity=Date.now(); unlockAudio(); },{passive:true}));
-// Al volver la app a primer plano (iPad dormido, cambio de app): re-activar audio + bajar datos frescos.
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ unlockAudio(); if(USE_SUPA && session.role) scheduleRefetch(); } });
+// Al volver la app a primer plano (iPad dormido, cambio de app): re-activar audio + bajar datos
+// frescos + re-tomar el wake lock (el sistema lo suelta al ocultar la página).
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ unlockAudio(); if(USE_SUPA && session.role) scheduleRefetch(); if(session.role==='carnicero') keepAwake(); } });
 setInterval(()=>{ if(session.role && Date.now()-lastActivity>2*3600*1000){ logout(); } },60000);
 
 function rerender(){
@@ -1743,7 +1759,7 @@ async function tomarFotoPedido(input){
 function adminClientes(){
   const map={};
   allOrders().forEach(o=>{ const k=o.clientName; if(!map[k]) map[k]={name:k,phone:o.phone,zone:o.zone,addr:o.addr,orders:[],total:0,prods:{}};
-    map[k].orders.push(o); if(o.status==="entregada"||o.paid) map[k].total+=fullTotal(o);
+    map[k].orders.push(o); if(_esVenta(o)) map[k].total+=fullTotal(o);
     o.items.forEach(it=>map[k].prods[it.name]=(map[k].prods[it.name]||0)+1); });
   const cls=Object.values(map).sort((a,b)=>b.total-a.total);
   return `<div class="view-head"><div><h2>Clientes</h2><div class="vh-sub">${cls.length} clientes · historial</div></div></div>
@@ -1766,7 +1782,7 @@ function adminClientes(){
 function adminResumen(g){
   const now=Date.now(), today=dayStart(now), day=86400000;
   const refTs=o=>o.paidAt||o.listaAt||o.createdAt;
-  const done=allOrders().filter(o=>o.status==="entregada"||o.paid);
+  const done=allOrders().filter(_esVenta);
   const todayDone=done.filter(o=>dayStart(refTs(o))===today);
   const ventasHoy=todayDone.reduce((s,o)=>s+fullTotal(o),0);
   const ticket=todayDone.length?ventasHoy/todayDone.length:0;
@@ -1846,10 +1862,17 @@ function adminHistorico(){
       <span class="oright"><span class="ototal">${money(fullTotal(o))}</span><span class="otime">${STATUS[o.status]}</span></span></button>`).join("")}</div>`
      :`<div class="empty-state"><div class="es-ic">${ic('history',40)}</div><p>Aún no hay comandas archivadas.</p></div>`}`;
 }
+// Una VENTA = entregada o pagada, nunca cancelada (una cancelada pagada no debe sumar).
+const _esVenta=o=>(o.status==="entregada"||o.paid) && o.status!=="cancelada";
+const _refVenta=o=>o.paidAt||o.listaAt||o.createdAt;
+function ventasDelMes(){ const dN=new Date();
+  return allOrders().filter(o=>{ if(!_esVenta(o)) return false;
+    const d=new Date(_refVenta(o)); return d.getMonth()===dN.getMonth()&&d.getFullYear()===dN.getFullYear(); }); }
 function adminReporte(){
-  const done=allOrders().filter(o=>o.status==="entregada"||o.paid);
+  const done=ventasDelMes(); // el reporte dice "Este mes" → ahora de verdad es el mes
   const total=done.reduce((s,o)=>s+fullTotal(o),0);
   const tick=done.length?total/done.length:0;
+  const pend=state.orders.filter(o=>!["entregada","cancelada"].includes(o.status)).length;
   const byProd={}, byCli={};
   done.forEach(o=>{ byCli[o.clientName]=(byCli[o.clientName]||0)+fullTotal(o);
     o.items.forEach(it=>{ byProd[it.name]=(byProd[it.name]||0)+lineAmount(it); }); });
@@ -1860,11 +1883,33 @@ function adminReporte(){
       <div class="kpi"><div class="kl">Total vendido</div><div class="kvv">${money(total)}</div></div>
       <div class="kpi"><div class="kl">Comandas</div><div class="kvv">${done.length}</div></div>
       <div class="kpi"><div class="kl">Ticket prom.</div><div class="kvv">${money(tick)}</div></div>
-      <div class="kpi"><div class="kl">Pendientes</div><div class="kvv">${state.orders.length-done.length}</div></div>
+      <div class="kpi"><div class="kl">Activas</div><div class="kvv">${pend}</div></div>
     </div>
     <div class="sect-label">Top productos</div><div class="rank">${rank(byProd)||'<div class="kempty">Sin datos</div>'}</div>
     <div class="sect-label">Top clientes</div><div class="rank">${rank(byCli)||'<div class="kempty">Sin datos</div>'}</div>
-    <div style="margin-top:14px"><button class="btn ghost block" onclick="toast('En la versión final: exporta a Excel/PDF')">${ic('doc',16)} Exportar reporte</button></div>`;
+    <div style="margin-top:14px"><button class="btn ghost block btn-ic" onclick="exportReporte()">${ic('doc',16)} Descargar Excel (CSV)</button></div>`;
+}
+// Descarga las ventas del mes como CSV (abre directo en Excel; BOM para acentos/ñ).
+function exportReporte(){
+  const rows=ventasDelMes().sort((a,b)=>_refVenta(a)-_refVenta(b));
+  if(!rows.length){ toast('No hay ventas este mes para exportar'); return; }
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const head=['Folio','Fecha','Hora','Cliente','Teléfono','Zona','Entrega','Estado','Pagado','Productos','Subtotal (L)','Envío (L)','Total (L)'];
+  const lines=[head.map(q).join(',')];
+  rows.forEach(o=>{ const d=new Date(_refVenta(o));
+    const prods=o.items.map(it=>{ const qy=(it.weigh&&it.weight!=null)?it.weight:it.qty;
+      return qy+' '+(it.unit==='Libra'?'lb':it.unit)+' '+it.name+(it.available?'':' (no disponible)'); }).join('; ');
+    lines.push([o.folio, d.toLocaleDateString('es-HN'), d.toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'}),
+      o.clientName, o.phone||'', o.zone||'', o.delivery==='envio'?'Envío':'Recoge', STATUS[o.status]||o.status,
+      o.paid?'Sí':'No', prods, orderTotal(o).toFixed(2), (o.shipping||0).toFixed(2), fullTotal(o).toFixed(2)].map(q).join(','));
+  });
+  const dN=new Date();
+  const blob=new Blob(["\ufeff"+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='ventas-torito-'+dN.getFullYear()+'-'+String(dN.getMonth()+1).padStart(2,'0')+'.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
+  toast('Reporte descargado · '+rows.length+' comandas');
 }
 
 /* ----- CATÁLOGO ----- */
@@ -2031,12 +2076,26 @@ function askDelete(id){
   const o=orderById(id);
   $("#overlayHost").innerHTML=`<div class="overlay"><div class="confirm-box">
     <div class="cb-ic">${ic('trash',38)}</div><div class="cb-t">¿Eliminar la comanda #${o.folio}?</div>
-    <div class="cb-s">${esc(o.clientName)} · ${money(fullTotal(o))}.<br>Esta acción no se puede deshacer.</div>
+    <div class="cb-s">${esc(o.clientName)} · ${money(fullTotal(o))}.<br>Se quita del tablero y queda como cancelada en el histórico.</div>
     <div class="cb-row"><button class="btn ghost block" onclick="closeSheet()">Cancelar</button>
       <button class="btn red block" onclick="doDelete('${o.id}')">Sí, eliminar</button></div>
   </div></div>`;
 }
-function doDelete(id){ const o=orderById(id); state.orders=state.orders.filter(x=>x.id!==id); dbDelete(id); if(!USE_SUPA) save(); closeSheet(); toast('Comanda eliminada', ()=>{ if(o){ state.orders.unshift(o); save(o); rerender(); } }); }
+// "Eliminar" ya NO borra de la nube: archiva como CANCELADA → desaparece del tablero pero
+// queda rastro en el Histórico (un dedazo ya no cuesta una comanda; no suma como venta).
+function doDelete(id){ const o=orderById(id); if(!o) return;
+  const prevHist=o.hist.slice(), prevStatus=o.status;
+  setStatus(o,'cancelada'); o.archived=true; o.archivedAt=Date.now();
+  state.orders=state.orders.filter(x=>x.id!==id);
+  if(!state.history) state.history=[];
+  state.history.push(o);
+  save(o); closeSheet();
+  toast('Comanda eliminada · queda en el histórico', ()=>{
+    o.status=prevStatus; o.hist=prevHist; o.archived=false; o.archivedAt=null;
+    state.history=state.history.filter(x=>x.id!==id);
+    state.orders.unshift(o); save(o); rerender();
+  });
+}
 
 /* ----- editable order sheet + numpad ----- */
 let editItems=null, editShipping=0, editComment='', activeEdit=null, adminEditMode=false;
