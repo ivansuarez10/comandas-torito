@@ -730,6 +730,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
     </div>
     <button class="login-go" id="loginGo" disabled>Entrar</button>
     <div class="login-err" id="loginErr"></div>
+    <div class="login-err" id="cloudWarn" style="color:#C77A12;font-weight:600"></div>
     <div class="login-foot">© 2026 El Torito Carnicería · Todos los derechos reservados<br><span>Uso interno · acceso autorizado</span></div>
   </div>
 </div>
@@ -1023,7 +1024,9 @@ function seed(){
 }
 let lastPing=0;
 function load(){ try{const r=localStorage.getItem(KEY); state=r?JSON.parse(r):seed(); }catch(e){state=seed();} if(!state.history) state.history=[]; if(!state.clients) state.clients=[]; }
-function save(){ if(USE_SUPA){ dbSyncAll(); return; } localStorage.setItem(KEY,JSON.stringify(state)); lastPing=Date.now(); localStorage.setItem("ct_v2_ping",lastPing); bc&&bc.postMessage("sync"); }
+// save(order): si se pasa la comanda que cambió, sube SOLO esa a la nube (evita pisar
+// cambios de otro dispositivo con datos viejos). Sin argumento = sync completo (archivar, undo masivo).
+function save(order){ if(USE_SUPA){ if(order) dbSyncOrder(order); else dbSyncAll(); return; } localStorage.setItem(KEY,JSON.stringify(state)); lastPing=Date.now(); localStorage.setItem("ct_v2_ping",lastPing); bc&&bc.postMessage("sync"); }
 const dayStart=ts=>{ const d=new Date(ts); d.setHours(0,0,0,0); return d.getTime(); };
 // Las comandas "Lista para entrega" se retiran del tablero al día siguiente, pero quedan en histórico.
 function archiveStaleListas(){
@@ -1049,29 +1052,38 @@ function toRow(o){ return {id:o.id,folio:o.folio,client_name:o.clientName,phone:
 function fromRow(r){ return {id:r.id,folio:r.folio,clientName:r.client_name,phone:r.phone,zone:r.zone,addr:r.addr,delivery:r.delivery,shipping:Number(r.shipping)||0,note:r.note,status:r.status,paid:!!r.paid,paidAt:r.paid_at,listaAt:r.lista_at,archived:!!r.archived,archivedAt:r.archived_at,createdAt:Number(r.created_at),items:r.items||[],hist:r.hist||[]}; }
 async function dbFetch(){
   const {data,error}=await supa.from('orders').select('*');
-  if(error){ console.warn('Supabase fetch:',error.message); return; }
+  if(error){ console.warn('Supabase fetch:',error.message); return false; }
   const all=(data||[]).map(fromRow);
   state.orders=all.filter(o=>!o.archived).sort((a,b)=>b.createdAt-a.createdAt);
   state.history=all.filter(o=>o.archived);
   state.seq=Math.max(0, ...all.map(o=>parseInt(o.folio,10)||0))+1;
   // clientes (si la tabla ya existe)
   try{ const {data:cl,error:ce}=await supa.from('clients').select('*'); if(!ce && cl) state.clients=cl.map(fromRowC); }catch(e){}
+  return true;
 }
 function toRowC(c){ return {phone:_digits(c.phone), name:c.name||'', zone:c.zone||'', addr:c.addr||'', note:c.note||'', created_at:c.createdAt||Date.now()}; }
 function fromRowC(r){ return {phone:r.phone, name:r.name, zone:r.zone, addr:r.addr, note:r.note, createdAt:Number(r.created_at)||0}; }
 function upsertClient(c){
   if(!c||_digits(c.phone).length<4||!c.name) return;
   const np=_digits(c.phone); if(!state.clients) state.clients=[];
-  const i=state.clients.findIndex(x=>_digits(x.phone)===np);
-  const rec={phone:np, name:c.name, zone:c.zone||'', addr:c.addr||'', note:(i>=0?state.clients[i].note:'')||'', createdAt:(i>=0?state.clients[i].createdAt:Date.now())};
+  const i=state.clients.findIndex(x=>_phoneKey(x.phone)===_phoneKey(np));
+  // si ya existe, conservar el teléfono guardado (evita duplicar "98765432" vs "50498765432")
+  const rec={phone:(i>=0?state.clients[i].phone:np), name:c.name, zone:c.zone||'', addr:c.addr||'', note:(i>=0?state.clients[i].note:'')||'', createdAt:(i>=0?state.clients[i].createdAt:Date.now())};
   if(i>=0) state.clients[i]=rec; else state.clients.push(rec);
   if(USE_SUPA) supa.from('clients').upsert(toRowC(rec)).then(({error})=>{ if(error) console.warn('Supabase client upsert:',error.message); });
 }
-async function seedToDb(){ const s=seed(); const rows=[...s.orders,...(s.history||[])].map(toRow); const {error}=await supa.from('orders').insert(rows); if(error) console.warn('Supabase seed:',error.message); }
+// Aviso visible cuando un guardado a la nube falla (antes moría en silencio en la consola).
+function syncFailed(msg){ console.warn('Supabase:',msg); toast('No se guardó en la nube — revisa el internet y vuelve a intentar'); }
+// Sube UNA comanda (la que cambió). Reintenta 1 vez antes de avisar.
+function dbSyncOrder(o){ const row=toRow(o);
+  supa.from('orders').upsert(row).then(({error})=>{
+    if(!error) return;
+    setTimeout(()=>{ supa.from('orders').upsert(row).then(({error:e2})=>{ if(e2) syncFailed('upsert: '+e2.message); }); },1500);
+  }); }
 let syncT=null;
 function dbSyncAll(){ clearTimeout(syncT); syncT=setTimeout(async()=>{
   const rows=[...state.orders,...(state.history||[])].map(toRow);
-  const {error}=await supa.from('orders').upsert(rows); if(error) console.warn('Supabase upsert:',error.message);
+  const {error}=await supa.from('orders').upsert(rows); if(error) syncFailed('upsert all: '+error.message);
 },120); }
 function dbDelete(id){ if(USE_SUPA) supa.from('orders').delete().eq('id',id).then(({error})=>{ if(error) console.warn('Supabase delete:',error.message); }); }
 let refetchT=null;
@@ -1088,8 +1100,10 @@ async function initSupa(){
 // Trae datos + se suscribe a tiempo real. Corre DESPUÉS de autenticar (con RLS cerrada requiere sesión).
 async function initSupaData(){
   await dbFetchCatalog();
-  await dbFetch();
-  if(state.orders.length===0 && state.history.length===0){ await seedToDb(); await dbFetch(); }
+  let ok=await dbFetch();
+  if(!ok){ await new Promise(r=>setTimeout(r,1200)); ok=await dbFetch(); } // reintento (red inestable)
+  if(!ok) toast('No pude bajar las comandas — revisa el internet y toca SYNC');
+  // APP EN PRODUCCIÓN: ya NO se siembran datos de demostración aunque la base esté vacía.
   archiveStaleListas();
   // pasar el token de sesión al tiempo real (necesario cuando la base está cerrada por RLS)
   try{ const {data}=await supa.auth.getSession(); if(data&&data.session&&supa.realtime&&supa.realtime.setAuth) supa.realtime.setAuth(data.session.access_token); }catch(e){}
@@ -1186,7 +1200,7 @@ function toast(m, undo){
 }
 function doUndo(){ if(toastUndo){ const fn=toastUndo; toastUndo=null; $("#toast").classList.remove("show"); fn(); } }
 // revierte el último cambio de estado (pop del historial) + reversión extra opcional
-function revertStatus(id, extra){ const o=orderById(id); if(!o) return; if(o.hist&&o.hist.length>1){ o.hist.pop(); o.status=o.hist[o.hist.length-1].s; } if(extra) extra(o); save(); rerender(); }
+function revertStatus(id, extra){ const o=orderById(id); if(!o) return; if(o.hist&&o.hist.length>1){ o.hist.pop(); o.status=o.hist[o.hist.length-1].s; } if(extra) extra(o); save(o); rerender(); }
 // sonido suave de aviso (Web Audio, sin assets) + control de mute
 let soundOn=true, prevCotizar=null, alertC1=false, _actx=null;
 // El audio en móvil/iPad requiere un gesto del usuario para activarse → se desbloquea al hacer login.
@@ -1295,6 +1309,9 @@ function updateClock(){ const el=$("#syncClock"); if(el) el.textContent="actuali
 // No refresca al admin si está capturando una comanda o con una hoja/editor abierto (perdería lo escrito).
 function safeToRefreshAdmin(){ if(adminView==='nueva') return false; if(document.querySelector('.overlay')) return false; return true; }
 setInterval(()=>{ archiveStaleListas();
+  // Modo nube: bajar datos de verdad (red de seguridad si el realtime se cae). scheduleRefetch ya
+  // respeta al admin cuando está capturando/editando y re-pinta al carnicero (suena si entró comanda).
+  if(USE_SUPA && session.role){ scheduleRefetch(); return; }
   if(session.role==="carnicero"){ rerender(); }
   else if(session.role==="admin" && safeToRefreshAdmin()){ rerender(); }
 },30000);
@@ -1339,7 +1356,8 @@ function renderAdmin(){
   else if(adminView==="dispositivos") content=adminDispositivos();
 
   $("#app").innerHTML = topbar(
-    `<span class="tb-pill"><span class="tb-dot"></span> En línea</span>`
+    USE_SUPA ? `<span class="tb-pill"><span class="tb-dot"></span> En línea</span>`
+             : `<span class="tb-pill" style="background:#FBF0D9;color:#8a5a06;font-weight:700">Sin nube · local</span>`
   ) + `<div class="layout">
       <aside class="sidebar">
         <button class="snav snew btn-ic" onclick="go('nueva')">${ic('plus',18)} Nueva comanda</button>
@@ -1524,22 +1542,25 @@ function submitOrder(){
   if(!draft.clientName.trim()){ toast("Falta el nombre del cliente"); return; }
   if(!draft.items.length){ toast("Agrega al menos un producto"); return; }
   const folio=String(state.seq++).padStart(4,"0");
-  const o={ id:"o"+folio, folio, clientName:draft.clientName.trim(), phone:draft.phone, zone:draft.zone, addr:draft.addr,
+  // ID único por dispositivo: si dos dispositivos crean comanda al mismo tiempo, ninguna pisa a la otra.
+  const o={ id:"o"+folio+"-"+Math.random().toString(36).slice(2,7), folio, clientName:draft.clientName.trim(), phone:draft.phone, zone:draft.zone, addr:draft.addr,
     delivery:draft.delivery, shipping:draft.delivery==='envio'?(+draft.shipping||0):0, note:draft.note, status:"cotizar", createdAt:Date.now(), paid:false,
     items:draft.items.map(it=>{const p=prodById(it.prodId);
       return {prodId:p.id,name:p.name,unit:p.unit,price:p.price,weigh:p.weigh,qty:it.qty,available:true,weight:null,note:""};}),
     hist:[{s:"cotizar",at:Date.now()}] };
-  state.orders.unshift(o); save();
+  state.orders.unshift(o); save(o);
   upsertClient({phone:draft.phone, name:draft.clientName.trim(), zone:draft.zone, addr:draft.addr});
   notifyNewOrder(o); // aviso push al dispositivo del carnicero
   toast("Comanda #"+folio+" enviada al carnicero"); go("bandeja");
 }
 /* ----- AUTOLLENAR (pegar pedido) + clientes por teléfono ----- */
 const _digits=p=>(p||'').replace(/\D/g,'');
+// Números de Honduras = 8 dígitos; compara los últimos 8 para que "9876-5432" encuentre a "+504 9876-5432".
+const _phoneKey=p=>{ const d=_digits(p); return d.length>8?d.slice(-8):d; };
 function clientByPhone(phone){
-  const np=_digits(phone); if(np.length<4) return null;
-  if(state.clients){ const c=state.clients.find(x=>_digits(x.phone)===np); if(c) return c; }
-  const o=allOrders().find(x=>_digits(x.phone)===np);
+  const np=_phoneKey(phone); if(np.length<4) return null;
+  if(state.clients){ const c=state.clients.find(x=>_phoneKey(x.phone)===np); if(c) return c; }
+  const o=allOrders().find(x=>_phoneKey(x.phone)===np);
   return o? {phone:o.phone,name:o.clientName,zone:o.zone,addr:o.addr} : null;
 }
 // IA (Claude/OpenAI vía Edge Function). Timeout 7s. Si falla → throw y caemos al parser local.
@@ -1852,9 +1873,9 @@ function waMessage(o){
 function repartidorFicha(o){
   return `Cliente: ${o.clientName}\nTeléfono: ${o.phone||'—'}\nDirección: ${o.addr||o.zone||'—'}`;
 }
-function markPaid(id){ const o=orderById(id); o.paid=true; o.paidAt=Date.now(); setStatus(o,"preparacion"); save(); closeSheet(); toast("Pagado · pasó a preparación", ()=>revertStatus(id, x=>{x.paid=false; x.paidAt=null;})); }
-function returnToCotizar(id){ const o=orderById(id); setStatus(o,"cotizar"); save(); closeSheet(); toast("Devuelta a cotización", ()=>revertStatus(id)); }
-function sendRepartidor(id){ const o=orderById(id); const f=repartidorFicha(o);
+function markPaid(id){ const o=orderById(id); if(!o) return; o.paid=true; o.paidAt=Date.now(); setStatus(o,"preparacion"); save(o); closeSheet(); toast("Pagado · pasó a preparación", ()=>revertStatus(id, x=>{x.paid=false; x.paidAt=null;})); }
+function returnToCotizar(id){ const o=orderById(id); if(!o) return; setStatus(o,"cotizar"); save(o); closeSheet(); toast("Devuelta a cotización", ()=>revertStatus(id)); }
+function sendRepartidor(id){ const o=orderById(id); if(!o) return; const f=repartidorFicha(o);
   // open a sub view in sheet
   sheet(o,`<div class="sect-label" style="margin-top:0">Ficha para el repartidor</div>
     <div class="msgbox" id="ficha">${esc(f)}</div>
@@ -1862,9 +1883,9 @@ function sendRepartidor(id){ const o=orderById(id); const f=repartidorFicha(o);
     <button class="btn ghost block sm" style="margin-top:8px" onclick="copy(document.getElementById('ficha').innerText);this.innerHTML='Copiado'">${ic('copy',16)} Copiar ficha</button>
     <button class="btn green lg block" style="margin-top:10px" onclick="confirmRuta('${o.id}')">${ic('truck',18)} Enviado al repartidor</button>`);
 }
-function confirmRuta(id){ const o=orderById(id); setStatus(o,"en_ruta"); save(); closeSheet(); toast("Comanda en ruta", ()=>revertStatus(id)); }
-function markDelivered(id){ const o=orderById(id); setStatus(o,"entregada"); save(); closeSheet(); toast("Comanda entregada", ()=>revertStatus(id)); }
-function cancelOrder(id){ const o=orderById(id); setStatus(o,"cancelada"); save(); closeSheet(); toast("Comanda cancelada", ()=>revertStatus(id)); }
+function confirmRuta(id){ const o=orderById(id); if(!o) return; setStatus(o,"en_ruta"); save(o); closeSheet(); toast("Comanda en ruta", ()=>revertStatus(id)); }
+function markDelivered(id){ const o=orderById(id); if(!o) return; setStatus(o,"entregada"); save(o); closeSheet(); toast("Comanda entregada", ()=>revertStatus(id)); }
+function cancelOrder(id){ const o=orderById(id); if(!o) return; setStatus(o,"cancelada"); save(o); closeSheet(); toast("Comanda cancelada", ()=>revertStatus(id)); }
 
 /* ================= CARNICERO v2 ================= */
 const C_COLS=[["c1","Por cotizar","cotizar"],["c2","Espera pago","espera_pago"],["c3","En preparación","preparacion"],["c4","Lista p/ entrega","lista"]];
@@ -1915,9 +1936,9 @@ function kcard(o,st){
   </div>`;
 }
 function moveCard(id,dir){
-  const o=orderById(id); const ni=C_ORDER.indexOf(o.status)+dir;
+  const o=orderById(id); if(!o) return; const ni=C_ORDER.indexOf(o.status)+dir;
   if(ni<0||ni>=C_ORDER.length) return;
-  setStatus(o,C_ORDER[ni]); save(); toast('#'+o.folio+' → '+STATUS[C_ORDER[ni]]);
+  setStatus(o,C_ORDER[ni]); save(o); toast('#'+o.folio+' → '+STATUS[C_ORDER[ni]]);
 }
 function askDelete(id){
   const o=orderById(id);
@@ -1928,7 +1949,7 @@ function askDelete(id){
       <button class="btn red block" onclick="doDelete('${o.id}')">Sí, eliminar</button></div>
   </div></div>`;
 }
-function doDelete(id){ const o=orderById(id); state.orders=state.orders.filter(x=>x.id!==id); dbDelete(id); save(); closeSheet(); toast('Comanda eliminada', ()=>{ if(o){ state.orders.unshift(o); save(); rerender(); } }); }
+function doDelete(id){ const o=orderById(id); state.orders=state.orders.filter(x=>x.id!==id); dbDelete(id); if(!USE_SUPA) save(); closeSheet(); toast('Comanda eliminada', ()=>{ if(o){ state.orders.unshift(o); save(o); rerender(); } }); }
 
 /* ----- editable order sheet + numpad ----- */
 let editItems=null, editShipping=0, editComment='', activeEdit=null, adminEditMode=false;
@@ -1966,9 +1987,12 @@ function oitemRow(it,i,vo){
       r2=`<span class="lbl">Cantidad</span>
         <button class="numbox ${activeEdit&&activeEdit.i===i&&activeEdit.field==='qty'?'active':''}" id="nb${i}" onclick="startEdit(${i},'qty')">${it.qty}<span class="nbu">${unit}</span></button>`;
     }
-    if(it.price==null){
+    // Los productos "por encargo" (sin precio de catálogo) siempre dejan editar el precio,
+    // aunque el carnicero ya haya puesto uno (antes la caja desaparecía y no se podía corregir).
+    const cp=prodById(it.prodId);
+    if(it.price==null || (cp&&cp.price==null)){
       r2+=`<span class="lbl">Precio/lb</span>
-        <button class="numbox ${activeEdit&&activeEdit.i===i&&activeEdit.field==='price'?'active':''}" id="pb${i}" onclick="startEdit(${i},'price')">L<span class="nbu">encargo</span></button>`;
+        <button class="numbox ${activeEdit&&activeEdit.i===i&&activeEdit.field==='price'?'active':''}" id="pb${i}" onclick="startEdit(${i},'price')">${it.price!=null?'L'+it.price:'L'}<span class="nbu">${it.price!=null?'/lb':'encargo'}</span></button>`;
     }
   } else if(it.available && vo){
     r2=`<span class="lbl">${it.weigh?(it.weight!=null?it.weight+' lb':'—'):it.qty+' '+unit}</span>`;
@@ -2088,15 +2112,15 @@ function commitEdit(){
 function closeNumpad(){ activeEdit=null; const h=$("#numpadHost"); if(h) h.innerHTML=''; rerenderOitems(); }
 function persistEdits(){ const o=orderById(currentSheetId); if(!o) return;
   o.items=editItems.map(it=>({...it, weight: it.weigh?(it.weight!=null?it.weight:it.qty):null}));
-  o.shipping=editShipping; o.note=editComment; save(); }
-function confirmCotizarV2(){ const o=orderById(currentSheetId);
+  o.shipping=editShipping; o.note=editComment; save(o); }
+function confirmCotizarV2(){ const o=orderById(currentSheetId); if(!o) return;
   // No dejar avanzar sin haber validado el peso de los productos que lo requieren.
   const faltan=editItems.filter(it=>it.available && it.weigh && !it._wtouched);
   if(faltan.length){ toast('Valida el peso de: '+faltan.map(f=>f.name).join(', '));
     const idx=editItems.indexOf(faltan[0]); if(idx>=0) startEdit(idx,'weight'); return; }
-  const id=o.id; persistEdits(); setStatus(o,'espera_pago'); save(); closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
+  const id=o.id; persistEdits(); setStatus(o,'espera_pago'); save(o); closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
 function guardarV2(){ persistEdits(); closeCarn(); toast('Cambios guardados'); }
-function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(); closeCarn(); toast('Listo para entrega', ()=>revertStatus(id, x=>{x.listaAt=prevLista;})); }
+function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(o); closeCarn(); toast('Listo para entrega', ()=>revertStatus(id, x=>{x.listaAt=prevLista;})); }
 function closeCarn(){ $("#overlayHost").innerHTML=''; const h=$("#numpadHost"); if(h) h.innerHTML=''; activeEdit=null; editItems=null; currentSheetId=null; adminEditMode=false; rerender(); }
 /* add product mid-process */
 let addCat="Res";
@@ -2134,6 +2158,8 @@ function closeSheet(){ $("#overlayHost").innerHTML=""; currentSheetId=null; edit
 /* ============ INIT ============ */
 if(window.supabase && SUPA_URL){ initSupa().catch(e=>{ console.warn('Supabase init falló, modo local:',e); USE_SUPA=false; load(); archiveStaleListas(); }); }
 else { USE_SUPA=false; load(); archiveStaleListas(); }
+// Si no cargó la nube, avisar ANTES de entrar (el modo local es demostración: no ve ni guarda pedidos reales).
+setTimeout(()=>{ const w=$("#cloudWarn"); if(w && !USE_SUPA) w.textContent="Sin conexión a la nube — modo de demostración. Los pedidos reales NO se verán aquí; revisa el internet y recarga."; },1500);
 
 /* ===== PWA: instalable + offline (service worker) ===== */
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
