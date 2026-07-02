@@ -711,6 +711,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .ab-search:focus-within{border-color:var(--rojo);box-shadow:0 0 0 4px rgba(159,38,41,.1)}
 .ab-clear{flex:none;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#EFEFF3;color:var(--muted);cursor:pointer}
 .ab-clear:active{transform:scale(.92)}
+/* iPad: sin espera de doble-tap y sin zoom accidental en los controles (taps instantáneos) */
+button,input,textarea,select,.kcard2,.ocard,.pchip,.numbox,.np-key,.kmv,.role-btn,.btoggle{touch-action:manipulation}
+/* Con una hoja abierta, pausar las animaciones del tablero de fondo (el iPad dedica todo al tap) */
+.ov-open .kcol.urge::before{animation-play-state:paused}
+.ov-open .kdot{animation-play-state:paused}
 /* "Con el carnicero" (Resumen) */
 .carn-info{display:flex;align-items:center;gap:8px;background:#F5F5F7;border:.5px solid var(--line);border-radius:12px;padding:11px 13px;margin:8px 0 2px;font-size:13.5px;color:var(--muted);cursor:pointer}
 .carn-info b{color:var(--ink);font-variant-numeric:tabular-nums}
@@ -1051,10 +1056,10 @@ function archiveStaleListas(){
 }
 const allOrders=()=> state.orders.concat(state.history||[]);
 const bc = ("BroadcastChannel" in window)? new BroadcastChannel("ct_v2"):null;
-if(bc) bc.onmessage=()=>{ if(USE_SUPA) return; load(); lastSync=Date.now(); rerender(); };
-window.addEventListener("storage",e=>{ if(USE_SUPA) return; if(e.key===KEY){ load(); lastSync=Date.now(); rerender(); }});
+if(bc) bc.onmessage=()=>{ if(USE_SUPA) return; load(); lastSync=Date.now(); tapSafeRerender(); };
+window.addEventListener("storage",e=>{ if(USE_SUPA) return; if(e.key===KEY){ load(); lastSync=Date.now(); tapSafeRerender(); }});
 // Sync robusto local (solo modo sin nube): revisa cambios de otra ventana cada 1.2s
-setInterval(()=>{ if(USE_SUPA) return; const p=+(localStorage.getItem("ct_v2_ping")||0); if(p>lastPing){ lastPing=p; load(); lastSync=Date.now(); rerender(); } },1200);
+setInterval(()=>{ if(USE_SUPA) return; const p=+(localStorage.getItem("ct_v2_ping")||0); if(p>lastPing){ lastPing=p; load(); lastSync=Date.now(); tapSafeRerender(); } },1200);
 
 /* ====== Capa de datos Supabase ====== */
 function toRow(o){ return {id:o.id,folio:o.folio,client_name:o.clientName,phone:o.phone,zone:o.zone,addr:o.addr,delivery:o.delivery,shipping:o.shipping||0,note:o.note,status:o.status,paid:!!o.paid,paid_at:o.paidAt||null,lista_at:o.listaAt||null,archived:!!o.archived,archived_at:o.archivedAt||null,created_at:o.createdAt,items:o.items||[],hist:o.hist||[]}; }
@@ -1096,7 +1101,7 @@ function dbSyncAll(){ clearTimeout(syncT); syncT=setTimeout(async()=>{
 },120); }
 function dbDelete(id){ if(USE_SUPA) supa.from('orders').delete().eq('id',id).then(({error})=>{ if(error) console.warn('Supabase delete:',error.message); }); }
 let refetchT=null;
-function scheduleRefetch(){ clearTimeout(refetchT); refetchT=setTimeout(async()=>{ await dbFetch(); lastSync=Date.now(); if(session.role==='admin' && !safeToRefreshAdmin()) return; rerender(); },250); }
+function scheduleRefetch(){ clearTimeout(refetchT); refetchT=setTimeout(async()=>{ await dbFetch(); lastSync=Date.now(); if(session.role==='admin' && !safeToRefreshAdmin()) return; tapSafeRerender(); },250); }
 let realtimeSubbed=false;
 async function initSupa(){
   supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);
@@ -1318,7 +1323,7 @@ async function doLogin(){
   }catch(e){ $("#loginErr").textContent="No pude entrar. Revisa la conexión."; go.disabled=false; }
 }
 async function enterApp(role){
-  session.role=role;
+  session.role=role; _carnSigLast=''; // forzar pintado completo al entrar
   if(USE_SUPA) await initSupaData(); else archiveStaleListas();
   unlockAudio(); // activar sonido dentro del gesto del login (necesario en iPad)
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
@@ -1347,8 +1352,8 @@ setInterval(()=>{ archiveStaleListas();
   // Modo nube: bajar datos de verdad (red de seguridad si el realtime se cae). scheduleRefetch ya
   // respeta al admin cuando está capturando/editando y re-pinta al carnicero (suena si entró comanda).
   if(USE_SUPA && session.role){ scheduleRefetch(); return; }
-  if(session.role==="carnicero"){ rerender(); }
-  else if(session.role==="admin" && safeToRefreshAdmin()){ rerender(); }
+  if(session.role==="carnicero"){ tapSafeRerender(); }
+  else if(session.role==="admin" && safeToRefreshAdmin()){ tapSafeRerender(); }
 },30000);
 // Cierre de sesión SOLO por inactividad (mínimo 2 horas sin interacción).
 let lastActivity=Date.now();
@@ -1360,6 +1365,17 @@ setInterval(()=>{ if(session.role && Date.now()-lastActivity>2*3600*1000){ logou
 function rerender(){
   if(!session.role) return;
   if(session.role==="admin") renderAdmin(); else renderCarnicero();
+}
+/* GUARDIÁN DE TAPS (iPad): los re-renders AUTOMÁTICOS (30s, realtime, sync) esperan a que el
+   dedo se levante. Si el tablero se reconstruye a media pulsación, el botón tocado se destruye
+   y el tap se pierde → "lag" / tocar dos veces. Las acciones del usuario re-pintan directo. */
+let _touching=false,_lastTouchEnd=0,_pendRerender=null;
+window.addEventListener('touchstart',()=>{_touching=true;},{passive:true});
+window.addEventListener('touchend',()=>{_touching=false;_lastTouchEnd=Date.now();},{passive:true});
+window.addEventListener('touchcancel',()=>{_touching=false;_lastTouchEnd=Date.now();},{passive:true});
+function tapSafeRerender(){
+  if(_touching || Date.now()-_lastTouchEnd<350){ clearTimeout(_pendRerender); _pendRerender=setTimeout(tapSafeRerender,250); return; }
+  rerender();
 }
 
 /* ---------- TOPBAR ---------- */
@@ -1949,11 +1965,20 @@ function cancelOrder(id){ const o=orderById(id); if(!o) return; setStatus(o,"can
 const C_COLS=[["c1","Por cotizar","cotizar"],["c2","Espera pago","espera_pago"],["c3","En preparación","preparacion"],["c4","Lista p/ entrega","lista"]];
 const C_ORDER=["cotizar","espera_pago","preparacion","lista"];
 const C_EMPTY={cotizar:"Nada por cotizar",espera_pago:"Nada en espera",preparacion:"Nada en preparación",lista:"Nada listo aún"};
+// Firma ligera del tablero: si nada visible cambió, NO se reconstruye el DOM (menos trabajo
+// en el iPad y menos ventanas donde un tap pueda caer en un botón recién destruido).
+// Incluye el minuto actual para que los "hace X min" se refresquen solos.
+let _carnSigLast='';
+function _carnSig(){ return Math.floor(Date.now()/60000)+'~'+soundOn+'~'+pushOn+'~'+
+  state.orders.filter(o=>C_ORDER.includes(o.status)).map(o=>[o.id,o.status,o.paid?1:0,o.clientName,o.note||'',o.items.length,fullTotal(o),o.createdAt].join('|')).join(';'); }
 function renderCarnicero(){
   // aviso de comanda nueva: si crecen las "por cotizar", suena + pulso en la columna
   const cotizarCount = state.orders.filter(o=>o.status==='cotizar').length;
   if(prevCotizar!==null && cotizarCount>prevCotizar){ playDing(); alertC1=true; setTimeout(()=>{alertC1=false; const c=$("#colC1"); if(c) c.classList.remove('alerted');},1800); }
   prevCotizar=cotizarCount;
+  const sig=_carnSig();
+  if(sig===_carnSigLast){ updateClock(); return; }
+  _carnSigLast=sig;
   $("#app").innerHTML =
    `<div class="ctop">
       <button class="ctop-out" onclick="logout()">${ic('left',18)} Salir</button>
@@ -2222,6 +2247,12 @@ if(window.supabase && SUPA_URL){ initSupa().catch(e=>{ console.warn('Supabase in
 else { USE_SUPA=false; load(); archiveStaleListas(); }
 // Si no cargó la nube, avisar ANTES de entrar (el modo local es demostración: no ve ni guarda pedidos reales).
 setTimeout(()=>{ const w=$("#cloudWarn"); if(w && !USE_SUPA) w.textContent="Sin conexión a la nube — modo de demostración. Los pedidos reales NO se verán aquí; revisa el internet y recarga."; },1500);
+
+// Marca <html class="ov-open"> mientras haya una hoja/modal abierta → el CSS pausa las
+// animaciones del tablero de fondo (taps más fluidos en iPad). Centralizado con un observer
+// para cubrir todos los caminos de abrir/cerrar (sheets, confirmaciones, editor, numpad).
+new MutationObserver(()=>{ document.documentElement.classList.toggle('ov-open', $("#overlayHost").children.length>0); })
+  .observe($("#overlayHost"),{childList:true});
 
 /* ===== PWA: instalable + offline (service worker) ===== */
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
