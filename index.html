@@ -1210,17 +1210,38 @@ function toast(m, undo){
 function doUndo(){ if(toastUndo){ const fn=toastUndo; toastUndo=null; $("#toast").classList.remove("show"); fn(); } }
 // revierte el último cambio de estado (pop del historial) + reversión extra opcional
 function revertStatus(id, extra){ const o=orderById(id); if(!o) return; if(o.hist&&o.hist.length>1){ o.hist.pop(); o.status=o.hist[o.hist.length-1].s; } if(extra) extra(o); save(o); rerender(); }
-// sonido suave de aviso (Web Audio, sin assets) + control de mute
-let soundOn=true, prevCotizar=null, alertC1=false, _actx=null;
-// El audio en móvil/iPad requiere un gesto del usuario para activarse → se desbloquea al hacer login.
+// timbre de aviso (Web Audio, sin assets) + control de mute (persistido)
+let soundOn=(localStorage.getItem('ct_v2_sound')!=='off'), prevCotizar=null, alertC1=false, _actx=null, _comp=null, lastDingAt=0;
+// El audio en móvil/iPad requiere un gesto del usuario para activarse → se desbloquea al hacer
+// login y se re-desbloquea con cualquier toque (iPad lo suspende al dormir/cambiar de app).
 function unlockAudio(){ try{ const A=window.AudioContext||window.webkitAudioContext; if(!_actx) _actx=new A(); if(_actx.state==='suspended') _actx.resume(); }catch(e){} }
-// Campana identificable y fuerte: 4 notas ascendentes (tipo timbre de mostrador), se repite 2 veces.
+// Compresor a la salida: permite subir la ganancia al máximo sin que distorsione.
+function _audioOut(){ if(!_comp){ _comp=_actx.createDynamicsCompressor(); _comp.connect(_actx.destination); } return _comp; }
+// Timbre FUERTE tipo campana de mostrador: nota + octava (más presencia), 3 rondas (~3 s),
+// al tope del volumen multimedia del dispositivo. + vibración (Android).
 function playDing(){ if(!soundOn) return; try{ unlockAudio(); const a=_actx; if(!a) return;
-  const seq=[784,1047,1319,1047]; // Sol-Do-Mi-Do
-  const round=(base)=>seq.forEach((f,i)=>{ const o=a.createOscillator(),g=a.createGain(); o.type='triangle'; o.frequency.value=f; o.connect(g); g.connect(a.destination);
-    const t=a.currentTime+base+i*0.15; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.42,t+0.018); g.gain.exponentialRampToValueAtTime(0.0001,t+0.34); o.start(t); o.stop(t+0.36); });
-  round(0); round(0.95);
+  lastDingAt=Date.now();
+  const seq=[784,1047,1319,1047]; const out=_audioOut(); // Sol-Do-Mi-Do
+  const round=(base)=>seq.forEach((f,i)=>{ [[f,'triangle',0.9],[f*2,'sine',0.4]].forEach(([fr,ty,pk])=>{
+    const o=a.createOscillator(),g=a.createGain(); o.type=ty; o.frequency.value=fr; o.connect(g); g.connect(out);
+    const t=a.currentTime+base+i*0.16;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(pk,t+0.018); g.gain.exponentialRampToValueAtTime(0.0001,t+0.4);
+    o.start(t); o.stop(t+0.42); }); });
+  round(0); round(1.0); round(2.0);
+  if(navigator.vibrate) navigator.vibrate([300,120,300,120,300]);
 }catch(e){} }
+function toggleSound(){ soundOn=!soundOn; localStorage.setItem('ct_v2_sound', soundOn?'on':'off');
+  if(session.role==='carnicero') renderCarnicero();
+  if(soundOn) playDing(); // suena de una vez: confirma que sí se oye y a qué volumen
+  toast(soundOn?'Timbre activado':'Timbre silenciado'); }
+// TIMBRE INSISTENTE: mientras haya comandas "Por cotizar" sin atender, re-suena cada 25 s
+// (no interrumpe si están trabajando una comanda con la hoja abierta; se calla con la bocina).
+setInterval(()=>{ if(session.role!=='carnicero'||!soundOn) return;
+  if(document.querySelector('.overlay')) return;
+  const n=state.orders.filter(o=>o.status==='cotizar').length;
+  if(n>0 && Date.now()-lastDingAt>25000){ playDing();
+    const c=$("#colC1"); if(c){ c.classList.add('alerted'); setTimeout(()=>c.classList.remove('alerted'),1800); } }
+},5000);
 // Botón SYNC del carnicero: refresca el tablero desde la nube y confirma que está al día.
 function manualSync(){ const b=$("#syncBtn"); if(b) b.classList.add('syncing');
   const done=()=>{ lastSync=Date.now(); rerender(); toast('Tablero actualizado'); };
@@ -1258,7 +1279,9 @@ function ic(n,s=20){const p={
   trend:'<path d="M3 17l5-5 4 4 8-8M16 8h5v5"/>',
   sync:'<path d="M20 12a8 8 0 01-14 5.7M4 12a8 8 0 0114-5.7M18 4v3h-3M6 20v-3h3"/>',
   camera:'<path d="M3 8.5A1.5 1.5 0 014.5 7H7l1.2-1.8h7.6L17 7h2.5A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/><circle cx="12" cy="13" r="3.3"/>',
-  search:'<circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8L20.5 20.5"/>'
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8L20.5 20.5"/>',
+  sound:'<path d="M4 9.5h3L12 5v14l-5-4.5H4zM15.5 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12"/>',
+  soundoff:'<path d="M4 9.5h3L12 5v14l-5-4.5H4zM16 9.5l5 5M21 9.5l-5 5"/>'
  }[n]||'';
  return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px;flex:none">${p}</svg>`;
 }
@@ -1329,7 +1352,9 @@ setInterval(()=>{ archiveStaleListas();
 },30000);
 // Cierre de sesión SOLO por inactividad (mínimo 2 horas sin interacción).
 let lastActivity=Date.now();
-['click','keydown','touchstart','pointerdown'].forEach(ev=>window.addEventListener(ev,()=>{ lastActivity=Date.now(); },{passive:true}));
+['click','keydown','touchstart','pointerdown'].forEach(ev=>window.addEventListener(ev,()=>{ lastActivity=Date.now(); unlockAudio(); },{passive:true}));
+// Al volver la app a primer plano (iPad dormido, cambio de app): re-activar audio + bajar datos frescos.
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ unlockAudio(); if(USE_SUPA && session.role) scheduleRefetch(); } });
 setInterval(()=>{ if(session.role && Date.now()-lastActivity>2*3600*1000){ logout(); } },60000);
 
 function rerender(){
@@ -1933,6 +1958,7 @@ function renderCarnicero(){
    `<div class="ctop">
       <button class="ctop-out" onclick="logout()">${ic('left',18)} Salir</button>
       <div class="ctop-brand ctop-brand-h"><img src="assets/torito-badge.png" class="ctop-badge" alt=""><img src="assets/torito-wordmark.svg" class="ctop-logo" alt="El Torito Carnicería"><span class="ctop-role">PRODUCCIÓN</span></div>
+      <button class="ctop-snd ${soundOn?'on':''}" onclick="toggleSound()" aria-label="${soundOn?'Silenciar timbre':'Activar timbre'}">${ic(soundOn?'sound':'soundoff',19)}</button>
       <button class="ctop-push ${pushOn?'on':''}" onclick="togglePush()" aria-label="${pushOn?'Avisos activados':'Activar avisos'}">${ic(pushOn?'bell':'belloff',18)}<span class="cp-lbl">${pushOn?'Avisos ON':'Activar avisos'}</span></button>
       <button class="ctop-sync" id="syncBtn" onclick="manualSync()" aria-label="Actualizar tablero">${ic('sync',16)}<span id="syncClock">actualizado ahora</span></button>
    </div>
