@@ -625,6 +625,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .ctop-sync{display:inline-flex;align-items:center;gap:7px;cursor:pointer;border:none}
 .ctop-sync svg{flex:none}
 .ctop-sync.syncing svg{animation:spin .8s linear infinite}
+.ctop-sync.stale{background:#FBF0D9;color:#8a5a06;font-weight:700}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* Carnicero: borde de luz que circula en columnas con comandas (sutil, alerta sin estorbar) */
 @property --toroAng{syntax:'<angle>';inherits:false;initial-value:0deg}
@@ -1238,7 +1239,7 @@ function _audioOut(){ if(!_comp){ _comp=_actx.createDynamicsCompressor(); _comp.
    En iPhone/iPad, el Web Audio "de fondo" se oye bajito y lo apaga el switch de silencio.
    Un <audio> real usa el canal de música: suena FUERTE y aunque el switch esté en silencio.
    Los tonos se sintetizan una vez (OfflineAudioContext → WAV) — sin archivos externos. */
-const TONES={campana:'Campana',timbre:'Timbre',alarma:'Alarma'};
+const TONES={campana:'Campana',cocina:'Cocina',timbre:'Timbre',alarma:'Alarma',sirena:'Sirena',claxon:'Claxon',melodia:'Melodía'};
 let bellTone=(localStorage.getItem('ct_v2_tone') in TONES)?localStorage.getItem('ct_v2_tone'):'campana';
 function _wavBlob(data,sr){ const n=data.length; const b=new ArrayBuffer(44+n*2); const v=new DataView(b);
   const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
@@ -1257,6 +1258,10 @@ async function _toneUrl(name){
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(pk,t+0.015); g.gain.exponentialRampToValueAtTime(0.0001,t+d); o.start(t); o.stop(t+d+0.02); };
   if(name==='timbre'){ for(let r=0;r<3;r++){ const t=r*1.05; for(let i=0;i<8;i++) note(i%2?880:660, t+i*0.09, 0.1, 0.95, 'square'); } }
   else if(name==='alarma'){ for(let r=0;r<6;r++){ const t=r*0.5; note(1200,t,0.22,0.95,'sawtooth'); note(1600,t+0.05,0.18,0.5,'square'); } }
+  else if(name==='cocina'){ [0,0.22,1.1,1.32,2.1,2.32].forEach(t=>{ note(1975,t,0.75,0.95,'sine'); note(2637,t,0.5,0.45,'sine'); }); } // "ding-ding" de mostrador
+  else if(name==='sirena'){ for(let i=0;i<6;i++) note(i%2?960:640, i*0.5, 0.5, 0.9, 'square'); }
+  else if(name==='claxon'){ for(let r=0;r<3;r++){ const t=r*0.9; note(350,t,0.55,0.9,'sawtooth'); note(440,t,0.55,0.7,'sawtooth'); } }
+  else if(name==='melodia'){ const m=[523,659,784,1047,1319]; [0,1.5].forEach(base=>m.forEach((f,i)=>{ note(f,base+i*0.18,0.35,0.9); note(f*2,base+i*0.18,0.3,0.3,'sine'); })); }
   else { const seq=[784,1047,1319,1047]; [0,1.0,2.0].forEach(base=>seq.forEach((f,i)=>{ note(f,base+i*0.16,0.4,0.95); note(f*2,base+i*0.16,0.4,0.4,'sine'); })); } // campana Sol-Do-Mi-Do
   const buf=await ctx.startRendering();
   _toneUrls[name]=URL.createObjectURL(_wavBlob(buf.getChannelData(0), sr));
@@ -1285,7 +1290,10 @@ function _dingSynth(){ try{ unlockAudio(); const a=_actx; if(!a) return;
     o.start(t); o.stop(t+0.42); }); });
   round(0); round(1.0); round(2.0);
 }catch(e){} }
-function playDing(){ if(!soundOn) return; lastDingAt=Date.now();
+// force=true (botones de la hoja de sonido) salta el anti-doble; sin force, dos avisos con
+// menos de 4 s entre sí se funden en uno (evita timbrazos encimados al entrar/sincronizar).
+function playDing(force){ if(!soundOn) return;
+  const now=Date.now(); if(!force && now-lastDingAt<4000) return; lastDingAt=now;
   if(navigator.vibrate) navigator.vibrate([300,120,300,120,300]);
   playBell().then(ok=>{ if(!ok) _dingSynth(); }).catch(()=>_dingSynth()); }
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
@@ -1296,12 +1304,12 @@ function openSoundSheet(){
      <button class="cat-tg ${soundOn?'on':''}" style="width:100%" onclick="sndToggle()">${ic(soundOn?'sound':'soundoff',16)} ${soundOn?'Timbre activado':'Timbre silenciado'}</button>
      <div class="sect-label">Tono del timbre</div>
      <div class="cat-tgs">${Object.entries(TONES).map(([k,l])=>`<button class="cat-tg ${bellTone===k?'on':''}" onclick="pickTone('${k}')">${l}</button>`).join('')}</div>
-     <button class="btn red lg block btn-ic" style="margin-top:16px" onclick="playDing()">${ic('sound',18)} Probar sonido</button>
+     <button class="btn red lg block btn-ic" style="margin-top:16px" onclick="playDing(true)">${ic('sound',18)} Probar sonido</button>
      <div class="pp-note" style="margin-top:12px">Sube el <b>volumen del dispositivo</b> con la app abierta. El timbre usa el canal de música: en iPhone/iPad suena aunque el switch esté en silencio.</div>
    </div></div></div>`;
 }
-function pickTone(k){ if(!(k in TONES)) return; bellTone=k; localStorage.setItem('ct_v2_tone',k); openSoundSheet(); playDing(); }
-function sndToggle(){ soundOn=!soundOn; localStorage.setItem('ct_v2_sound', soundOn?'on':'off'); openSoundSheet(); if(soundOn) playDing(); }
+function pickTone(k){ if(!(k in TONES)) return; bellTone=k; localStorage.setItem('ct_v2_tone',k); openSoundSheet(); playDing(true); }
+function sndToggle(){ soundOn=!soundOn; localStorage.setItem('ct_v2_sound', soundOn?'on':'off'); openSoundSheet(); if(soundOn) playDing(true); }
 // TIMBRE INSISTENTE: mientras haya comandas "Por cotizar" sin atender, re-suena cada 25 s
 // (no interrumpe si están trabajando una comanda con la hoja abierta; se calla con la bocina).
 setInterval(()=>{ if(session.role!=='carnicero'||!soundOn) return;
@@ -1310,10 +1318,16 @@ setInterval(()=>{ if(session.role!=='carnicero'||!soundOn) return;
   if(n>0 && Date.now()-lastDingAt>25000){ playDing();
     const c=$("#colC1"); if(c){ c.classList.add('alerted'); setTimeout(()=>c.classList.remove('alerted'),1800); } }
 },5000);
-// Botón SYNC del carnicero: refresca el tablero desde la nube y confirma que está al día.
+// Botón SYNC del carnicero: baja comandas + catálogo de la nube y REPINTA COMPLETO
+// (fuerza el repintado aunque la firma diga que nada cambió; antes el spinner podía quedarse girando).
 function manualSync(){ const b=$("#syncBtn"); if(b) b.classList.add('syncing');
-  const done=()=>{ lastSync=Date.now(); rerender(); toast('Tablero actualizado'); };
-  if(USE_SUPA){ dbFetch().then(done).catch(done); } else { load(); done(); } }
+  const done=(ok)=>{ if(ok!==false) lastSync=Date.now();
+    _carnSigLast=''; rerender();
+    const b2=$("#syncBtn"); if(b2) b2.classList.remove('syncing');
+    updateClock();
+    toast(ok===false ? 'No pude actualizar — revisa el internet' : 'Tablero actualizado'); };
+  if(USE_SUPA){ Promise.all([dbFetch(), dbFetchCatalog().catch(()=>{})]).then(([ok])=>done(ok)).catch(()=>done(false)); }
+  else { load(); done(true); } }
 function copy(txt){ navigator.clipboard&&navigator.clipboard.writeText(txt); }
 const esc=s=>(s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function ic(n,s=20){const p={
@@ -1387,6 +1401,9 @@ async function doLogin(){
 }
 async function enterApp(role){
   session.role=role; _carnSigLast=''; // forzar pintado completo al entrar
+  // Periodo de gracia del timbre: al entrar NO suena de una (el insistente esperaba con reloj
+  // vencido y timbraba al instante — el "bug de la alarma al volver a entrar").
+  lastDingAt=Date.now(); prevCotizar=null;
   if(USE_SUPA) await initSupaData(); else archiveStaleListas();
   unlockAudio(); // activar sonido dentro del gesto del login (necesario en iPad)
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
@@ -1397,7 +1414,7 @@ async function enterApp(role){
     refreshPushState().then(()=>{ if(session.role==='carnicero') renderCarnicero(); });
   }
 }
-function logout(){ session.role=null; clearInterval(clockT); releaseWake();
+function logout(){ session.role=null; clearInterval(clockT); releaseWake(); prevCotizar=null;
   if(USE_SUPA && supa){ try{ supa.auth.signOut(); }catch(e){} }
   $("#app").classList.add("hidden"); $("#overlayHost").innerHTML=""; $("#login").classList.remove("hidden");
   selRole=null; document.querySelectorAll(".role-btn").forEach(x=>x.classList.remove("sel"));
@@ -1408,7 +1425,8 @@ function logout(){ session.role=null; clearInterval(clockT); releaseWake();
 let adminView="nueva";
 let clock=0, clockT;
 function startClock(){ clockT=setInterval(()=>{ if(session.role==="carnicero") updateClock(); },1000); }
-function updateClock(){ const el=$("#syncClock"); if(el) el.textContent="actualizado "+timeAgo(lastSync).replace("hace ","hace ").replace("instantes","ahora"); }
+function updateClock(){ const el=$("#syncClock"); if(el) el.textContent="actualizado "+timeAgo(lastSync).replace("hace ","hace ").replace("instantes","ahora");
+  const b=$("#syncBtn"); if(b) b.classList.toggle('stale', Date.now()-lastSync>120000); } // ámbar si lleva >2 min sin sincronizar
 // Refresco automático cada 30s. NO hace logout; el logout es por inactividad (2h, abajo).
 // No refresca al admin si está capturando una comanda o con una hoja/editor abierto (perdería lo escrito).
 function safeToRefreshAdmin(){ if(adminView==='nueva') return false; if(document.querySelector('.overlay')) return false;
