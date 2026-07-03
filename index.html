@@ -560,7 +560,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .admin-board .kcol.c5 .kn{color:var(--muted)}
 .admin-board .kcol.c5 .kc{background:rgba(0,0,0,.06);color:#5a514a}
 .admin-board .kmove{margin-top:10px}
-.admin-board .kmv{width:100%;border:none;border-radius:11px;padding:9px;font-weight:700;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.admin-board .kmv{width:auto;flex:1;border:none;border-radius:11px;padding:9px;font-weight:700;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.admin-board .kmv.anav{flex:0 0 42px;padding:9px 0;background:#EFEFF3;color:var(--muted)}
+.admin-board .kmv.anav.ghost{visibility:hidden}
 .admin-board .kmv.go{background:#2F6B57;color:#fff}
 .admin-board .kmv.fwd{background:var(--ink);color:#fff}
 @media(min-width:900px){ .admin-board .kanban{grid-template-columns:repeat(5,1fr)} .admin-board .kcol{flex:auto} }
@@ -1072,10 +1074,17 @@ async function dbFetch(){
   state.orders=all.filter(o=>!o.archived).sort((a,b)=>b.createdAt-a.createdAt);
   state.history=all.filter(o=>o.archived);
   state.seq=Math.max(0, ...all.map(o=>parseInt(o.folio,10)||0))+1;
-  // clientes (si la tabla ya existe)
-  try{ const {data:cl,error:ce}=await supa.from('clients').select('*'); if(!ce && cl) state.clients=cl.map(fromRowC); }catch(e){}
+  // clientes: la nube manda si la tabla existe y tiene datos; si no, respaldo local del dispositivo
+  try{ const {data:cl,error:ce}=await supa.from('clients').select('*');
+    if(!ce && cl && cl.length) state.clients=cl.map(fromRowC);
+    else if(!state.clients || !state.clients.length) state.clients=loadClientsLocal();
+  }catch(e){ if(!state.clients || !state.clients.length) state.clients=loadClientsLocal(); }
   return true;
 }
+// Respaldo local de clientes: si la tabla `clients` no existe en la nube (SQL_clients.sql),
+// los clientes editados persisten al menos en este dispositivo.
+function loadClientsLocal(){ try{ return JSON.parse(localStorage.getItem('ct_v2_clients')||'[]'); }catch(e){ return []; } }
+function saveClientsLocal(){ try{ localStorage.setItem('ct_v2_clients', JSON.stringify(state.clients||[])); }catch(e){} }
 function toRowC(c){ return {phone:_digits(c.phone), name:c.name||'', zone:c.zone||'', addr:c.addr||'', note:c.note||'', created_at:c.createdAt||Date.now()}; }
 function fromRowC(r){ return {phone:r.phone, name:r.name, zone:r.zone, addr:r.addr, note:r.note, createdAt:Number(r.created_at)||0}; }
 function upsertClient(c){
@@ -1085,6 +1094,7 @@ function upsertClient(c){
   // si ya existe, conservar el teléfono guardado (evita duplicar "98765432" vs "50498765432")
   const rec={phone:(i>=0?state.clients[i].phone:np), name:c.name, zone:c.zone||'', addr:c.addr||'', note:(i>=0?state.clients[i].note:'')||'', createdAt:(i>=0?state.clients[i].createdAt:Date.now())};
   if(i>=0) state.clients[i]=rec; else state.clients.push(rec);
+  saveClientsLocal();
   if(USE_SUPA) supa.from('clients').upsert(toRowC(rec)).then(({error})=>{ if(error) console.warn('Supabase client upsert:',error.message); });
 }
 // Aviso visible cuando un guardado a la nube falla (antes moría en silencio en la consola).
@@ -1574,6 +1584,18 @@ function adminBandeja(g){
      <div class="kanban" id="abKanban">${abColsHtml()}</div>
    </div>`;
 }
+// El ADMIN puede mover cualquier comanda entre estaciones con las flechas ‹ › (control total).
+// Mover con flecha NO marca pagado — eso sigue siendo el botón "Marcar pagado".
+const A_ORDER=['cotizar','espera_pago','preparacion','lista','en_ruta','entregada'];
+function adminMove(id,dir){
+  const o=orderById(id); if(!o) return;
+  const i=A_ORDER.indexOf(o.status); if(i<0) return;
+  const ni=i+dir; if(ni<0||ni>=A_ORDER.length) return;
+  setStatus(o,A_ORDER[ni]);
+  if(A_ORDER[ni]==='lista' && !o.listaAt) o.listaAt=Date.now();
+  save(o); rerender();
+  toast('#'+o.folio+' → '+STATUS[A_ORDER[ni]], ()=>revertStatus(id));
+}
 function akcard(o,st){
   let footer='', tag='';
   if(st==='espera_pago') footer=`<button class="kmv go" onclick="event.stopPropagation();markPaid('${o.id}')">${ic('cash',16)} Marcar pagado</button>`;
@@ -1581,13 +1603,17 @@ function akcard(o,st){
   else if(st==='en_ruta') footer=`<button class="kmv go" onclick="event.stopPropagation();markDelivered('${o.id}')">${ic('check',16)} Marcar entregada</button>`;
   if(st==='cotizar') tag=`<div class="kwait">${ic('clock',14)} El carnicero está cotizando</div>`;
   else if(st==='preparacion') tag=`<div class="kpaid">${ic('knife',14)} En preparación</div>`;
+  const idx=A_ORDER.indexOf(st);
+  const arrow=(d,en)=> en
+    ? `<button class="kmv anav" onclick="event.stopPropagation();adminMove('${o.id}',${d})" aria-label="${d<0?'Regresar':'Avanzar'} de estación">${ic(d<0?'left':'right',16)}</button>`
+    : `<span class="kmv anav ghost"></span>`;
   return `<div class="kcard2" onclick="openAdminOrder('${o.id}')">
     <div class="kf"><span class="kfolio">#${o.folio}</span><span class="ktime">${timeAgo(o.createdAt)}</span></div>
     <div class="kname">${esc(o.clientName)}</div>
     <div class="kitems">${o.items.length} productos · <b>${money(fullTotal(o))}</b></div>
     ${o.paid?`<div class="kpaid">${ic('check',14)} Pagado</div>`:""}
     ${tag}
-    ${footer?`<div class="kmove">${footer}</div>`:""}
+    <div class="kmove">${arrow(-1,idx>0)}${footer||`<span style="flex:1"></span>`}${arrow(1,idx<A_ORDER.length-1)}</div>
   </div>`;
 }
 
@@ -1841,26 +1867,78 @@ async function tomarFotoPedido(input){
   if(btn){ btn.disabled=false; btn.innerHTML=old; }
 }
 
-/* ----- CLIENTES ----- */
+/* ----- CLIENTES (editables por el admin) ----- */
+// Agrupa por TELÉFONO (últimos 8 dígitos); sin teléfono, por nombre. Los datos editados
+// en la ficha del cliente (state.clients) mandan sobre lo derivado de las comandas.
+let _cliMap={};
 function adminClientes(){
   const map={};
-  allOrders().forEach(o=>{ const k=o.clientName; if(!map[k]) map[k]={name:k,phone:o.phone,zone:o.zone,addr:o.addr,orders:[],total:0,prods:{}};
+  const keyOf=(phone,name)=>{ const k=_phoneKey(phone); return k.length>=4 ? 'p'+k : 'n'+_norm(name); };
+  allOrders().forEach(o=>{ const k=keyOf(o.phone,o.clientName);
+    if(!map[k]) map[k]={key:k,name:o.clientName,phone:o.phone,zone:o.zone,addr:o.addr,note:'',orders:[],total:0,prods:{}};
     map[k].orders.push(o); if(_esVenta(o)) map[k].total+=fullTotal(o);
     o.items.forEach(it=>map[k].prods[it.name]=(map[k].prods[it.name]||0)+1); });
+  (state.clients||[]).forEach(c=>{ const k=keyOf(c.phone,c.name);
+    if(!map[k]) map[k]={key:k,name:c.name,phone:c.phone,zone:c.zone,addr:c.addr,note:c.note||'',orders:[],total:0,prods:{}};
+    else { map[k].name=c.name||map[k].name; map[k].phone=c.phone||map[k].phone;
+      map[k].zone=c.zone||map[k].zone; map[k].addr=c.addr||map[k].addr; map[k].note=c.note||''; } });
+  _cliMap=map;
   const cls=Object.values(map).sort((a,b)=>b.total-a.total);
-  return `<div class="view-head"><div><h2>Clientes</h2><div class="vh-sub">${cls.length} clientes · historial</div></div></div>
+  return `<div class="view-head"><div><h2>Clientes</h2><div class="vh-sub">${cls.length} clientes · toca el lápiz para editar</div></div></div>
     <div class="olist">${cls.map(c=>{
       const top=Object.entries(c.prods).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join(", ");
       return `<div class="card" style="padding:14px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-          <div><div style="font-weight:700;font-size:15.5px">${esc(c.name)}</div>
+          <div style="min-width:0"><div style="font-weight:700;font-size:15.5px">${esc(c.name)}</div>
             <div style="font-size:12.5px;color:var(--muted);margin-top:2px">${esc(c.phone||'—')} · ${esc(c.zone||'')}</div></div>
-          <div style="text-align:right"><div class="disp" style="font-weight:600;font-size:18px;color:var(--rojo)">${money(c.total)}</div>
-            <div style="font-size:11px;color:var(--muted-2)">${c.orders.length} comandas</div></div>
+          <div style="display:flex;align-items:flex-start;gap:4px;flex:none">
+            <div style="text-align:right"><div class="disp" style="font-weight:600;font-size:18px;color:var(--rojo)">${money(c.total)}</div>
+              <div style="font-size:11px;color:var(--muted-2)">${c.orders.length} comandas</div></div>
+            <button class="ce-icon" onclick="openClientEdit('${c.key}')" aria-label="Editar cliente">${ic('edit',15)}</button>
+          </div>
         </div>
-        ${top?`<div style="font-size:12.5px;color:var(--muted);margin-top:9px">🛒 Compra seguido: <b style="color:var(--ink)">${esc(top)}</b></div>`:""}
+        ${c.note?`<div style="font-size:12.5px;color:var(--muted);margin-top:9px;background:#F5F5F7;border-radius:9px;padding:7px 10px">${ic('note',13)} ${esc(c.note)}</div>`:""}
+        ${top?`<div style="font-size:12.5px;color:var(--muted);margin-top:9px">Compra seguido: <b style="color:var(--ink)">${esc(top)}</b></div>`:""}
         <div style="margin-top:9px;display:flex;flex-wrap:wrap;gap:6px">${c.orders.slice(0,4).map(o=>`<span class="chip ${CHIP[o.status]}">#${o.folio} ${money(fullTotal(o))}</span>`).join("")}</div>
       </div>`;}).join("")}</div>`;
+}
+/* Ficha editable del cliente */
+let currentCliEdit=null; // key del cliente en edición ('p<8dígitos>' o 'n<nombre>')
+function openClientEdit(key){
+  const c=_cliMap[key]; if(!c) return; currentCliEdit=key;
+  $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()">
+    <div class="sheet" style="max-width:460px"><div class="sheet-head"><span class="sh-name">Editar cliente</span><button class="x" onclick="closeSheet()" aria-label="Cerrar">${ic('x',16)}</button></div>
+    <div class="sheet-body">
+      <div class="field"><label>Nombre</label><input class="inp" id="clName" value="${esc(c.name)}"></div>
+      <div class="field"><label>Teléfono (WhatsApp) — es el ID del cliente</label><input class="inp" id="clPhone" inputmode="tel" value="${esc(c.phone||'')}" placeholder="+504 ..."></div>
+      <div class="field"><label>Zona</label><input class="inp" id="clZone" value="${esc(c.zone||'')}" placeholder="Colonia / barrio"></div>
+      <div class="field"><label>Dirección</label><input class="inp" id="clAddr" value="${esc(c.addr||'')}" placeholder="Dirección + referencia"></div>
+      <div class="field"><label>Nota (ej: cliente frecuente, cobra factura…)</label><input class="inp" id="clNote" value="${esc(c.note||'')}"></div>
+      <button class="btn red lg block btn-ic" style="margin-top:6px" onclick="saveClientEdit()">${ic('check',17)} Guardar cliente</button>
+      <div class="pp-note" style="margin-top:10px">Los cambios aplican al autollenado y a esta lista. Las comandas ya creadas conservan sus datos originales.</div>
+    </div></div></div>`;
+}
+function saveClientEdit(){
+  const g=id=>(($("#"+id)||{}).value||'').trim();
+  const name=g('clName'), phone=g('clPhone'), zone=g('clZone'), addr=g('clAddr'), note=g('clNote');
+  if(!name){ toast('El nombre no puede quedar vacío'); return; }
+  const np=_digits(phone);
+  if(np.length<8){ toast('Pon el teléfono completo (8 dígitos): es el ID del cliente'); return; }
+  if(!state.clients) state.clients=[];
+  const oldKey=currentCliEdit, newPk=_phoneKey(np);
+  // si cambió el número, retirar el registro viejo (local y nube)
+  if(oldKey && oldKey.startsWith('p') && oldKey.slice(1)!==newPk){
+    const old=state.clients.find(x=>_phoneKey(x.phone)===oldKey.slice(1));
+    state.clients=state.clients.filter(x=>_phoneKey(x.phone)!==oldKey.slice(1));
+    if(USE_SUPA && old) supa.from('clients').delete().eq('phone',_digits(old.phone)).then(({error})=>{ if(error) console.warn('client delete:',error.message); });
+  }
+  const i=state.clients.findIndex(x=>_phoneKey(x.phone)===newPk);
+  const rec={phone:np, name, zone, addr, note, createdAt:(i>=0?state.clients[i].createdAt:Date.now())};
+  if(i>=0) state.clients[i]=rec; else state.clients.push(rec);
+  saveClientsLocal();
+  if(USE_SUPA) supa.from('clients').upsert(toRowC(rec)).then(({error})=>{ if(error) console.warn('client upsert:',error.message); });
+  else save();
+  currentCliEdit=null; closeSheet(); toast('Cliente guardado: '+name);
 }
 
 /* ----- REPORTE ----- */
