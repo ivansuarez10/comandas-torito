@@ -1239,8 +1239,15 @@ function _audioOut(){ if(!_comp){ _comp=_actx.createDynamicsCompressor(); _comp.
    En iPhone/iPad, el Web Audio "de fondo" se oye bajito y lo apaga el switch de silencio.
    Un <audio> real usa el canal de música: suena FUERTE y aunque el switch esté en silencio.
    Los tonos se sintetizan una vez (OfflineAudioContext → WAV) — sin archivos externos. */
-const TONES={campana:'Campana',cocina:'Cocina',timbre:'Timbre',alarma:'Alarma',sirena:'Sirena',claxon:'Claxon',melodia:'Melodía'};
+/* 3 tonos (los mejores): Campana original + dos inspirados en los avisos más conocidos
+   (tri-tono tipo iPhone y din-don de timbre) — sintetizados propios, sin grabaciones con copyright. */
+const TONES={campana:'Campana',tritono:'Tritono',dindon:'Din-don'};
 let bellTone=(localStorage.getItem('ct_v2_tone') in TONES)?localStorage.getItem('ct_v2_tone'):'campana';
+/* Intensidad HORNEADA en el audio (iOS no deja controlar volumen por software):
+   fuerte = ganancia máxima + compresión extra para más pegada. */
+const VOLS={suave:'Suave',normal:'Normal',fuerte:'Fuerte'};
+const _VOLG={suave:.35, normal:.7, fuerte:1};
+let bellVol=(localStorage.getItem('ct_v2_vol') in VOLS)?localStorage.getItem('ct_v2_vol'):'fuerte';
 function _wavBlob(data,sr){ const n=data.length; const b=new ArrayBuffer(44+n*2); const v=new DataView(b);
   const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
   ws(0,'RIFF'); v.setUint32(4,36+n*2,true); ws(8,'WAVE'); ws(12,'fmt '); v.setUint32(16,16,true);
@@ -1250,22 +1257,27 @@ function _wavBlob(data,sr){ const n=data.length; const b=new ArrayBuffer(44+n*2)
   return new Blob([b],{type:'audio/wav'}); }
 const _toneUrls={};
 async function _toneUrl(name){
-  if(_toneUrls[name]) return _toneUrls[name];
+  const key=name+'@'+bellVol;
+  if(_toneUrls[key]) return _toneUrls[key];
   const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
   const sr=44100, ctx=new OAC(1, sr*3, sr);
   const comp=ctx.createDynamicsCompressor(); comp.connect(ctx.destination);
   const note=(f,t,d,pk,type)=>{ const o=ctx.createOscillator(),g=ctx.createGain(); o.type=type||'triangle'; o.frequency.value=f; o.connect(g); g.connect(comp);
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(pk,t+0.015); g.gain.exponentialRampToValueAtTime(0.0001,t+d); o.start(t); o.stop(t+d+0.02); };
-  if(name==='timbre'){ for(let r=0;r<3;r++){ const t=r*1.05; for(let i=0;i<8;i++) note(i%2?880:660, t+i*0.09, 0.1, 0.95, 'square'); } }
-  else if(name==='alarma'){ for(let r=0;r<6;r++){ const t=r*0.5; note(1200,t,0.22,0.95,'sawtooth'); note(1600,t+0.05,0.18,0.5,'square'); } }
-  else if(name==='cocina'){ [0,0.22,1.1,1.32,2.1,2.32].forEach(t=>{ note(1975,t,0.75,0.95,'sine'); note(2637,t,0.5,0.45,'sine'); }); } // "ding-ding" de mostrador
-  else if(name==='sirena'){ for(let i=0;i<6;i++) note(i%2?960:640, i*0.5, 0.5, 0.9, 'square'); }
-  else if(name==='claxon'){ for(let r=0;r<3;r++){ const t=r*0.9; note(350,t,0.55,0.9,'sawtooth'); note(440,t,0.55,0.7,'sawtooth'); } }
-  else if(name==='melodia'){ const m=[523,659,784,1047,1319]; [0,1.5].forEach(base=>m.forEach((f,i)=>{ note(f,base+i*0.18,0.35,0.9); note(f*2,base+i*0.18,0.3,0.3,'sine'); })); }
-  else { const seq=[784,1047,1319,1047]; [0,1.0,2.0].forEach(base=>seq.forEach((f,i)=>{ note(f,base+i*0.16,0.4,0.95); note(f*2,base+i*0.16,0.4,0.4,'sine'); })); } // campana Sol-Do-Mi-Do
+  // golpe de campanita: fundamental + parciales inarmónicos (timbre cálido, no "de videojuego")
+  const strike=(f,t,d,pk)=>{ note(f,t,d,pk,'sine'); note(f*2.76,t,d*0.5,pk*0.25,'sine'); note(f*5.4,t,d*0.22,pk*0.09,'sine'); };
+  if(name==='tritono'){ // tres notas ascendentes rápidas tipo aviso de mensaje, ×3
+    [0,1.05,2.1].forEach(base=>[1046.5,1318.5,1568].forEach((f,i)=>strike(f, base+i*0.11, 0.6, 0.95)));
+  } else if(name==='dindon'){ // timbre de puerta clásico: din(Mi)–don(Do), ×2
+    [0,1.5].forEach(base=>{ strike(659.3, base, 1.0, 0.95); strike(523.3, base+0.45, 1.2, 0.9); });
+  } else { const seq=[784,1047,1319,1047]; [0,1.0,2.0].forEach(base=>seq.forEach((f,i)=>{ note(f,base+i*0.16,0.4,0.95); note(f*2,base+i*0.16,0.4,0.4,'sine'); })); } // campana Sol-Do-Mi-Do (la de siempre)
   const buf=await ctx.startRendering();
-  _toneUrls[name]=URL.createObjectURL(_wavBlob(buf.getChannelData(0), sr));
-  return _toneUrls[name]; }
+  // INTENSIDAD horneada: suave/normal atenúan; fuerte aplica saturación suave (más pegada al mismo tope)
+  const data=buf.getChannelData(0);
+  if(bellVol==='fuerte'){ const K=Math.tanh(2.2); for(let i=0;i<data.length;i++) data[i]=Math.tanh(data[i]*2.2)/K; }
+  else { const g=_VOLG[bellVol]||1; for(let i=0;i<data.length;i++) data[i]*=g; }
+  _toneUrls[key]=URL.createObjectURL(_wavBlob(data, sr));
+  return _toneUrls[key]; }
 let _bell=null,_bellReady=false;
 // Dentro de un GESTO del usuario: reproducir mudo un instante deja el <audio> autorizado
 // para sonar solo después (regla de autoplay de iOS/Android).
@@ -1304,11 +1316,14 @@ function openSoundSheet(){
      <button class="cat-tg ${soundOn?'on':''}" style="width:100%" onclick="sndToggle()">${ic(soundOn?'sound':'soundoff',16)} ${soundOn?'Timbre activado':'Timbre silenciado'}</button>
      <div class="sect-label">Tono del timbre</div>
      <div class="cat-tgs">${Object.entries(TONES).map(([k,l])=>`<button class="cat-tg ${bellTone===k?'on':''}" onclick="pickTone('${k}')">${l}</button>`).join('')}</div>
+     <div class="sect-label">Intensidad</div>
+     <div class="cat-tgs">${Object.entries(VOLS).map(([k,l])=>`<button class="cat-tg ${bellVol===k?'on':''}" onclick="pickVol('${k}')">${l}</button>`).join('')}</div>
      <button class="btn red lg block btn-ic" style="margin-top:16px" onclick="playDing(true)">${ic('sound',18)} Probar sonido</button>
      <div class="pp-note" style="margin-top:12px">Sube el <b>volumen del dispositivo</b> con la app abierta. El timbre usa el canal de música: en iPhone/iPad suena aunque el switch esté en silencio.</div>
    </div></div></div>`;
 }
 function pickTone(k){ if(!(k in TONES)) return; bellTone=k; localStorage.setItem('ct_v2_tone',k); openSoundSheet(); playDing(true); }
+function pickVol(k){ if(!(k in VOLS)) return; bellVol=k; localStorage.setItem('ct_v2_vol',k); openSoundSheet(); playDing(true); }
 function sndToggle(){ soundOn=!soundOn; localStorage.setItem('ct_v2_sound', soundOn?'on':'off'); openSoundSheet(); if(soundOn) playDing(true); }
 // TIMBRE INSISTENTE: mientras haya comandas "Por cotizar" sin atender, re-suena cada 25 s
 // (no interrumpe si están trabajando una comanda con la hoja abierta; se calla con la bocina).
