@@ -1873,9 +1873,16 @@ async function tomarFotoPedido(input){
 let _cliMap={};
 function adminClientes(){
   const map={};
-  const keyOf=(phone,name)=>{ const k=_phoneKey(phone); return k.length>=4 ? 'p'+k : 'n'+_norm(name); };
+  // Índice nombre→teléfono: para fusionar pedidos viejos SIN teléfono con el cliente que sí lo tiene.
+  const nameToPhone={};
+  allOrders().forEach(o=>{ const k=_phoneKey(o.phone); if(k.length>=4) nameToPhone[_norm(o.clientName)]=k; });
+  (state.clients||[]).forEach(c=>{ const k=_phoneKey(c.phone); if(k.length>=4) nameToPhone[_norm(c.name)]=k; });
+  const keyOf=(phone,name)=>{ let k=_phoneKey(phone);
+    if(k.length<4){ const byName=nameToPhone[_norm(name)]; if(byName) k=byName; } // sin tel → usar el del mismo nombre
+    return k.length>=4 ? 'p'+k : 'n'+_norm(name); };
   allOrders().forEach(o=>{ const k=keyOf(o.phone,o.clientName);
     if(!map[k]) map[k]={key:k,name:o.clientName,phone:o.phone,zone:o.zone,addr:o.addr,note:'',orders:[],total:0,prods:{}};
+    if(o.phone && !map[k].phone) map[k].phone=o.phone; // rellenar tel desde el pedido que sí lo trae
     map[k].orders.push(o); if(_esVenta(o)) map[k].total+=fullTotal(o);
     o.items.forEach(it=>map[k].prods[it.name]=(map[k].prods[it.name]||0)+1); });
   (state.clients||[]).forEach(c=>{ const k=keyOf(c.phone,c.name);
@@ -1884,23 +1891,55 @@ function adminClientes(){
       map[k].zone=c.zone||map[k].zone; map[k].addr=c.addr||map[k].addr; map[k].note=c.note||''; } });
   _cliMap=map;
   const cls=Object.values(map).sort((a,b)=>b.total-a.total);
-  return `<div class="view-head"><div><h2>Clientes</h2><div class="vh-sub">${cls.length} clientes · toca el lápiz para editar</div></div></div>
-    <div class="olist">${cls.map(c=>{
+  return `<div class="view-head"><div><h2>Clientes</h2><div class="vh-sub">${cls.length} clientes · toca uno para ver su perfil</div></div></div>
+    ${cls.length? `<div class="olist">${cls.map(c=>{
       const top=Object.entries(c.prods).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join(", ");
-      return `<div class="card" style="padding:14px">
+      return `<div class="card cli-card" style="padding:14px;cursor:pointer" onclick="openClientProfile('${c.key}')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
           <div style="min-width:0"><div style="font-weight:700;font-size:15.5px">${esc(c.name)}</div>
             <div style="font-size:12.5px;color:var(--muted);margin-top:2px">${esc(c.phone||'—')} · ${esc(c.zone||'')}</div></div>
           <div style="display:flex;align-items:flex-start;gap:4px;flex:none">
             <div style="text-align:right"><div class="disp" style="font-weight:600;font-size:18px;color:var(--rojo)">${money(c.total)}</div>
               <div style="font-size:11px;color:var(--muted-2)">${c.orders.length} comandas</div></div>
-            <button class="ce-icon" onclick="openClientEdit('${c.key}')" aria-label="Editar cliente">${ic('edit',15)}</button>
+            <button class="ce-icon" onclick="event.stopPropagation();openClientEdit('${c.key}')" aria-label="Editar cliente">${ic('edit',15)}</button>
           </div>
         </div>
         ${c.note?`<div style="font-size:12.5px;color:var(--muted);margin-top:9px;background:#F5F5F7;border-radius:9px;padding:7px 10px">${ic('note',13)} ${esc(c.note)}</div>`:""}
         ${top?`<div style="font-size:12.5px;color:var(--muted);margin-top:9px">Compra seguido: <b style="color:var(--ink)">${esc(top)}</b></div>`:""}
-        <div style="margin-top:9px;display:flex;flex-wrap:wrap;gap:6px">${c.orders.slice(0,4).map(o=>`<span class="chip ${CHIP[o.status]}">#${o.folio} ${money(fullTotal(o))}</span>`).join("")}</div>
-      </div>`;}).join("")}</div>`;
+        <div style="margin-top:9px;display:flex;align-items:center;gap:6px;color:var(--rojo);font-size:12.5px;font-weight:600">${ic('eye',14)} Ver perfil e historial ${ic('right',13)}</div>
+      </div>`;}).join("")}</div>`
+    : `<div class="empty-state"><div class="es-ic">${ic('user',40)}</div><p>Aún no hay clientes.<br>Se crean solos al capturar comandas con teléfono.</p></div>`}`;
+}
+/* Perfil del cliente: datos + historial COMPLETO de pedidos (cada uno abre su detalle) */
+function openClientProfile(key){
+  const c=_cliMap[key]; if(!c) return;
+  const orders=c.orders.slice().sort((a,b)=>(b.paidAt||b.createdAt)-(a.paidAt||a.createdAt));
+  const top=Object.entries(c.prods).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const ventas=orders.filter(_esVenta).length;
+  $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()">
+    <div class="sheet"><div class="sheet-head">
+      <span class="sh-name" style="font-size:16px;font-weight:700;color:var(--ink)">${esc(c.name)}</span>
+      <button class="x" onclick="openClientEdit('${c.key}')" aria-label="Editar" style="margin-left:auto;background:#EFEFF3">${ic('edit',15)}</button>
+      <button class="x" onclick="closeSheet()" aria-label="Cerrar">${ic('x',16)}</button></div>
+    <div class="sheet-body">
+      <div class="kv"><span class="k">${ic('user',14)} Teléfono</span><span class="v">${esc(c.phone||'—')}</span></div>
+      <div class="kv"><span class="k">${ic('truck',14)} Zona</span><span class="v">${esc(c.zone||'—')}</span></div>
+      <div class="kv"><span class="k">${ic('store',14)} Dirección</span><span class="v" style="max-width:60%">${esc(c.addr||'—')}</span></div>
+      ${c.note?`<div class="note-banner" style="margin-top:10px">${ic('note',15)} ${esc(c.note)}</div>`:''}
+      <div class="kpis" style="margin-top:12px">
+        <div class="kpi"><div class="kl">Total comprado</div><div class="kvv" style="color:var(--rojo)">${money(c.total)}</div></div>
+        <div class="kpi"><div class="kl">Pedidos pagados</div><div class="kvv">${ventas}</div></div>
+      </div>
+      ${top.length?`<div class="sect-label">Lo que más compra</div>
+        <div class="rank">${top.map(([n,cnt])=>`<div class="rrow"><span class="rk-name" style="width:auto;flex:1">${esc(n)}</span><span class="rv">${cnt}×</span></div>`).join('')}</div>`:''}
+      <div class="sect-label">Historial de pedidos · ${orders.length}</div>
+      <div class="olist">${orders.map(o=>`<button class="ocard" onclick="openAdminOrder('${o.id}')">
+        <span class="folio">#${o.folio}</span>
+        <span class="obody"><span class="oname">${new Date(o.paidAt||o.createdAt).toLocaleDateString('es-HN',{day:'numeric',month:'short',year:'numeric'})}</span>
+          <span class="ometa">${o.items.length} prod · <span class="chip ${CHIP[o.status]}">${STATUS[o.status]}</span></span></span>
+        <span class="oright"><span class="ototal">${money(fullTotal(o))}</span></span></button>`).join('')||'<div class="kempty">Sin pedidos registrados</div>'}</div>
+      <div style="height:14px"></div>
+    </div></div></div>`;
 }
 /* Ficha editable del cliente */
 let currentCliEdit=null; // key del cliente en edición ('p<8dígitos>' o 'n<nombre>')
