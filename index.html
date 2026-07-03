@@ -1241,7 +1241,7 @@ function _audioOut(){ if(!_comp){ _comp=_actx.createDynamicsCompressor(); _comp.
    Los tonos se sintetizan una vez (OfflineAudioContext → WAV) — sin archivos externos. */
 /* 3 tonos (los mejores): Campana original + dos inspirados en los avisos más conocidos
    (tri-tono tipo iPhone y din-don de timbre) — sintetizados propios, sin grabaciones con copyright. */
-const TONES={campana:'Campana',tritono:'Tritono',dindon:'Din-don'};
+const TONES={campana:'Campana',timbre:'Timbre',tritono:'Tritono',dindon:'Din-don'};
 let bellTone=(localStorage.getItem('ct_v2_tone') in TONES)?localStorage.getItem('ct_v2_tone'):'campana';
 /* Intensidad HORNEADA en el audio (iOS no deja controlar volumen por software):
    fuerte = ganancia máxima + compresión extra para más pegada. */
@@ -1266,7 +1266,9 @@ async function _toneUrl(name){
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(pk,t+0.015); g.gain.exponentialRampToValueAtTime(0.0001,t+d); o.start(t); o.stop(t+d+0.02); };
   // golpe de campanita: fundamental + parciales inarmónicos (timbre cálido, no "de videojuego")
   const strike=(f,t,d,pk)=>{ note(f,t,d,pk,'sine'); note(f*2.76,t,d*0.5,pk*0.25,'sine'); note(f*5.4,t,d*0.22,pk*0.09,'sine'); };
-  if(name==='tritono'){ // tres notas ascendentes rápidas tipo aviso de mensaje, ×3
+  if(name==='timbre'){ // "ring-ring" insistente tipo app de pedidos: trino de campanilla eléctrica, 3 ráfagas
+    [0,1.0,2.0].forEach(base=>{ for(let i=0;i<14;i++) strike(i%2?1568:1760, base+i*0.05, 0.14, 0.85); });
+  } else if(name==='tritono'){ // tres notas ascendentes rápidas tipo aviso de mensaje, ×3
     [0,1.05,2.1].forEach(base=>[1046.5,1318.5,1568].forEach((f,i)=>strike(f, base+i*0.11, 0.6, 0.95)));
   } else if(name==='dindon'){ // timbre de puerta clásico: din(Mi)–don(Do), ×2
     [0,1.5].forEach(base=>{ strike(659.3, base, 1.0, 0.95); strike(523.3, base+0.45, 1.2, 0.9); });
