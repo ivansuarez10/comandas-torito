@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Pedidos · El Torito Carnicería</title>
 <link rel="icon" type="image/png" href="assets/torito-icon.png">
 <link rel="apple-touch-icon" href="assets/torito-icon.png">
@@ -29,7 +29,7 @@
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,system-ui,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
+html,body{height:100%;overscroll-behavior:none} /* sin pull-to-refresh accidental al deslizar el tablero */
 body{font-family:var(--font),system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.45}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 input,select{font-family:inherit;font-size:16px}
@@ -212,7 +212,7 @@ input,select{font-family:inherit;font-size:16px}
 /* ---------- NUEVA COMANDA ---------- */
 .field{margin-bottom:13px}
 .field label{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.03em;display:block;margin-bottom:6px}
-.inp{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-size:15px}
+.inp{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-size:16px} /* ≥16px: evita el auto-zoom al enfocar en móvil */
 .inp:focus{outline:none;border-color:var(--rojo)}
 .seg{display:flex;gap:8px}
 .seg button{flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:600;font-size:14px;color:var(--muted)}
@@ -233,7 +233,7 @@ input,select{font-family:inherit;font-size:16px}
 .cartline .cn small{display:block;color:var(--muted);font-size:11.5px}
 .qty{display:flex;align-items:center;gap:0;border:1.5px solid var(--line);border-radius:9px;overflow:hidden}
 .qty button{width:32px;height:34px;background:#F5F1EA;font-size:18px;font-weight:600;color:var(--ink)}
-.qty input{width:46px;height:34px;border:none;text-align:center;font-size:15px;font-family:var(--font);border-left:1.5px solid var(--line);border-right:1.5px solid var(--line)}
+.qty input{width:46px;height:34px;border:none;text-align:center;font-size:16px;font-family:var(--font);border-left:1.5px solid var(--line);border-right:1.5px solid var(--line)}
 .qty input:focus{outline:none}
 .cartline .rm{color:var(--muted-2);font-size:18px;width:30px;height:30px}
 .cart-empty{text-align:center;color:var(--muted-2);font-size:13px;padding:22px;border:1.5px dashed var(--line);border-radius:12px}
@@ -460,7 +460,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .numbox.active{border-color:var(--rojo);box-shadow:0 0 0 4px rgba(159,38,41,.12)}
 .add-prod{border:1.5px dashed var(--line);border-radius:16px;box-shadow:none}
 /* numpad popup LIGHT (iOS keypad) */
-.np-scrim{background:rgba(0,0,0,.32);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.np-scrim{background:rgba(0,0,0,.38)} /* sin blur de pantalla completa: caro en Android, hacía lento abrir el numpad */
 .np-pop{background:rgba(250,250,252,.96);-webkit-backdrop-filter:saturate(180%) blur(30px);backdrop-filter:saturate(180%) blur(30px);border:.5px solid rgba(0,0,0,.06);border-radius:30px;box-shadow:0 26px 80px rgba(0,0,0,.34)}
 .np-label{color:var(--muted)}
 .np-val{color:var(--ink)}
@@ -2280,7 +2280,10 @@ function startEdit(i,field){
   const cur = field==='weight'?editItems[i].weight : field==='qty'?editItems[i].qty : field==='price'?editItems[i].price : editShipping;
   if(field==='weight' && i>=0 && editItems[i]) editItems[i]._wtouched=true; // marca que sí validó el peso
   activeEdit={i,field,buffer:(cur!=null&&!isNaN(cur))?String(cur):'',fresh:true};
-  rerenderOitems(); renderNumpadPop();
+  // resaltar la caja activa SIN reconstruir toda la lista (el rebuild hacía sentir "pegado" el tap en móvil)
+  document.querySelectorAll('#oitems .numbox.active').forEach(b=>b.classList.remove('active'));
+  if(i>=0){ const bx=$((field==='price'?'#pb':'#nb')+i); if(bx) bx.classList.add('active'); }
+  renderNumpadPop();
 }
 function renderNumpadPop(){
   const host=$("#numpadHost"); if(!host) return;
