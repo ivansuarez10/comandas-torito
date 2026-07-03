@@ -1880,7 +1880,8 @@ function adminClientes(){
   const keyOf=(phone,name)=>{ let k=_phoneKey(phone);
     if(k.length<4){ const byName=nameToPhone[_norm(name)]; if(byName) k=byName; } // sin tel → usar el del mismo nombre
     return k.length>=4 ? 'p'+k : 'n'+_norm(name); };
-  allOrders().forEach(o=>{ const k=keyOf(o.phone,o.clientName);
+  // Los pedidos cancelados NO derivan un cliente (así, al eliminar un cliente, desaparece de la lista).
+  allOrders().filter(o=>o.status!=='cancelada').forEach(o=>{ const k=keyOf(o.phone,o.clientName);
     if(!map[k]) map[k]={key:k,name:o.clientName,phone:o.phone,zone:o.zone,addr:o.addr,note:'',orders:[],total:0,prods:{}};
     if(o.phone && !map[k].phone) map[k].phone=o.phone; // rellenar tel desde el pedido que sí lo trae
     map[k].orders.push(o); if(_esVenta(o)) map[k].total+=fullTotal(o);
@@ -1954,8 +1955,49 @@ function openClientEdit(key){
       <div class="field"><label>Dirección</label><input class="inp" id="clAddr" value="${esc(c.addr||'')}" placeholder="Dirección + referencia"></div>
       <div class="field"><label>Nota (ej: cliente frecuente, cobra factura…)</label><input class="inp" id="clNote" value="${esc(c.note||'')}"></div>
       <button class="btn red lg block btn-ic" style="margin-top:6px" onclick="saveClientEdit()">${ic('check',17)} Guardar cliente</button>
+      <button class="btn ghost block sm btn-ic" style="margin-top:10px;color:#b03a3a" onclick="askDeleteClient('${c.key}')">${ic('trash',15)} Eliminar cliente</button>
       <div class="pp-note" style="margin-top:10px">Los cambios aplican al autollenado y a esta lista. Las comandas ya creadas conservan sus datos originales.</div>
     </div></div></div>`;
+}
+// Eliminar cliente. Si tiene pedidos, se avisa y (con confirmación) también se retiran del tablero/histórico.
+function askDeleteClient(key){
+  const c=_cliMap[key]; if(!c) return;
+  const n=c.orders.length;
+  const msg = n>0
+    ? `${esc(c.name)} tiene <b>${n} pedido${n>1?'s':''}</b> en el historial.<br>Al eliminar el cliente, esos pedidos se marcan como cancelados y salen de la lista. Podrás deshacer.`
+    : `Se eliminará a <b>${esc(c.name)}</b> de la lista de clientes.`;
+  $("#overlayHost").innerHTML=`<div class="overlay"><div class="confirm-box">
+    <div class="cb-ic">${ic('trash',38)}</div><div class="cb-t">¿Eliminar cliente?</div>
+    <div class="cb-s">${msg}</div>
+    <div class="cb-row"><button class="btn ghost block" onclick="closeSheet()">Cancelar</button>
+      <button class="btn red block" onclick="doDeleteClient('${key}')">Sí, eliminar</button></div>
+  </div></div>`;
+}
+function doDeleteClient(key){
+  const c=_cliMap[key]; if(!c){ closeSheet(); return; }
+  const removedClientRec = (state.clients||[]).filter(x=>_phoneKey(x.phone)===key.slice(1) || _norm(x.name)===_norm(c.name));
+  const removedOrders = c.orders.slice();
+  // 1) quitar el registro editable del cliente (local + nube)
+  if(state.clients){ state.clients=state.clients.filter(x=>!(_phoneKey(x.phone)===key.slice(1) || _norm(x.name)===_norm(c.name))); saveClientsLocal(); }
+  if(USE_SUPA) removedClientRec.forEach(rec=>{ supa.from('clients').delete().eq('phone',_digits(rec.phone)).then(({error})=>{ if(error) console.warn('client del:',error.message); }); });
+  // 2) sus pedidos → cancelados + archivados (salen de la lista; no cuentan como venta)
+  removedOrders.forEach(o=>{ if(o.archived && o.status==='cancelada') return;
+    o._prevStatus=o.status; o._prevHist=o.hist.slice(); o._prevArch=o.archived;
+    setStatus(o,'cancelada'); o.archived=true; o.archivedAt=Date.now();
+    state.orders=state.orders.filter(x=>x.id!==o.id);
+    if(!(state.history||[]).some(x=>x.id===o.id)){ if(!state.history) state.history=[]; state.history.push(o); }
+    save(o); });
+  closeSheet();
+  toast('Cliente eliminado', ()=>{ // deshacer
+    removedOrders.forEach(o=>{ if(o._prevStatus===undefined) return;
+      o.status=o._prevStatus; o.hist=o._prevHist||o.hist; o.archived=o._prevArch; o.archivedAt=o._prevArch?o.archivedAt:null;
+      state.history=(state.history||[]).filter(x=>x.id!==o.id);
+      if(!o.archived) state.orders.unshift(o); else if(!state.history.some(x=>x.id===o.id)) state.history.push(o);
+      delete o._prevStatus; delete o._prevHist; delete o._prevArch; save(o); });
+    if(removedClientRec.length){ if(!state.clients) state.clients=[]; removedClientRec.forEach(rec=>state.clients.push(rec)); saveClientsLocal();
+      if(USE_SUPA) removedClientRec.forEach(rec=>supa.from('clients').upsert(toRowC(rec))); }
+    rerender();
+  });
 }
 function saveClientEdit(){
   const g=id=>(($("#"+id)||{}).value||'').trim();
