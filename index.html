@@ -2064,7 +2064,7 @@ function openAdminOrder(id){
 function waMessage(o){
   const av=o.items.filter(i=>i.available);
   const un=o.items.filter(i=>!i.available);
-  let s='';
+  let s='*Detalle de tu pedido:*\n\n';
   av.forEach(it=>{ const q=(it.weigh&&it.weight!=null)?it.weight:it.qty;
     const nm=it.name.replace(/\s*\(paquete\)/i,'');
     s+=`${q} ${unitWord(it.unit,q)} de ${nm} .... ${moneyWA(lineAmount(it))}\n`; });
