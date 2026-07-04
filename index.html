@@ -539,6 +539,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .hist-tx b{font-weight:700;font-size:15px} .hist-tx small{color:var(--muted);font-size:12.5px;margin-top:1px}
 .hist-ch{color:var(--muted-2)}
 .back-btn{background:transparent;border:none;color:var(--rojo);font-weight:600;font-size:14px;padding:0 0 7px;cursor:pointer;display:inline-flex;align-items:center;gap:3px}
+/* histórico: encabezado de día */
+.hist-day-head{display:flex;align-items:center;gap:10px;margin:20px 2px 9px}
+.hist-day-head .hdh-txt{flex:1;min-width:0}
+.hist-day-head .hdh-day{font-family:var(--font);font-weight:800;font-size:16px;color:var(--ink);text-transform:capitalize;letter-spacing:-.01em}
+.hist-day-head .hdh-meta{font-size:12.5px;color:var(--muted-2);font-weight:600;margin-top:1px;font-variant-numeric:tabular-nums}
+.hist-day-head .hdh-del{flex:none;background:#fff;border:.5px solid #F1D2D2;color:#b03a3a;font-weight:700;font-size:12.5px;padding:8px 12px;border-radius:10px;box-shadow:var(--sh);cursor:pointer;white-space:nowrap}
+.hist-day-head .hdh-del:active{background:#FBECEC;transform:scale(.97)}
+/* histórico: fila = abrir + eliminar */
+.hist-row{display:flex;align-items:stretch;gap:0;padding:0;overflow:hidden}
+.hist-row .hist-open{flex:1;min-width:0;display:flex;align-items:center;gap:13px;padding:13px 14px;background:transparent;border:none;text-align:left;cursor:pointer}
+.hist-row .hist-del{flex:none;width:52px;display:flex;align-items:center;justify-content:center;border:none;border-left:.5px solid var(--line);background:transparent;color:var(--muted-2);cursor:pointer}
+.hist-row .hist-del:active{background:#FBECEC;color:var(--rojo)}
 /* ===== línea gráfica: rojo solo como acento (acciones, nav activa, alertas) ===== */
 .ocard .folio{color:var(--ink)} .kcard2 .kfolio{color:var(--ink)} .sh-folio{color:var(--ink)}
 .sect-label svg{color:var(--muted-2)}
@@ -1114,6 +1126,7 @@ function upsertClient(c){
 // Aviso visible cuando un guardado a la nube falla (antes moría en silencio en la consola).
 function syncFailed(msg){ console.warn('Supabase:',msg); toast('No se guardó en la nube — revisa el internet y vuelve a intentar'); }
 // Sube UNA comanda (la que cambió). Reintenta 1 vez antes de avisar.
+function dbDeleteOrder(id){ if(USE_SUPA) supa.from('orders').delete().eq('id',id).then(({error})=>{ if(error) console.warn('order delete:',error.message); }); }
 function dbSyncOrder(o){ const row=toRow(o);
   supa.from('orders').upsert(row).then(({error})=>{
     if(!error) return;
@@ -2112,14 +2125,63 @@ async function removeDispositivo(endpoint){ if(!confirm('¿Quitar este dispositi
   try{ await supa.from('push_subs').delete().eq('endpoint',endpoint); }catch(e){}
   toast('Dispositivo quitado'); loadDispositivos(); }
 /* ----- HISTÓRICO ----- */
+function _dayLabel(ts){ const d=dayStart(ts), today=dayStart(Date.now()), day=86400000;
+  if(d===today) return 'Hoy'; if(d===today-day) return 'Ayer';
+  return new Date(ts).toLocaleDateString('es-HN',{weekday:'long',day:'numeric',month:'long'}); }
 function adminHistorico(){
-  const h=(state.history||[]).slice().sort((a,b)=>(b.paidAt||b.createdAt)-(a.paidAt||a.createdAt));
-  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Histórico</h2><div class="vh-sub">${h.length} comandas archivadas</div></div></div>
-    ${h.length?`<div class="olist">${h.map(o=>`<button class="ocard" onclick="openAdminOrder('${o.id}')">
-      <span class="folio">#${o.folio}</span>
-      <span class="obody"><span class="oname">${esc(o.clientName)}</span><span class="ometa">${new Date(o.paidAt||o.createdAt).toLocaleDateString('es-HN',{day:'numeric',month:'short'})} · ${o.items.length} prod</span></span>
-      <span class="oright"><span class="ototal">${money(fullTotal(o))}</span><span class="otime">${STATUS[o.status]}</span></span></button>`).join("")}</div>`
-     :`<div class="empty-state"><div class="es-ic">${ic('history',40)}</div><p>Aún no hay comandas archivadas.</p></div>`}`;
+  const h=(state.history||[]).slice().sort((a,b)=>_refVenta(b)-_refVenta(a));
+  // agrupar por día (del pedido)
+  const groups=[]; const byDay={};
+  h.forEach(o=>{ const d=dayStart(_refVenta(o)); if(!byDay[d]){ byDay[d]={day:d, orders:[]}; groups.push(byDay[d]); } byDay[d].orders.push(o); });
+  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Histórico</h2><div class="vh-sub">${h.length} comandas archivadas · por día</div></div></div>
+    ${groups.length? groups.map(g=>{
+      const ventas=g.orders.filter(_esVenta).reduce((s,o)=>s+fullTotal(o),0);
+      return `<div class="hist-day-head">
+          <div class="hdh-txt"><div class="hdh-day">${esc(_dayLabel(g.day))}</div>
+            <div class="hdh-meta">${g.orders.length} comanda${g.orders.length>1?'s':''} · ${money(ventas)}</div></div>
+          <button class="hdh-del btn-ic" onclick="askDeleteDay('${g.day}')">${ic('trash',14)} Borrar día</button>
+        </div>
+        <div class="olist">${g.orders.map(o=>`<div class="ocard hist-row">
+          <button class="hist-open" onclick="openAdminOrder('${o.id}')">
+            <span class="folio">#${o.folio}</span>
+            <span class="obody"><span class="oname">${esc(o.clientName)}${o.status==='cancelada'?' <span class="chip cancel" style="margin-left:4px">Cancelada</span>':''}</span>
+              <span class="ometa">${new Date(_refVenta(o)).toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'})} · ${o.items.length} prod</span></span>
+            <span class="oright"><span class="ototal">${money(fullTotal(o))}</span><span class="otime">${STATUS[o.status]}</span></span>
+          </button>
+          <button class="hist-del" onclick="deleteArchivedOrder('${o.id}')" aria-label="Eliminar del histórico">${ic('trash',17)}</button>
+        </div>`).join("")}</div>`;
+    }).join("")
+     :`<div class="empty-state"><div class="es-ic">${ic('history',40)}</div><p>Aún no hay comandas archivadas.</p></div>`}
+    <div style="height:24px"></div>`;
+}
+// Borrar UNA comanda del histórico (real, con Deshacer). Úsalo para limpiar las de prueba.
+function deleteArchivedOrder(id){
+  const o=(state.history||[]).find(x=>x.id===id); if(!o) return;
+  const at=state.history.indexOf(o);
+  state.history.splice(at,1);
+  dbDeleteOrder(id); if(!USE_SUPA) save();
+  rerender();
+  toast('Comanda #'+o.folio+' eliminada', ()=>{ state.history.splice(at,0,o); save(o); rerender(); });
+}
+// Borrar TODAS las archivadas de un día (con confirmación + Deshacer).
+function askDeleteDay(dayTs){
+  const day=+dayTs;
+  const removed=(state.history||[]).filter(o=>dayStart(_refVenta(o))===day);
+  if(!removed.length) return;
+  $("#overlayHost").innerHTML=`<div class="overlay"><div class="confirm-box">
+    <div class="cb-ic">${ic('trash',38)}</div><div class="cb-t">¿Borrar ${removed.length} comanda${removed.length>1?'s':''}?</div>
+    <div class="cb-s">Se eliminan del histórico las comandas archivadas de <b>${esc(_dayLabel(day))}</b>. Podrás deshacer.</div>
+    <div class="cb-row"><button class="btn ghost block" onclick="closeSheet()">Cancelar</button>
+      <button class="btn red block" onclick="doDeleteDay('${dayTs}')">Sí, borrar</button></div>
+  </div></div>`;
+}
+function doDeleteDay(dayTs){
+  const day=+dayTs;
+  const removed=(state.history||[]).filter(o=>dayStart(_refVenta(o))===day);
+  state.history=(state.history||[]).filter(o=>dayStart(_refVenta(o))!==day);
+  removed.forEach(o=>dbDeleteOrder(o.id)); if(!USE_SUPA) save();
+  closeSheet();
+  toast(removed.length+' comandas eliminadas', ()=>{ removed.forEach(o=>{ state.history.push(o); save(o); }); rerender(); });
 }
 // Una VENTA = entregada o pagada, nunca cancelada (una cancelada pagada no debe sumar).
 const _esVenta=o=>(o.status==="entregada"||o.paid) && o.status!=="cancelada";
