@@ -349,6 +349,12 @@ input,select{font-family:inherit;font-size:16px}
 .btoggle.off::after{right:auto;left:3px}
 .oitem-del{flex:none;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--muted-2);border-radius:11px;cursor:pointer;margin-left:2px}
 .oitem-del:active{background:#FBECEC;color:var(--rojo);transform:scale(.92)}
+/* check "ya preparé" (preparación/lista): tacha sin tocar el precio */
+.oitem-check{flex:none;width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:#fff;color:#C7C7CC;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:.12s}
+.oitem-check:active{transform:scale(.9)}
+.oitem-check.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.oitem.done{opacity:.6;background:#F4FAF6}
+.oitem.done .oitem-name{text-decoration:line-through;text-decoration-color:var(--ok);text-decoration-thickness:2px}
 .add-prod{width:100%;padding:16px;border:2px dashed var(--line);border-radius:14px;background:#fff;font-weight:800;font-size:16px;color:var(--rojo);margin:2px 0 14px}
 .add-prod:active{background:#FBF1F1}
 .osum{background:#fff;border:1px solid var(--line);border-radius:14px;padding:4px 16px;margin:6px 0 14px}
@@ -2390,9 +2396,14 @@ function oitemRow(it,i,vo){
   } else if(it.available && vo){
     r2=`<span class="lbl">${it.weigh?(it.weight!=null?it.weight+' lb':'—'):it.qty+' '+unit}</span>`;
   }
-  return `<div class="oitem ${it.available?'':'unavail'}">
+  const done=!!it.done;
+  // En preparación/lista (vo) el carnicero tacha con un CHECK lo que ya preparó (no toca el precio).
+  const leftCtl = vo
+    ? `<button class="oitem-check ${done?'on':''}" onclick="toggleDone(${i})" aria-label="${done?'Preparado':'Marcar preparado'}">${ic('check',20)}</button>`
+    : `<button class="btoggle ${it.available?'':'off'}" onclick="togItem(${i})"></button>`;
+  return `<div class="oitem ${it.available?'':'unavail'} ${done?'done':''}">
     <div class="oitem-r1">
-      ${vo?'':`<button class="btoggle ${it.available?'':'off'}" onclick="togItem(${i})"></button>`}
+      ${leftCtl}
       <div class="oitem-main"><div class="oitem-name">${esc(it.name)}${it.weigh?'<span class="line-tag">Validar peso</span>':''}</div>
         <div class="oitem-sub">Pedido: ${it.qty} ${it.unit==='Libra'?'lb':unit} · ${priceTxt}</div></div>
       <div class="oitem-amt" id="amt${i}">${it.available?money(itemAmt(it)):'—'}</div>
@@ -2425,7 +2436,8 @@ function renderCarnOrder(o,vo){
   else if(o.status==='cotizar') action=`<button class="btn red lg block btn-ic" onclick="confirmCotizarV2()">${ic('check',18)} Guardar y pasar a pago</button>`;
   else if(o.status==='espera_pago') action=`<button class="btn red lg block btn-ic" onclick="guardarV2()">${ic('check',18)} Guardar cambios</button>`;
   else if(o.status==='preparacion') action=`<button class="btn green lg block btn-ic" onclick="markReady('${o.id}')">${ic('check',18)} Marcar listo para entrega</button>`;
-  const voNote = o.status==='preparacion'?'Pagado · pedido final, solo lectura':o.status==='lista'?'Lista para entrega · solo lectura':'Entregada · solo lectura';
+  curSheetVO=vo;
+  const voNote = o.status==='preparacion'?'Pagado · toca el círculo para tachar lo que ya preparaste':o.status==='lista'?'Lista para entrega · solo lectura':'Entregada · solo lectura';
   $("#overlayHost").innerHTML=`<div class="overlay osheet" onclick="if(event.target===this)closeCarn()">
     <div class="sheet"><div class="sheet-head">
       <span class="sh-folio">#${o.folio}</span><span class="sh-name">${esc(o.clientName)}</span>
@@ -2443,7 +2455,10 @@ function renderCarnOrder(o,vo){
         ${action?`<div style="margin-top:6px">${action}</div>`:''}
       </div></div></div>`;
 }
-function rerenderOitems(){ const el=$("#oitems"); if(el) el.innerHTML=editItems.map((it,i)=>oitemRow(it,i,false)).join(""); }
+let curSheetVO=false;
+function rerenderOitems(){ const el=$("#oitems"); if(el) el.innerHTML=editItems.map((it,i)=>oitemRow(it,i,curSheetVO)).join(""); }
+// Tachar/destachar un producto como "ya preparado" (solo visual, NO cambia precio ni total).
+function toggleDone(i){ if(!editItems[i]) return; editItems[i].done=!editItems[i].done; persistEdits(); rerenderOitems(); }
 function togItem(i){ editItems[i].available=!editItems[i].available; if(activeEdit&&activeEdit.i===i){activeEdit=null;} persistEdits(); rerenderOitems(); updateSummary(); renderNumpadPop(); }
 function updateSummary(){ const a=$("#sumSub"); if(a)a.textContent=money(editSubtotal());
   const sh=$("#sumShip"); if(sh)sh.textContent=money(editShipping||0);
