@@ -355,6 +355,12 @@ input,select{font-family:inherit;font-size:16px}
 .oitem-check.on{background:var(--ok);border-color:var(--ok);color:#fff}
 .oitem.done{opacity:.6;background:#F4FAF6}
 .oitem.done .oitem-name{text-decoration:line-through;text-decoration-color:var(--ok);text-decoration-thickness:2px}
+/* avance de preparación */
+.prep-prog{margin-bottom:12px}
+.prep-prog .pp-bar{height:8px;background:#E9E9EE;border-radius:99px;overflow:hidden}
+.prep-prog .pp-bar i{display:block;height:100%;background:var(--ok);border-radius:99px;transition:width .2s}
+.prep-prog .pp-txt{font-size:13.5px;font-weight:700;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:6px}
+.prep-prog .pp-txt.all{color:var(--ok)}
 .add-prod{width:100%;padding:16px;border:2px dashed var(--line);border-radius:14px;background:#fff;font-weight:800;font-size:16px;color:var(--rojo);margin:2px 0 14px}
 .add-prod:active{background:#FBF1F1}
 .osum{background:#fff;border:1px solid var(--line);border-radius:14px;padding:4px 16px;margin:6px 0 14px}
@@ -2445,6 +2451,7 @@ function renderCarnOrder(o,vo){
       <button class="x" onclick="closeCarn()" aria-label="Cerrar">${ic('x',16)}</button></div>
       <div class="sheet-body" id="carnBody">
         ${vo?`<div class="viewonly-tag">${ic('eye',15)} ${voNote}</div>`:''}
+        ${o.status==='preparacion'?`<div class="prep-prog" id="prepProg">${prepProgInner()}</div>`:''}
         <div id="oitems">${editItems.map((it,i)=>oitemRow(it,i,vo)).join("")}</div>
         ${vo?'':`<button class="add-prod btn-ic" onclick="openAddProduct()">${ic('plus',18)} Agregar producto</button>`}
         ${vo
@@ -2457,8 +2464,14 @@ function renderCarnOrder(o,vo){
 }
 let curSheetVO=false;
 function rerenderOitems(){ const el=$("#oitems"); if(el) el.innerHTML=editItems.map((it,i)=>oitemRow(it,i,curSheetVO)).join(""); }
+// Contador de avance "X de Y preparados" (encabezado de la comanda en preparación).
+function prepProgInner(){ const total=(editItems||[]).length, done=(editItems||[]).filter(x=>x.done).length;
+  const all=total>0&&done===total;
+  return `<div class="pp-bar"><i style="width:${total?Math.round(done/total*100):0}%"></i></div>
+    <div class="pp-txt ${all?'all':''}">${all?ic('check',15)+' Todo preparado':done+' de '+total+' preparados'}</div>`; }
+function updatePrepProgress(){ const el=$("#prepProg"); if(el) el.innerHTML=prepProgInner(); }
 // Tachar/destachar un producto como "ya preparado" (solo visual, NO cambia precio ni total).
-function toggleDone(i){ if(!editItems[i]) return; editItems[i].done=!editItems[i].done; persistEdits(); rerenderOitems(); }
+function toggleDone(i){ if(!editItems[i]) return; editItems[i].done=!editItems[i].done; persistEdits(); rerenderOitems(); updatePrepProgress(); }
 function togItem(i){ editItems[i].available=!editItems[i].available; if(activeEdit&&activeEdit.i===i){activeEdit=null;} persistEdits(); rerenderOitems(); updateSummary(); renderNumpadPop(); }
 function updateSummary(){ const a=$("#sumSub"); if(a)a.textContent=money(editSubtotal());
   const sh=$("#sumShip"); if(sh)sh.textContent=money(editShipping||0);
