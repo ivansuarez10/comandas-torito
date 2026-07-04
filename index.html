@@ -347,6 +347,8 @@ input,select{font-family:inherit;font-size:16px}
 .btoggle.off{background:#cf9a9a}
 .btoggle::after{content:"";position:absolute;width:28px;height:28px;border-radius:50%;background:#fff;top:3px;right:3px;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .btoggle.off::after{right:auto;left:3px}
+.oitem-del{flex:none;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--muted-2);border-radius:11px;cursor:pointer;margin-left:2px}
+.oitem-del:active{background:#FBECEC;color:var(--rojo);transform:scale(.92)}
 .add-prod{width:100%;padding:16px;border:2px dashed var(--line);border-radius:14px;background:#fff;font-weight:800;font-size:16px;color:var(--rojo);margin:2px 0 14px}
 .add-prod:active{background:#FBF1F1}
 .osum{background:#fff;border:1px solid var(--line);border-radius:14px;padding:4px 16px;margin:6px 0 14px}
@@ -2394,9 +2396,20 @@ function oitemRow(it,i,vo){
       <div class="oitem-main"><div class="oitem-name">${esc(it.name)}${it.weigh?'<span class="line-tag">Validar peso</span>':''}</div>
         <div class="oitem-sub">Pedido: ${it.qty} ${it.unit==='Libra'?'lb':unit} · ${priceTxt}</div></div>
       <div class="oitem-amt" id="amt${i}">${it.available?money(itemAmt(it)):'—'}</div>
+      ${vo?'':`<button class="oitem-del" onclick="removeEditItem(${i})" aria-label="Quitar producto">${ic('trash',17)}</button>`}
     </div>
     ${r2?`<div class="oitem-r2">${r2}</div>`:''}
   </div>`;
+}
+// Quitar un producto de la comanda (con Deshacer). No deja la comanda en cero productos.
+function removeEditItem(i){
+  const it=editItems[i]; if(!it) return;
+  if(editItems.length<=1){ toast('La comanda debe tener al menos un producto. Para anularla, usa Cancelar comanda.'); return; }
+  closeNumpad();
+  const removed=editItems[i], at=i;
+  editItems.splice(i,1);
+  persistEdits(); rerenderOitems(); updateSummary();
+  toast('Quitado: '+removed.name, ()=>{ editItems.splice(at,0,removed); persistEdits(); rerenderOitems(); updateSummary(); });
 }
 function osumHtml(vo){
   return `<div class="osum">
