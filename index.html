@@ -749,6 +749,22 @@ button,input,textarea,select,.kcard2,.ocard,.pchip,.numbox,.np-key,.kmv,.role-bt
 .carn-info{display:flex;align-items:center;gap:8px;background:#F5F5F7;border:.5px solid var(--line);border-radius:12px;padding:11px 13px;margin:8px 0 2px;font-size:13.5px;color:var(--muted);cursor:pointer}
 .carn-info b{color:var(--ink);font-variant-numeric:tabular-nums}
 .admin-foot{margin-top:4px}
+/* ===== Toque más consistente en Android (Honor/Samsung): sin destello ni selección accidental ===== */
+button,.kcard2,.ocard,.pchip,.numbox,.np-key,.kmv,.role-btn,.btoggle,.oitem-check,.oitem-del,.act-card,.hist-open,.hist-del,.cli-card{
+  -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none}
+/* ===== MODO LIGERO (html.lite): apaga efectos pesados en teléfonos de gama media/baja =====
+   Quita el borde de luz animado, los desenfoques tipo vidrio, el scroll-snap y las transiciones.
+   La GPU/CPU deja de trabajar de fondo → los toques responden al instante y el scroll no salta. */
+html.lite *,html.lite *::before,html.lite *::after{animation:none!important;transition:none!important}
+html.lite .kcol.urge::before{display:none!important}
+html.lite .kdot{display:none!important}
+html.lite .topbar,html.lite .ctop,html.lite .sheet-head,html.lite .botnav,html.lite .np-pop{
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:#fff!important}
+html.lite .np-scrim,html.lite .overlay{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.lite .kcol,html.lite .kcol.c1,html.lite .kcol.c2,html.lite .kcol.c3,html.lite .kcol.c4{
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:#ECECEF!important}
+html.lite .kanban{scroll-snap-type:none!important}
+html.lite .kcard2,html.lite .ocard,html.lite .card,html.lite .oitem,html.lite .kpi{box-shadow:0 1px 2px rgba(0,0,0,.08)!important}
 </style>
 </head>
 <body>
@@ -1350,7 +1366,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 function openSoundSheet(){
   $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()">
-   <div class="sheet" style="max-width:420px"><div class="sheet-head"><span class="sh-name">Sonido de aviso</span><button class="x" onclick="closeSheet()" aria-label="Cerrar">${ic('x',16)}</button></div>
+   <div class="sheet" style="max-width:420px"><div class="sheet-head"><span class="sh-name">Ajustes</span><button class="x" onclick="closeSheet()" aria-label="Cerrar">${ic('x',16)}</button></div>
    <div class="sheet-body">
      <button class="cat-tg ${soundOn?'on':''}" style="width:100%" onclick="sndToggle()">${ic(soundOn?'sound':'soundoff',16)} ${soundOn?'Timbre activado':'Timbre silenciado'}</button>
      <div class="sect-label">Tono del timbre</div>
@@ -1359,10 +1375,20 @@ function openSoundSheet(){
      <div class="cat-tgs">${Object.entries(VOLS).map(([k,l])=>`<button class="cat-tg ${bellVol===k?'on':''}" onclick="pickVol('${k}')">${l}</button>`).join('')}</div>
      <button class="btn red lg block btn-ic" style="margin-top:16px" onclick="playDing(true)">${ic('sound',18)} Probar sonido</button>
      <div class="pp-note" style="margin-top:12px">Sube el <b>volumen del dispositivo</b> con la app abierta. El timbre usa el canal de música: en iPhone/iPad suena aunque el switch esté en silencio.</div>
+     <div class="sect-label">Rendimiento</div>
+     <button class="cat-tg ${liteOn?'on':''}" style="width:100%" onclick="toggleLite()">${ic('check',16)} Modo ligero ${liteOn?'· activado':''}</button>
+     <div class="pp-note" style="margin-top:10px">Actívalo si el teléfono se siente <b>lento o los toques tardan</b> (celulares de gama media/baja). Apaga animaciones y efectos pesados; la app queda igual de funcional pero más fluida.</div>
    </div></div></div>`;
 }
 function pickTone(k){ if(!(k in TONES)) return; bellTone=k; localStorage.setItem('ct_v2_tone',k); openSoundSheet(); playDing(true); }
 function pickVol(k){ if(!(k in VOLS)) return; bellVol=k; localStorage.setItem('ct_v2_vol',k); openSoundSheet(); playDing(true); }
+/* ===== MODO LIGERO (rendimiento en teléfonos de gama media/baja, ej. Honor) ===== */
+// Auto-encendido si el dispositivo reporta poca CPU/RAM; el usuario puede forzarlo desde Ajustes.
+function _liteAuto(){ const c=navigator.hardwareConcurrency||8, m=navigator.deviceMemory||8; return c<=4||m<=3; }
+let liteOn = (localStorage.getItem('ct_v2_lite')!=null) ? (localStorage.getItem('ct_v2_lite')==='on') : _liteAuto();
+function applyLite(){ document.documentElement.classList.toggle('lite', liteOn); }
+function toggleLite(){ liteOn=!liteOn; localStorage.setItem('ct_v2_lite', liteOn?'on':'off'); applyLite(); openSoundSheet(); toast(liteOn?'Modo ligero activado':'Modo ligero desactivado'); }
+applyLite();
 function sndToggle(){ soundOn=!soundOn; localStorage.setItem('ct_v2_sound', soundOn?'on':'off'); openSoundSheet(); if(soundOn) playDing(true); }
 // TIMBRE INSISTENTE: mientras haya comandas "Por cotizar" sin atender, re-suena cada 25 s
 // (no interrumpe si están trabajando una comanda con la hoja abierta; se calla con la bocina).
