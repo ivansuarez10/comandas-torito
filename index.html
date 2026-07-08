@@ -2154,17 +2154,24 @@ async function removeDispositivo(endpoint){ if(!confirm('¿Quitar este dispositi
 function _dayLabel(ts){ const d=dayStart(ts), today=dayStart(Date.now()), day=86400000;
   if(d===today) return 'Hoy'; if(d===today-day) return 'Ayer';
   return new Date(ts).toLocaleDateString('es-HN',{weekday:'long',day:'numeric',month:'long'}); }
+// Libras vendidas: solo productos por LIBRA disponibles (peso real si se pesó, si no la cantidad pedida).
+function itemLibras(it){ if(!it.available||it.unit!=='Libra') return 0; return (it.weigh&&it.weight!=null)?it.weight:(+it.qty||0); }
+function orderLibras(o){ return (o.items||[]).reduce((s,it)=>s+itemLibras(it),0); }
+const _lb=n=>{ const r=Math.round(n*10)/10; return (r%1===0?r.toFixed(0):r.toFixed(1))+' lb'; };
 function adminHistorico(){
   const h=(state.history||[]).slice().sort((a,b)=>_refVenta(b)-_refVenta(a));
+  const totalLb=h.filter(_esVenta).reduce((s,o)=>s+orderLibras(o),0);
   // agrupar por día (del pedido)
   const groups=[]; const byDay={};
   h.forEach(o=>{ const d=dayStart(_refVenta(o)); if(!byDay[d]){ byDay[d]={day:d, orders:[]}; groups.push(byDay[d]); } byDay[d].orders.push(o); });
-  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Histórico</h2><div class="vh-sub">${h.length} comandas archivadas · por día</div></div></div>
+  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Histórico</h2><div class="vh-sub">${h.length} comandas archivadas${totalLb?' · '+_lb(totalLb)+' vendidas':''}</div></div></div>
     ${groups.length? groups.map(g=>{
-      const ventas=g.orders.filter(_esVenta).reduce((s,o)=>s+fullTotal(o),0);
+      const ventasArr=g.orders.filter(_esVenta);
+      const ventas=ventasArr.reduce((s,o)=>s+fullTotal(o),0);
+      const dayLb=ventasArr.reduce((s,o)=>s+orderLibras(o),0);
       return `<div class="hist-day-head">
           <div class="hdh-txt"><div class="hdh-day">${esc(_dayLabel(g.day))}</div>
-            <div class="hdh-meta">${g.orders.length} comanda${g.orders.length>1?'s':''} · ${money(ventas)}</div></div>
+            <div class="hdh-meta">${g.orders.length} comanda${g.orders.length>1?'s':''} · ${money(ventas)}${dayLb?' · '+_lb(dayLb):''}</div></div>
           <button class="hdh-del btn-ic" onclick="askDeleteDay('${g.day}')">${ic('trash',14)} Borrar día</button>
         </div>
         <div class="olist">${g.orders.map(o=>`<div class="ocard hist-row">
@@ -2241,15 +2248,20 @@ function exportReporte(){
   const rows=ventasDelMes().sort((a,b)=>_refVenta(a)-_refVenta(b));
   if(!rows.length){ toast('No hay ventas este mes para exportar'); return; }
   const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
-  const head=['Folio','Fecha','Hora','Cliente','Teléfono','Zona','Entrega','Estado','Pagado','Productos','Subtotal (L)','Envío (L)','Total (L)'];
+  const head=['Folio','Fecha','Hora','Cliente','Teléfono','Zona','Entrega','Estado','Pagado','Productos','Libras','Subtotal (L)','Envío (L)','Total (L)'];
   const lines=[head.map(q).join(',')];
+  let totLb=0;
   rows.forEach(o=>{ const d=new Date(_refVenta(o));
     const prods=o.items.map(it=>{ const qy=(it.weigh&&it.weight!=null)?it.weight:it.qty;
       return qy+' '+(it.unit==='Libra'?'lb':it.unit)+' '+it.name+(it.available?'':' (no disponible)'); }).join('; ');
+    const lb=orderLibras(o); totLb+=lb;
     lines.push([o.folio, d.toLocaleDateString('es-HN'), d.toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'}),
       o.clientName, o.phone||'', o.zone||'', o.delivery==='envio'?'Envío':'Recoge', STATUS[o.status]||o.status,
-      o.paid?'Sí':'No', prods, orderTotal(o).toFixed(2), (o.shipping||0).toFixed(2), fullTotal(o).toFixed(2)].map(q).join(','));
+      o.paid?'Sí':'No', prods, (Math.round(lb*10)/10).toFixed(1), orderTotal(o).toFixed(2), (o.shipping||0).toFixed(2), fullTotal(o).toFixed(2)].map(q).join(','));
   });
+  // fila de totales
+  lines.push(['TOTAL','','','','','','','','','', (Math.round(totLb*10)/10).toFixed(1),
+    rows.reduce((s,o)=>s+orderTotal(o),0).toFixed(2), rows.reduce((s,o)=>s+(o.shipping||0),0).toFixed(2), rows.reduce((s,o)=>s+fullTotal(o),0).toFixed(2)].map(q).join(','));
   const dN=new Date();
   const blob=new Blob(["\ufeff"+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
