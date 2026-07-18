@@ -844,9 +844,9 @@ const CAT=[
    ["Medallones",L(80)],["Pechugas sin hueso",L(82)],["Pechuguitas",L(98)],
    ["Trocitos de pollo en caja",L(98)],["Chicken finger",L(100)] ]},
  {cat:"Embutidos", items:[
-   ["Chorizo Cervecero",L(40)],["Chorizo Indio",L(50)],["Chorizo Suelto",L(60)],["Chorizo Criollo",L(55)],
+   ["Chorizo Cervecero",L(40)],["Chorizo Indio",L(50)],["Chorizo Suelto",L(60)],["Chorizo Criollo Ahumado",L(55)],
    ["Chorizo Barbacoa",L(65)],["Chorizo Barbacoa (paquete)",P(60)],
-   ["Chorizo Parrillero (paquete)",P(60)],["Chorizo Criollo (paquete)",P(60)] ]},
+   ["Chorizo Parrillero (paquete)",P(60)],["Chorizo Criollo Ahumado (paquete)",P(60)] ]},
  {cat:"Vísceras", items:[
    ["Mondongo",L(38)],["Hígado",L(45)],["Lengua",L(82)],
    ["Pulmón",COT()],["Corazón",COT()],["Vaso",COT()] ]},
@@ -972,7 +972,7 @@ const ALIASES=[
   // EMBUTIDOS
   [['chorizo suelto'],'Chorizo Suelto'],[['chorizo barbacoa'],'Chorizo Barbacoa'],
   [['chorizo indio'],'Chorizo Indio'],[['chorizo cervecero'],'Chorizo Cervecero'],
-  [['chorizo criollo'],'Chorizo Criollo'],
+  [['chorizo criollo ahumado','criollo ahumado','chorizo ahumado','ahumado','chorizo criollo','criollo'],'Chorizo Criollo Ahumado'],
   [['chorizo parrillero','chorizo para asar','chorizo para azar','chorizo de asar','chorizo asar','chorizo azar'],'Chorizo Parrillero (paquete)'],
   // RES genéricos (al final)
   [['carne molida','molida'],'Molida'],[['carne de asar','para asar','de asar','asar'],'Carne de asar'],
@@ -1058,7 +1058,7 @@ function seed(){
     history:[
       mkH("0034","Doña María Hernández",1,[li("Rib eye",1,{weight:1.4}),li("Molida",2,{weight:2.1})]),
       mkH("0033","Carlos Banegas (Comedor)",1,[li("Costilla de res",8,{weight:8.2}),li("Pollo entero",3,{weight:9.5})],80),
-      mkH("0032","Wendy Padilla",2,[li("Bistec",3,{weight:3.1}),li("Chorizo Criollo",2,{weight:2})]),
+      mkH("0032","Wendy Padilla",2,[li("Bistec",3,{weight:3.1}),li("Chorizo Criollo Ahumado",2,{weight:2})]),
       mkH("0031","Marvin López",2,[li("Filete",2,{weight:2.3})]),
       mkH("0030","Glenda Cruz",3,[li("Molida",4,{weight:4.2}),li("Chuleta",2,{weight:2})]),
       mkH("0029","Don Beto Sandoval",3,[li("New York",2,{weight:2.4}),li("Chorizo Parrillero (paquete)",3)]),
