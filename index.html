@@ -2324,7 +2324,7 @@ function openAdminOrder(id){
     ${showClientMsg? `
       <div class="sect-label" style="margin-top:6px">Mensaje para el cliente</div>
       <div class="msgbox" id="waBox">${esc(msg)}</div>
-      <button class="btn green block btn-ic" style="margin-top:8px" onclick="waSendClient('${o.id}')">${ic('send',16)} Enviar por WhatsApp</button>
+      <button class="btn green block btn-ic" style="margin-top:8px" onclick="waSendClient('${o.id}')">${ic('send',16)} Notificar cliente (WhatsApp)</button>
       <button class="btn ghost block sm" style="margin-top:8px" onclick="copy(document.getElementById('waBox').innerText);this.innerHTML='Copiado';">${ic('copy',16)} Copiar mensaje</button>
     `:""}
     <div style="margin-top:14px">${actions}</div>
@@ -2337,15 +2337,28 @@ function openAdminOrder(id){
 function waMessage(o){
   const av=o.items.filter(i=>i.available);
   const un=o.items.filter(i=>!i.available);
-  let s='*Detalle de tu pedido:*\n\n';
+  const nm0=(o.clientName||'').trim().split(/\s+/)[0]||'';
+  let s=`Hola${nm0?' '+nm0:''} 👋 Gracias por tu pedido en *Carnicería El Torito*.\n\n*Tu pedido${o.folio?' · '+o.folio:''}:*\n\n`;
   av.forEach(it=>{ const q=(it.weigh&&it.weight!=null)?it.weight:it.qty;
     const nm=it.name.replace(/\s*\(paquete\)/i,'');
     s+=`${q} ${unitWord(it.unit,q)} de ${nm} .... ${moneyWA(lineAmount(it))}\n`; });
   un.forEach(it=>{ s+=`${it.name} .... hoy no disponible\n`; });
   s+=`\n*Subtotal: ${moneyWA(orderTotal(o))}*\n`;
-  if(o.shipping){ s+=`\nEnvío .... ${moneyWA(o.shipping)}\n`; }
-  s+=`\n*Total: ${moneyWA(fullTotal(o))}*\n`;
-  s+=`\nEl pago puedes realizarlo a la siguiente cuenta bancaria.\n\n${PAY_INFO}`;
+  if(o.shipping){ s+=`Envío .... ${moneyWA(o.shipping)}\n`; }
+  s+=`\n*Total a pagar: ${moneyWA(fullTotal(o))}*\n`;
+  // Métodos de pago según entrega: a domicilio el pago va antes de salir; en retiro puede ser efectivo.
+  if(o.delivery){
+    s+=`\n*¿Cómo querés pagar?*\n`;
+    s+=`• Transferencia — te paso la cuenta y me mandás el comprobante 📸\n`;
+    s+=`• Link de pago — decime y te lo envío por aquí 💳\n`;
+    s+=`\nApenas confirmes el pago salimos a entregar 🛵\n`;
+    s+=`\n${PAY_INFO}`;
+  } else {
+    s+=`\n*¿Cómo querés pagar?*\n`;
+    s+=`• Efectivo al pasar a retirar 💵\n`;
+    s+=`• Transferencia si querés adelantar — me mandás el comprobante 📸\n`;
+    s+=`\n${PAY_INFO}`;
+  }
   return s;
 }
 function repartidorFicha(o){
