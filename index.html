@@ -807,6 +807,9 @@ html.lite .kcard2,html.lite .ocard,html.lite .card,html.lite .oitem,html.lite .k
 const CREDS = { admin:"1970", carnicero:"0707" }; // fallback SOLO si no hay nube (Supabase Auth es el login real)
 const AUTH_EMAILS = { admin:"admin@eltorito.hn", carnicero:"carnicero@eltorito.hn" }; // cuentas reales en Supabase
 const PAY_INFO = "Cliente: IVAN ALEJANDRO SUAREZ VELASQUEZ\nNúmero de cuenta BAC: 729447561";
+// Link fijo de pago con tarjeta (BAC "Pagá con tarjeta"). Vacío = todavía no llega de BAC.
+// Cuando te lo den: pegá la URL aquí entre comillas y volvé a subir el archivo. Listo, se cobra en línea.
+const PAY_LINK = "";
 const REPARTIDOR_PHONE = "50431565418"; // WhatsApp del repartidor (+504 3156-5418).
 // Abre WhatsApp Web (en la compu, con la sesión Business) o la app, con el mensaje ya escrito. No auto-envía.
 function _waPhone(p){ let d=(p||'').replace(/\D/g,''); if(!d) return ''; if(d.length===8) d='504'+d; return d; }
@@ -868,7 +871,35 @@ function saveCatMeta(){ localStorage.setItem('ct_v2_catmeta', JSON.stringify(CAT
 function applyPriceOverrides(){ try{ const o=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}'); PRODUCTS.forEach(p=>{ if(o[p.id]!==undefined) p.price=o[p.id]; }); }catch(e){} }
 // PRODUCTS se reconstruye desde CAT + ediciones. Se muta EN SITIO para no romper referencias.
 const PRODUCTS=[];
+/* ===== Menú desde la TIENDA (panel) = fuente única de verdad =====
+   Si existe app_config.store_catalog (lo que edita el panel de la tienda), Comandas
+   construye su catálogo desde ahí. El "agotado" se mantiene local (overlay CATMETA.disabled).
+   Si no existe / la nube no responde, cae al CAT hardcodeado de arriba (red de seguridad). */
+let STORE_CATALOG=null; // array de productos del panel, o null
+const CATMAP={res:'Res',cerdo:'Cerdo',pollo:'Pollo',embutidos:'Embutidos',visceras:'Vísceras',extras:'Extras'};
+// id del panel → nombre canónico que el parser de Comandas ya espera (solo donde difieren; el resto usa el nombre de la tienda tal cual)
+const CANON={
+  'res-asar':'Carne de asar','res-costilla':'Costilla de res','res-new-york':'New York',
+  'cerdo-asar-de-cerdo':'Cerdo para asar','cerdo-lonja-carnuda':'Lonja carnuda',
+  'pollo-menudo':'Menudo de pollo','pollo-entero':'Pollo entero','pollo-patas':'Patas de pollo',
+  'visceras-pulmon':'Pulmón','visceras-corazon':'Corazón','visceras-higado':'Hígado',
+  'extras-camaron':'Camarón','extras-camaron-5lb':'Camarón (5 lb)',
+  'extras-papas-sazonadas':'Papas sazonadas','extras-papas-tornillo':'Papas tornillo',
+  'extras-papas-congeladas':'Papas','extras-bacon':'Tocino',
+  'embutidos-chorizo-criollo':'Chorizo Criollo Ahumado','embutidos-chorizo-parrillero':'Chorizo Parrillero (paquete)'
+};
+function rebuildFromStore(){
+  PRODUCTS.length=0;
+  const dis=(CATMETA&&CATMETA.disabled)||{};
+  STORE_CATALOG.forEach(p=>{
+    const unit = p.unit==='paquete' ? 'Paquete' : (p.unit==='libra' ? 'Libra' : (p.unit||'Libra'));
+    const price = p.quote ? null : (p.price==null ? null : p.price);
+    PRODUCTS.push({ id:p.id, cat:CATMAP[p.cat]||p.cat, name:CANON[p.id]||p.name,
+      unit, price, weigh:!!p.validate, custom:false, disabled:!!dis[p.id], fromStore:true });
+  });
+}
 function rebuildCatalog(){
+  if(STORE_CATALOG && STORE_CATALOG.length){ rebuildFromStore(); return; }
   PRODUCTS.length=0; let idx=0;
   const uov=(CATMETA&&CATMETA.units)||{}, dis=(CATMETA&&CATMETA.disabled)||{};
   CAT.forEach(g=>g.items.forEach(([name,d])=>{
@@ -1166,7 +1197,7 @@ async function initSupa(){
 }
 // Trae datos + se suscribe a tiempo real. Corre DESPUÉS de autenticar (con RLS cerrada requiere sesión).
 async function initSupaData(){
-  await dbFetchCatalog();
+  await dbFetchMenu();
   let ok=await dbFetch();
   if(!ok){ await new Promise(r=>setTimeout(r,1200)); ok=await dbFetch(); } // reintento (red inestable)
   if(!ok) toast('No pude bajar las comandas — revisa el internet y toca SYNC');
@@ -1177,7 +1208,7 @@ async function initSupaData(){
   if(!realtimeSubbed){ realtimeSubbed=true;
     supa.channel('orders-rt').on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>scheduleRefetch()).subscribe();
     supa.channel('config-rt').on('postgres_changes',{event:'*',schema:'public',table:'app_config'},()=>{
-      dbFetchCatalog().then(()=>{ if(editingCatalog()) return; if(session.role==='admin' && !safeToRefreshAdmin()) return; rerender(); });
+      dbFetchMenu().then(()=>{ if(editingCatalog()) return; if(session.role==='admin' && !safeToRefreshAdmin()) return; rerender(); });
     }).subscribe();
   }
 }
@@ -1194,6 +1225,16 @@ async function dbFetchCatalog(){
     rebuildCatalog();
   }catch(e){ /* tabla aún no existe → sigue en modo local */ }
 }
+async function dbFetchStoreCatalog(){
+  try{
+    const {data,error}=await supa.from('app_config').select('value').eq('key','store_catalog').maybeSingle();
+    if(error||!data||!data.value||!Array.isArray(data.value.products)||!data.value.products.length){ return; }
+    STORE_CATALOG=data.value.products;
+    rebuildCatalog();
+  }catch(e){ /* sin nube / sin store_catalog → sigue con el CAT local */ }
+}
+// Baja el catálogo: primero CATMETA (overlay de agotado), luego el menú de la tienda (fuente de verdad).
+async function dbFetchMenu(){ await dbFetchCatalog(); await dbFetchStoreCatalog(); }
 function catalogBlob(){ let prices={}; try{prices=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}');}catch(e){}
   return {names:CATMETA.names||{}, custom:CATMETA.custom||[], removed:CATMETA.removed||[], weigh:CATMETA.weigh||{}, units:CATMETA.units||{}, disabled:CATMETA.disabled||{}, prices}; }
 let catSaveT=null;
@@ -1406,7 +1447,7 @@ function manualSync(){ const b=$("#syncBtn"); if(b) b.classList.add('syncing');
     const b2=$("#syncBtn"); if(b2) b2.classList.remove('syncing');
     updateClock();
     toast(ok===false ? 'No pude actualizar — revisa el internet' : 'Tablero actualizado'); };
-  if(USE_SUPA){ Promise.all([dbFetch(), dbFetchCatalog().catch(()=>{})]).then(([ok])=>done(ok)).catch(()=>done(false)); }
+  if(USE_SUPA){ Promise.all([dbFetch(), dbFetchMenu().catch(()=>{})]).then(([ok])=>done(ok)).catch(()=>done(false)); }
   else { load(); done(true); } }
 function copy(txt){ navigator.clipboard&&navigator.clipboard.writeText(txt); }
 const esc=s=>(s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -2272,8 +2313,34 @@ function exportReporte(){
 }
 
 /* ----- CATÁLOGO ----- */
+// Agotar / disponible desde Comandas (mostrador). Overlay local; no toca precios ni el catálogo del panel.
+function toggleSoldout(id){ const p=prodById(id); if(!p) return;
+  const now=!p.disabled;
+  if(!CATMETA.disabled) CATMETA.disabled={};
+  if(now) CATMETA.disabled[id]=true; else delete CATMETA.disabled[id];
+  saveCatMeta(); dbSaveCatalog(); rebuildCatalog(); rerender();
+  toast(p.name+(now?' → agotado':' → disponible')); }
 function adminCatalogo(){
   const uAbbr=u=>u==='Libra'?'lb':u==='Unidad'?'u':u;
+  // Modo tienda: el menú viene del panel → aquí solo se marca agotado (editar/agregar/quitar deshabilitados).
+  if(STORE_CATALOG && STORE_CATALOG.length){
+    const cats=['Res','Cerdo','Pollo','Embutidos','Vísceras','Extras'];
+    return `<div class="view-head"><div><h2>Menú y precios</h2><div class="vh-sub">${PRODUCTS.length} productos · desde el panel de la tienda</div></div></div>
+    <div class="cat-note">${ic('tag',15)}<span>El menú (precios, nombres, productos) se edita en el <b>panel de la tienda</b>. Aquí solo marcás <b>agotado</b> cuando se acabe algo en el mostrador.</span></div>
+    ${cats.map(cat=>`
+      <div class="sect-label">${esc(cat)}</div>
+      <div class="cat-elist">
+      ${PRODUCTS.filter(p=>p.cat===cat).map(p=>`
+        <div class="cat-erow${p.disabled?' off':''}">
+          <div class="ce-info">
+            <div class="ce-name">${esc(p.name)}${p.disabled?' <span class="ce-offtag">Agotado</span>':''}</div>
+            <div class="ce-unit">${p.unit} · ${p.price==null?'por encargo':money(p.price)+'/'+uAbbr(p.unit)}${p.weigh?' · validar peso':''}</div>
+          </div>
+          <button class="ce-icon${p.disabled?'':' ce-del'}" onclick="toggleSoldout('${p.id}')" aria-label="${p.disabled?'Marcar disponible':'Marcar agotado'}">${ic(p.disabled?'check':'x',15)}</button>
+        </div>`).join("")}
+      </div>`).join("")}
+    <div style="height:28px"></div>`;
+  }
   return `<div class="view-head"><div><h2>Menú y precios</h2><div class="vh-sub">${PRODUCTS.length} productos · toca el lápiz para editar</div></div></div>
     <div class="cat-note">${ic('tag',15)} Los cambios se aplican a las comandas <b>nuevas</b>. Producto <b>agotado</b> = la IA no lo interpreta y no aparece para pedir (lo re-activas cuando vuelva).</div>
     ${CAT_NAMES().map(cat=>`
@@ -2347,16 +2414,21 @@ function waMessage(o){
   if(o.shipping){ s+=`Envío .... ${moneyWA(o.shipping)}\n`; }
   s+=`\n*Total a pagar: ${moneyWA(fullTotal(o))}*\n`;
   // Métodos de pago según entrega: a domicilio el pago va antes de salir; en retiro puede ser efectivo.
+  // Si hay PAY_LINK (link BAC), se ofrece el pago con tarjeta con el monto exacto; si no, queda el fallback.
+  const linkLine = PAY_LINK
+    ? `• Con tarjeta 💳: ${PAY_LINK}\n   (poné el monto: ${moneyWA(fullTotal(o))})\n`
+    : `• Link de pago con tarjeta — decime y te lo envío 💳\n`;
   if(o.delivery){
     s+=`\n*¿Cómo querés pagar?*\n`;
     s+=`• Transferencia — te paso la cuenta y me mandás el comprobante 📸\n`;
-    s+=`• Link de pago — decime y te lo envío por aquí 💳\n`;
+    s+=linkLine;
     s+=`\nApenas confirmes el pago salimos a entregar 🛵\n`;
     s+=`\n${PAY_INFO}`;
   } else {
     s+=`\n*¿Cómo querés pagar?*\n`;
     s+=`• Efectivo al pasar a retirar 💵\n`;
     s+=`• Transferencia si querés adelantar — me mandás el comprobante 📸\n`;
+    if(PAY_LINK) s+=linkLine;
     s+=`\n${PAY_INFO}`;
   }
   return s;
