@@ -913,7 +913,8 @@ function rebuildFromStore(){
   STORE_CATALOG.forEach(p=>{
     const unit = p.unit==='paquete' ? 'Paquete' : (p.unit==='libra' ? 'Libra' : (p.unit||'Libra'));
     const price = p.quote ? null : (p.price==null ? null : p.price);
-    PRODUCTS.push({ id:p.id, cat:CATMAP[p.cat]||p.cat, name:CANON[p.id]||p.name,
+    // name = el nombre EXACTO de la web (lo que ve el cliente). canon = alias para que el parser resuelva.
+    PRODUCTS.push({ id:p.id, cat:CATMAP[p.cat]||p.cat, name:p.name, canon:CANON[p.id]||p.name,
       unit, price, weigh:!!p.validate, custom:false, disabled:!!dis[p.id], fromStore:true });
   });
 }
@@ -934,7 +935,7 @@ function rebuildCatalog(){
 }
 rebuildCatalog();
 const prodById=id=>PRODUCTS.find(p=>p.id===id);
-const prodByName=n=>PRODUCTS.find(p=>p.name===n);
+const prodByName=n=>PRODUCTS.find(p=>p.name===n||p.canon===n);
 function setCatalogPrice(id,val){ const p=prodById(id); if(!p) return;
   let n=(val===''||val==null)?null:parseFloat(String(val).replace(',','.')); if(n!=null&&isNaN(n)) return;
   p.price=n; let o={}; try{o=JSON.parse(localStorage.getItem('ct_v2_prices')||'{}');}catch(e){}
