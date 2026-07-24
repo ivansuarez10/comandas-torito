@@ -1141,7 +1141,11 @@ let lastPing=0;
 function load(){ try{const r=localStorage.getItem(KEY); state=r?JSON.parse(r):seed(); }catch(e){state=seed();} if(!state.history) state.history=[]; if(!state.clients) state.clients=[]; }
 // save(order): si se pasa la comanda que cambió, sube SOLO esa a la nube (evita pisar
 // cambios de otro dispositivo con datos viejos). Sin argumento = sync completo (archivar, undo masivo).
-function save(order){ if(USE_SUPA){ if(order) dbSyncOrder(order); else dbSyncAll(); return; } localStorage.setItem(KEY,JSON.stringify(state)); lastPing=Date.now(); localStorage.setItem("ct_v2_ping",lastPing); bc&&bc.postMessage("sync"); }
+// _recentSave[id]=timestamp → una comanda tocada localmente hace poco NO se deja revertir por el
+// refetch de la nube (evita la carrera "guardé y el refresco bajó el estado viejo").
+const _recentSave={};
+function save(order){ if(order&&order.id) _recentSave[order.id]=Date.now();
+  if(USE_SUPA){ if(order) dbSyncOrder(order); else dbSyncAll(); return; } localStorage.setItem(KEY,JSON.stringify(state)); lastPing=Date.now(); localStorage.setItem("ct_v2_ping",lastPing); bc&&bc.postMessage("sync"); }
 const dayStart=ts=>{ const d=new Date(ts); d.setHours(0,0,0,0); return d.getTime(); };
 // Las comandas "Lista para entrega" se retiran del tablero al día siguiente, pero quedan en histórico.
 function archiveStaleListas(){
@@ -1169,9 +1173,17 @@ async function dbFetch(){
   const {data,error}=await supa.from('orders').select('*');
   if(error){ console.warn('Supabase fetch:',error.message); return false; }
   const all=(data||[]).map(fromRow);
-  state.orders=all.filter(o=>!o.archived).sort((a,b)=>b.createdAt-a.createdAt);
-  state.history=all.filter(o=>o.archived);
-  state.seq=Math.max(0, ...all.map(o=>parseInt(o.folio,10)||0))+1;
+  // No pisar una comanda que ACABAMOS de cambiar localmente (aún no dio round-trip): si se guardó
+  // hace <3.5s, conservamos la versión local → el refetch no revierte "pasar a pago", "pagado", etc.
+  const now=Date.now();
+  const cloudIds=new Set(all.map(o=>o.id));
+  const localAll=[...(state.orders||[]),...(state.history||[])];
+  const localById={}; localAll.forEach(o=>{ localById[o.id]=o; });
+  let merged=all.map(o=>{ const t=_recentSave[o.id]; return (t && now-t<3500 && localById[o.id]) ? localById[o.id] : o; });
+  localAll.forEach(o=>{ const t=_recentSave[o.id]; if(t && now-t<3500 && !cloudIds.has(o.id)) merged.push(o); }); // recién creadas
+  state.orders=merged.filter(o=>!o.archived).sort((a,b)=>b.createdAt-a.createdAt);
+  state.history=merged.filter(o=>o.archived);
+  state.seq=Math.max(0, ...merged.map(o=>parseInt(o.folio,10)||0))+1;
   // clientes: la nube manda si la tabla existe y tiene datos; si no, respaldo local del dispositivo
   try{ const {data:cl,error:ce}=await supa.from('clients').select('*');
     if(!ce && cl && cl.length) state.clients=cl.map(fromRowC);
@@ -1432,7 +1444,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='24 jul 2026 · v4';
+const APP_BUILD='24 jul 2026 · v5';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2810,15 +2822,15 @@ function commitEdit(){
   closeNumpad(); // al dar "Listo" se cierra el teclado; el carnicero elige manualmente la siguiente línea a actualizar
 }
 function closeNumpad(){ activeEdit=null; const h=$("#numpadHost"); if(h) h.innerHTML=''; rerenderOitems(); }
-function persistEdits(){ const o=orderById(currentSheetId); if(!o) return;
+function persistEdits(noSave){ const o=orderById(currentSheetId); if(!o) return;
   o.items=editItems.map(it=>({...it, weight: it.weigh?(it.weight!=null?it.weight:it.qty):null}));
-  o.shipping=editShipping; o.note=editComment; save(o); }
+  o.shipping=editShipping; o.note=editComment; if(!noSave) save(o); }
 function confirmCotizarV2(){ const o=orderById(currentSheetId); if(!o) return;
   // No dejar avanzar sin haber validado el peso de los productos que lo requieren.
   const faltan=editItems.filter(it=>it.available && it.weigh && !it._wtouched);
   if(faltan.length){ toast('Valida el peso de: '+faltan.map(f=>f.name).join(', '));
     const idx=editItems.indexOf(faltan[0]); if(idx>=0) startEdit(idx,'weight'); return; }
-  const id=o.id; persistEdits(); setStatus(o,'espera_pago'); save(o); closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
+  const id=o.id; persistEdits(true); setStatus(o,'espera_pago'); save(o); closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
 function guardarV2(){ persistEdits(); closeCarn(); toast('Cambios guardados'); }
 function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(o); closeCarn(); toast('Listo para entrega', ()=>revertStatus(id, x=>{x.listaAt=prevLista;})); }
 function closeCarn(){ $("#overlayHost").innerHTML=''; const h=$("#numpadHost"); if(h) h.innerHTML=''; activeEdit=null; editItems=null; currentSheetId=null; adminEditMode=false; rerender(); }
