@@ -1432,7 +1432,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='24 jul 2026 · v3';
+const APP_BUILD='24 jul 2026 · v4';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2556,7 +2556,7 @@ function kcard(o,st){
   let footer='';
   if(st==='cotizar') footer=`<button class="kmv fwd" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('edit',17)} Cotizar</button>`;
   else if(st==='espera_pago') footer=`<button class="kmv" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('edit',17)} Editar pedido</button>`;
-  else if(st==='preparacion') footer=`<button class="kmv go" onclick="event.stopPropagation();markReady('${o.id}')">${ic('check',17)} Marcar listo</button>`;
+  else if(st==='preparacion') footer=`<button class="kmv fwd" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('knife',17)} Preparar</button>`;
   else if(st==='lista') footer=`<button class="kmv del" onclick="event.stopPropagation();askDelete('${o.id}')">${ic('trash',17)} Eliminar</button>`;
   const waitMin=(Date.now()-o.createdAt)/60000;
   const urgent = st==='cotizar' && waitMin>10;
