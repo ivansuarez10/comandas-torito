@@ -472,6 +472,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 /* edit numbox */
 .numbox{border:1.5px solid var(--line);box-shadow:var(--sh);background:#fff;border-radius:14px}
 .numbox.active{border-color:var(--rojo);box-shadow:0 0 0 4px rgba(159,38,41,.12)}
+/* Peso pendiente de validar: borde rojo para que el carnicero lo actualice antes de pasar a pago */
+.numbox.needw{border-color:var(--rojo);background:#FBF1F1;box-shadow:0 0 0 3px rgba(159,38,41,.14);animation:needwPulse 1.6s ease-in-out infinite}
+.numbox.needw.active{animation:none}
+@keyframes needwPulse{0%,100%{box-shadow:0 0 0 3px rgba(159,38,41,.14)}50%{box-shadow:0 0 0 5px rgba(159,38,41,.22)}}
+html.lite .numbox.needw{animation:none}
 .add-prod{border:1.5px dashed var(--line);border-radius:16px;box-shadow:none}
 /* numpad popup LIGHT (iOS keypad) */
 .np-scrim{background:rgba(0,0,0,.38)} /* sin blur de pantalla completa: caro en Android, hacía lento abrir el numpad */
@@ -496,6 +501,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .cmt-field{margin:4px 0 16px}
 .cmt-label{display:flex;align-items:center;gap:7px;font-size:14px;color:var(--muted);font-weight:600;margin-bottom:8px}
 .cmt-label svg{color:var(--rojo)}
+.cmt-opt{font-weight:600;font-size:12px;color:var(--muted-2);text-transform:none}
 .cmt-area{width:100%;resize:none;font-size:15px;line-height:1.45;padding:13px 14px;border-radius:14px;box-shadow:var(--sh)}
 .cmt-area:focus{outline:none;border-color:var(--rojo);box-shadow:0 0 0 4px rgba(159,38,41,.1)}
 /* ===== quick wins ===== */
@@ -1405,6 +1411,25 @@ function playDing(force){ if(!soundOn) return;
   if(navigator.vibrate) navigator.vibrate([300,120,300,120,300]);
   playBell().then(ok=>{ if(!ok) _dingSynth(); }).catch(()=>_dingSynth()); }
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
+// Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
+// SUBIR esta fecha en cada deploy.
+const APP_BUILD='24 jul 2026';
+// Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
+// y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
+async function forceUpdate(){
+  toast('Buscando actualización…');
+  try{
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.update().catch(()=>{})));
+    }
+    if(window.caches){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+  }catch(_){}
+  setTimeout(()=>location.reload(), 400);
+}
 function openSoundSheet(){
   $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()">
    <div class="sheet" style="max-width:420px"><div class="sheet-head"><span class="sh-name">Ajustes</span><button class="x" onclick="closeSheet()" aria-label="Cerrar">${ic('x',16)}</button></div>
@@ -1419,6 +1444,9 @@ function openSoundSheet(){
      <div class="sect-label">Rendimiento</div>
      <button class="cat-tg ${liteOn?'on':''}" style="width:100%" onclick="toggleLite()">${ic('check',16)} Modo ligero ${liteOn?'· activado':''}</button>
      <div class="pp-note" style="margin-top:10px">Actívalo si el teléfono se siente <b>lento o los toques tardan</b> (celulares de gama media/baja). Apaga animaciones y efectos pesados; la app queda igual de funcional pero más fluida.</div>
+     <div class="sect-label">Actualizar app</div>
+     <button class="cat-tg" style="width:100%" onclick="forceUpdate()">${ic('sync',16)} Buscar actualización</button>
+     <div class="pp-note" style="margin-top:10px">Trae los últimos cambios <b>sin desinstalar</b> la app. Versión instalada: <b>${APP_BUILD}</b>.</div>
    </div></div></div>`;
 }
 function pickTone(k){ if(!(k in TONES)) return; bellTone=k; localStorage.setItem('ct_v2_tone',k); openSoundSheet(); playDing(true); }
@@ -2572,7 +2600,7 @@ function oitemRow(it,i,vo){
   if(it.available && !vo){
     if(it.weigh){
       r2=`<span class="lbl">Peso real</span>
-        <button class="numbox ${activeEdit&&activeEdit.i===i&&activeEdit.field==='weight'?'active':''}" id="nb${i}" onclick="startEdit(${i},'weight')">${it.weight!=null?it.weight:'—'}<span class="nbu">lb</span></button>`;
+        <button class="numbox ${it._wtouched?'':'needw'} ${activeEdit&&activeEdit.i===i&&activeEdit.field==='weight'?'active':''}" id="nb${i}" onclick="startEdit(${i},'weight')">${it.weight!=null?it.weight:'—'}<span class="nbu">lb</span></button>`;
     } else {
       r2=`<span class="lbl">Cantidad</span>
         <button class="numbox ${activeEdit&&activeEdit.i===i&&activeEdit.field==='qty'?'active':''}" id="nb${i}" onclick="startEdit(${i},'qty')">${it.qty}<span class="nbu">${unit}</span></button>`;
@@ -2637,18 +2665,30 @@ function renderCarnOrder(o,vo){
       <div class="sheet-body" id="carnBody">
         ${vo?`<div class="viewonly-tag">${ic('eye',15)} ${voNote}</div>`:''}
         ${o.status==='preparacion'?`<div class="prep-prog" id="prepProg">${prepProgInner()}</div>`:''}
-        <div id="oitems">${editItems.map((it,i)=>oitemRow(it,i,vo)).join("")}</div>
+        <div id="oitems">${oitemOrder(vo).map(i=>oitemRow(editItems[i],i,vo)).join("")}</div>
         ${vo?'':`<button class="add-prod btn-ic" onclick="openAddProduct()">${ic('plus',18)} Agregar producto</button>`}
         ${vo
           ? (o.note?`<div class="note-banner">${ic('note',16)} <b>Indicación:</b> ${esc(o.note)}</div>`:'')
-          : `<div class="cmt-field"><label class="cmt-label">${ic('note',15)} Indicación para el carnicero</label>
-             <textarea class="inp cmt-area" id="ordComment" rows="2" placeholder="Ej: el rib eye bien rojo, cortar fino…" oninput="setComment(this.value)" onchange="setComment(this.value);persistEdits()">${esc(editComment)}</textarea></div>`}
+          : `<div class="cmt-field"><label class="cmt-label">${ic('note',15)} Indicación para el carnicero <span class="cmt-opt">(opcional)</span></label>
+             <textarea class="inp cmt-area" id="ordComment" rows="2" placeholder="" oninput="setComment(this.value)" onchange="setComment(this.value);persistEdits()">${esc(editComment)}</textarea></div>`}
         ${osumHtml(vo)}
         ${action?`<div style="margin-top:6px">${action}</div>`:''}
       </div></div></div>`;
 }
 let curSheetVO=false;
-function rerenderOitems(){ const el=$("#oitems"); if(el) el.innerHTML=editItems.map((it,i)=>oitemRow(it,i,curSheetVO)).join(""); }
+// Orden de las líneas: en vista editable (cotizar/espera_pago) primero los productos que se PESAN
+// y siguen disponibles → el carnicero valida esos pesos de una. En solo-lectura (preparación/lista)
+// se respeta el orden original. Devuelve índices a editItems (los callbacks siguen usando el índice real).
+function oitemOrder(vo){
+  const idx=editItems.map((_,i)=>i);
+  if(vo) return idx; // orden original en preparación/lista
+  return idx.sort((a,b)=>{
+    const wa=(editItems[a].weigh&&editItems[a].available)?0:1;
+    const wb=(editItems[b].weigh&&editItems[b].available)?0:1;
+    return wa-wb; // el sort de V8 es estable: los empates conservan su orden
+  });
+}
+function rerenderOitems(){ const el=$("#oitems"); if(el) el.innerHTML=oitemOrder(curSheetVO).map(i=>oitemRow(editItems[i],i,curSheetVO)).join(""); }
 // Contador de avance "X de Y preparados" (encabezado de la comanda en preparación).
 function prepProgInner(){ const total=(editItems||[]).length, done=(editItems||[]).filter(x=>x.done).length;
   const all=total>0&&done===total;
@@ -2724,10 +2764,7 @@ function applyEdit(){
 }
 function commitEdit(){
   persistEdits();
-  if(activeEdit && activeEdit.field==='weight'){
-    for(let j=activeEdit.i+1;j<editItems.length;j++){ if(editItems[j].available&&editItems[j].weigh){ startEdit(j,'weight'); return; } }
-  }
-  closeNumpad();
+  closeNumpad(); // al dar "Listo" se cierra el teclado; el carnicero elige manualmente la siguiente línea a actualizar
 }
 function closeNumpad(){ activeEdit=null; const h=$("#numpadHost"); if(h) h.innerHTML=''; rerenderOitems(); }
 function persistEdits(){ const o=orderById(currentSheetId); if(!o) return;
