@@ -583,6 +583,8 @@ html.bigtext .ocat-head{font-size:13px;color:var(--muted)}
 .hist-row .hist-del:active{background:#FBECEC;color:var(--rojo)}
 /* ===== línea gráfica: rojo solo como acento (acciones, nav activa, alertas) ===== */
 .ocard .folio{color:var(--ink)} .kcard2 .kfolio{color:var(--ink)} .sh-folio{color:var(--ink)}
+/* Folios largos (pedidos web, ej. W9198665) no deben encimarse: se ajustan al contenido con tope */
+.hist-row .folio{width:auto;min-width:42px;max-width:92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px}
 .sect-label svg{color:var(--muted-2)}
 .act-ic{color:var(--muted)} .act-n{color:var(--ink)}
 .rank .rbar i{background:#C7C7CC}
@@ -1450,7 +1452,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='27 jul 2026 · v8';
+const APP_BUILD='27 jul 2026 · v9';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2334,6 +2336,17 @@ function adminHistorico(){
      :`<div class="empty-state"><div class="es-ic">${ic('history',40)}</div><p>Aún no hay comandas archivadas.</p></div>`}
     <div style="height:24px"></div>`;
 }
+// Eliminar PERMANENTE una comanda TERMINADA (entregada/cancelada), esté en el tablero o archivada.
+// Con Deshacer. Sirve para limpiar comandas de prueba/error desde el detalle (vista Por día).
+function deleteOrderForever(id){
+  let arr=state.orders, at=arr.findIndex(o=>o.id===id);
+  if(at<0){ arr=state.history||[]; at=arr.findIndex(o=>o.id===id); }
+  if(at<0) return;
+  const o=arr[at]; arr.splice(at,1);
+  dbDeleteOrder(id); if(!USE_SUPA) save();
+  closeSheet(); rerender();
+  toast('Comanda #'+o.folio+' eliminada', ()=>{ arr.splice(at,0,o); save(o); rerender(); });
+}
 // Borrar UNA comanda del histórico (real, con Deshacer). Úsalo para limpiar las de prueba.
 function deleteArchivedOrder(id){
   const o=(state.history||[]).find(x=>x.id===id); if(!o) return;
@@ -2489,7 +2502,15 @@ function openAdminOrder(id){
   }
   const msg = waMessage(o);
   const showClientMsg = ["espera_pago","preparacion"].includes(o.status); // en Por entregar/En ruta ya no se le pide pago
+  const info = `
+    ${o.phone?`<div class="kv"><span class="k">Teléfono</span><span class="v">${esc(o.phone)}</span></div>`:''}
+    <div class="kv"><span class="k">Entrega</span><span class="v">${o.delivery==='retiro'?'Retiro en local':'A domicilio'}${o.zone?' · '+esc(o.zone):''}</span></div>
+    ${o.addr?`<div class="kv"><span class="k">Dirección</span><span class="v">${esc(o.addr)}</span></div>`:''}
+    <div class="kv"><span class="k">Fecha</span><span class="v">${new Date(o.createdAt).toLocaleString('es-HN',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>
+    ${o.note?`<div class="kv"><span class="k">${ic('note',14)} Indicación</span><span class="v" style="max-width:60%;text-align:right">${esc(o.note)}</span></div>`:''}`;
   sheet(o, `
+    ${info}
+    <div class="sect-label" style="margin-top:8px">Productos</div>
     ${lines}
     ${o.shipping?`<div class="kv"><span class="k">Subtotal productos</span><span class="v">${money(orderTotal(o))}</span></div>
     <div class="kv"><span class="k">${ic('truck',15)} Envío</span><span class="v">${money(o.shipping)}</span></div>`:""}
@@ -2502,8 +2523,9 @@ function openAdminOrder(id){
     `:""}
     <div style="margin-top:14px">${actions}</div>
     <div class="admin-foot">
-      ${o.status!=='cancelada'?`<button class="btn ghost block btn-ic" onclick="openAdminEdit('${o.id}')">${ic('edit',16)} Editar comanda</button>`:""}
+      ${!["entregada","cancelada"].includes(o.status)?`<button class="btn ghost block btn-ic" onclick="openAdminEdit('${o.id}')">${ic('edit',16)} Editar comanda</button>`:""}
       ${!["entregada","cancelada"].includes(o.status)?`<button class="btn ghost block sm" style="margin-top:10px;color:#b03a3a" onclick="cancelOrder('${o.id}')">Cancelar comanda</button>`:""}
+      ${["entregada","cancelada"].includes(o.status)?`<button class="btn ghost block sm btn-ic" style="color:#b03a3a" onclick="deleteOrderForever('${o.id}')">${ic('trash',16)} Eliminar comanda</button>`:""}
     </div>
   `);
 }
