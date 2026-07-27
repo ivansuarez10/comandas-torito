@@ -1450,7 +1450,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='27 jul 2026 · v6';
+const APP_BUILD='27 jul 2026 · v7';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2221,6 +2221,7 @@ function adminResumen(g){
       <div class="kpi"><div class="kl">Ticket promedio</div><div class="kvv">${money(ticket)}</div></div>
       <div class="kpi"><div class="kl">Activas ahora</div><div class="kvv">${activas}</div></div>
     </div>
+    <button class="hist-link card" onclick="go('dia')" style="margin-top:2px"><span class="act-ic">${ic('clock',20)}</span><span class="hist-tx"><b>Ver por día</b><small>Ventas y comandas de cualquier fecha</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div class="sect-label">Necesita tu mano</div>
     <div class="act-grid">
       <button class="act-card" onclick="go('bandeja')"><span class="act-ic">${ic('cash',20)}</span><span class="act-n">${g.cobrar.length}</span><span class="act-l">Por cobrar</span></button>
@@ -2234,8 +2235,6 @@ function adminResumen(g){
     </div>
     <div class="sect-label">Top productos</div><div class="rank">${rank(byProd,5)||'<div class="kempty">Sin datos</div>'}</div>
     <div class="sect-label">Top clientes</div><div class="rank">${rank(byCli,4)||'<div class="kempty">Sin datos</div>'}</div>
-    <div class="sect-label">Detalle por día</div>
-    <button class="hist-link card" onclick="go('dia')"><span class="act-ic">${ic('clock',20)}</span><span class="hist-tx"><b>Ver por día</b><small>Todo lo que pasó cualquier día: ventas, comandas, canceladas</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div class="sect-label">Histórico</div>
     <button class="hist-link card" onclick="go('historico')"><span class="act-ic">${ic('history',20)}</span><span class="hist-tx"><b>${(state.history||[]).length} comandas archivadas</b><small>Entregadas de días anteriores</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div class="sect-label">Avisos</div>
