@@ -515,12 +515,12 @@ html.bigtext .cmt-area{font-size:16px}
 .cmt-label{display:flex;align-items:center;gap:7px;font-size:14px;color:var(--muted);font-weight:600;margin-bottom:8px}
 .cmt-label svg{color:var(--rojo)}
 .cmt-opt{font-weight:600;font-size:12px;color:var(--muted-2);text-transform:none}
-/* Selector de día (vista Por día) */
-.day-picker{display:flex;align-items:center;gap:10px;margin:6px 0 16px}
-.day-input{flex:1;font-family:var(--font);font-size:16px;font-weight:700;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 14px;box-shadow:var(--sh);text-align:center}
-.daynav{flex:none;width:46px;height:46px;border-radius:13px;background:var(--card);border:1px solid var(--line);box-shadow:var(--sh);color:var(--ink);display:inline-flex;align-items:center;justify-content:center}
-.daynav:disabled{opacity:.35}
-html.bigtext .day-input{font-size:17px}
+/* Navegador de día en el Resumen (flechas ‹ fecha ›) */
+.res-datenav{display:flex;align-items:center;justify-content:center;gap:16px;margin:2px 0 16px}
+.rdn-lbl{font-family:var(--font);font-size:16px;font-weight:700;color:var(--ink);text-transform:capitalize;min-width:150px;text-align:center;letter-spacing:-.01em}
+.daynav{flex:none;width:44px;height:44px;border-radius:13px;background:var(--card);border:1px solid var(--line);box-shadow:var(--sh);color:var(--ink);display:inline-flex;align-items:center;justify-content:center}
+.daynav:disabled{opacity:.3}
+html.bigtext .rdn-lbl{font-size:18px}
 /* Encabezado de categoría dentro de la comanda (agrupado Res/Cerdo/Pollo/...) */
 .ocat-head{display:flex;align-items:center;gap:10px;font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted-2);margin:18px 2px 9px}
 .ocat-head::after{content:'';flex:1;height:1px;background:var(--line)}
@@ -1450,7 +1450,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='27 jul 2026 · v7';
+const APP_BUILD='27 jul 2026 · v8';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1684,7 +1684,6 @@ function renderAdmin(){
   else if(adminView==="clientes") content=adminClientes();
   else if(adminView==="reporte") content=adminReporte();
   else if(adminView==="historico") content=adminHistorico();
-  else if(adminView==="dia") content=adminDia();
   else if(adminView==="catalogo") content=adminCatalogo();
   else if(adminView==="dispositivos") content=adminDispositivos();
 
@@ -1705,7 +1704,7 @@ function renderAdmin(){
     </nav>`;
   if(adminView==="nueva") initNueva();
 }
-function go(v){ adminView=v; if(v==="nueva"){ draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null}; prodOpen=false; } if(v==="bandeja") bandejaQ=''; if(v==="dia") dayFilter=null; renderAdmin(); window.scrollTo(0,0); }
+function go(v){ adminView=v; if(v==="nueva"){ draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null}; prodOpen=false; } if(v==="bandeja") bandejaQ=''; if(v==="resumen") dayFilter=null; renderAdmin(); window.scrollTo(0,0); }
 
 function ocard(o,actionHtml){
   return `<button class="ocard" onclick="openAdminOrder('${o.id}')">
@@ -2213,15 +2212,29 @@ function adminResumen(g){
     o.items.forEach(it=>{ if(it.available&&it.price!=null) byProd[it.name]=(byProd[it.name]||0)+lineAmount(it); }); });
   const rank=(obj,n)=>{const e=Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);const mx=e.length?e[0][1]:1;
     return e.map(([k,v])=>`<div class="rrow"><span class="rk-name">${esc(k)}</span><span class="rbar"><i style="width:${Math.max(6,v/mx*100)}%"></i></span><span class="rv">${money(v)}</span></div>`).join("");};
-  const dateStr=new Date(now).toLocaleDateString("es-HN",{weekday:"long",day:"numeric",month:"long"});
-  return `<div class="view-head"><div><h2>Resumen</h2><div class="vh-sub" style="text-transform:capitalize">${dateStr}</div></div></div>
+  // DÍA seleccionado (flechas ‹ › debajo del título). Default = hoy.
+  const sel=dayStart(dayFilter!=null?dayFilter:now), isToday=sel===today;
+  const dayAll=_dayOrders(sel), dayVentas=dayAll.filter(_esVenta);
+  const ventasDia=dayVentas.reduce((s,o)=>s+fullTotal(o),0);
+  const tickDia=dayVentas.length?ventasDia/dayVentas.length:0;
+  const canc=dayAll.filter(o=>o.status==='cancelada').length;
+  const lbl=isToday?'Hoy':(sel===today-day?'Ayer':new Date(sel).toLocaleDateString("es-HN",{weekday:"long",day:"numeric",month:"long"}));
+  const nav=`<div class="res-datenav">
+      <button class="daynav" onclick="shiftDay(-1)" aria-label="Día anterior">${ic('left',18)}</button>
+      <span class="rdn-lbl">${esc(lbl)}</span>
+      <button class="daynav" onclick="shiftDay(1)" ${isToday?'disabled':''} aria-label="Día siguiente">${ic('right',18)}</button>
+    </div>`;
+  return `<div class="view-head"><div><h2>Resumen</h2></div></div>
+    ${nav}
     <div class="kpis">
-      <div class="kpi accent"><div class="kl">Ventas de hoy</div><div class="kvv">${money(ventasHoy)}</div></div>
-      <div class="kpi"><div class="kl">Comandas hoy</div><div class="kvv">${todayDone.length}</div></div>
-      <div class="kpi"><div class="kl">Ticket promedio</div><div class="kvv">${money(ticket)}</div></div>
-      <div class="kpi"><div class="kl">Activas ahora</div><div class="kvv">${activas}</div></div>
+      <div class="kpi accent"><div class="kl">${isToday?'Ventas de hoy':'Vendido'}</div><div class="kvv">${money(ventasDia)}</div></div>
+      <div class="kpi"><div class="kl">Comandas${isToday?' hoy':''}</div><div class="kvv">${dayAll.length}</div></div>
+      <div class="kpi"><div class="kl">Ticket promedio</div><div class="kvv">${money(tickDia)}</div></div>
+      ${isToday
+        ? `<div class="kpi"><div class="kl">Activas ahora</div><div class="kvv">${activas}</div></div>`
+        : `<div class="kpi"><div class="kl">Canceladas</div><div class="kvv">${canc}</div></div>`}
     </div>
-    <button class="hist-link card" onclick="go('dia')" style="margin-top:2px"><span class="act-ic">${ic('clock',20)}</span><span class="hist-tx"><b>Ver por día</b><small>Ventas y comandas de cualquier fecha</small></span><span class="hist-ch">${ic('right',18)}</span></button>
+    ${isToday ? `
     <div class="sect-label">Necesita tu mano</div>
     <div class="act-grid">
       <button class="act-card" onclick="go('bandeja')"><span class="act-ic">${ic('cash',20)}</span><span class="act-n">${g.cobrar.length}</span><span class="act-l">Por cobrar</span></button>
@@ -2239,6 +2252,10 @@ function adminResumen(g){
     <button class="hist-link card" onclick="go('historico')"><span class="act-ic">${ic('history',20)}</span><span class="hist-tx"><b>${(state.history||[]).length} comandas archivadas</b><small>Entregadas de días anteriores</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div class="sect-label">Avisos</div>
     <button class="hist-link card" onclick="go('dispositivos')"><span class="act-ic">${ic('bell',20)}</span><span class="hist-tx"><b>Dispositivos con avisos</b><small>Ver y quitar dónde suenan las comandas</small></span><span class="hist-ch">${ic('right',18)}</span></button>
+    ` : `
+    <div class="sect-label">${dayAll.length} comanda${dayAll.length!==1?'s':''} de este día</div>
+    ${dayOrdersListHtml(sel)}
+    `}
     <div style="height:24px"></div>`;
 }
 /* ----- DISPOSITIVOS CON AVISOS (push) ----- */
@@ -2266,41 +2283,19 @@ async function loadDispositivos(){
 async function removeDispositivo(endpoint){ if(!confirm('¿Quitar este dispositivo de los avisos?')) return;
   try{ await supa.from('push_subs').delete().eq('endpoint',endpoint); }catch(e){}
   toast('Dispositivo quitado'); loadDispositivos(); }
-/* ----- POR DÍA (filtro): todo lo que pasó un día — ventas, comandas, canceladas ----- */
-let dayFilter=null; // ts de inicio del día elegido (null = hoy)
-function _dayInputVal(ts){ const d=new Date(ts), p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
-function setDayFilter(v){ if(!v){ dayFilter=dayStart(Date.now()); } else { const [y,m,d]=v.split('-').map(Number); dayFilter=new Date(y,m-1,d).getTime(); } renderAdmin(); window.scrollTo(0,0); }
+/* ----- NAVEGACIÓN POR DÍA (dentro del Resumen): flechas ‹ › debajo de la fecha ----- */
+let dayFilter=null; // ts del día visto en el Resumen (null = hoy)
 function shiftDay(n){ const base=dayFilter!=null?dayFilter:dayStart(Date.now()); const next=dayStart(base)+n*86400000; if(next>dayStart(Date.now())) return; dayFilter=next; renderAdmin(); window.scrollTo(0,0); }
-function adminDia(){
-  const sel=dayStart(dayFilter!=null?dayFilter:Date.now());
-  const isToday=sel===dayStart(Date.now());
-  // TODO lo del día = comandas creadas ese día (activas + archivadas), más nuevas arriba
-  const all=allOrders().filter(o=>dayStart(o.createdAt)===sel).sort((a,b)=>b.createdAt-a.createdAt);
-  const ventasArr=all.filter(_esVenta);
-  const vendido=ventasArr.reduce((s,o)=>s+fullTotal(o),0);
-  const lb=ventasArr.reduce((s,o)=>s+orderLibras(o),0);
-  const canceladas=all.filter(o=>o.status==='cancelada').length;
-  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Por día</h2><div class="vh-sub" style="text-transform:capitalize">${esc(_dayLabel(sel))}</div></div></div>
-    <div class="day-picker">
-      <button class="daynav" onclick="shiftDay(-1)" aria-label="Día anterior">${ic('left',18)}</button>
-      <input type="date" class="day-input" value="${_dayInputVal(sel)}" max="${_dayInputVal(dayStart(Date.now()))}" onchange="setDayFilter(this.value)">
-      <button class="daynav" onclick="shiftDay(1)" ${isToday?'disabled':''} aria-label="Día siguiente">${ic('right',18)}</button>
-    </div>
-    <div class="kpis">
-      <div class="kpi accent"><div class="kl">Vendido</div><div class="kvv">${money(vendido)}</div></div>
-      <div class="kpi"><div class="kl">Comandas</div><div class="kvv">${all.length}</div></div>
-      <div class="kpi"><div class="kl">Libras vendidas</div><div class="kvv">${_lb(lb)}</div></div>
-      <div class="kpi"><div class="kl">Canceladas</div><div class="kvv">${canceladas}</div></div>
-    </div>
-    ${all.length? `<div class="sect-label">${all.length} comanda${all.length>1?'s':''} de este día</div>
-      <div class="olist">${all.map(o=>`<div class="ocard hist-row"><button class="hist-open" onclick="openAdminOrder('${o.id}')">
-        <span class="folio">#${o.folio}</span>
-        <span class="obody"><span class="oname">${esc(o.clientName)}${o.status==='cancelada'?' <span class="chip cancel" style="margin-left:4px">Cancelada</span>':''}</span>
-          <span class="ometa">${new Date(o.createdAt).toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'})} · ${o.items.length} prod</span></span>
-        <span class="oright"><span class="ototal">${money(fullTotal(o))}</span><span class="otime">${STATUS[o.status]}</span></span>
-      </button></div>`).join('')}</div>`
-      : `<div class="empty-state"><div class="es-ic">${ic('history',40)}</div><p>No hubo comandas este día.</p></div>`}
-    <div style="height:24px"></div>`;
+// Comandas creadas un día (activas + archivadas), más nuevas arriba.
+function _dayOrders(sel){ return allOrders().filter(o=>dayStart(o.createdAt)===sel).sort((a,b)=>b.createdAt-a.createdAt); }
+function dayOrdersListHtml(sel){ const all=_dayOrders(sel);
+  if(!all.length) return `<div class="empty-state"><div class="es-ic">${ic('inbox',36)}</div><p>No hubo comandas este día.</p></div>`;
+  return `<div class="olist">${all.map(o=>`<div class="ocard hist-row"><button class="hist-open" onclick="openAdminOrder('${o.id}')">
+    <span class="folio">#${o.folio}</span>
+    <span class="obody"><span class="oname">${esc(o.clientName)}${o.status==='cancelada'?' <span class="chip cancel" style="margin-left:4px">Cancelada</span>':''}</span>
+      <span class="ometa">${new Date(o.createdAt).toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'})} · ${o.items.length} prod</span></span>
+    <span class="oright"><span class="ototal">${money(fullTotal(o))}</span><span class="otime">${STATUS[o.status]}</span></span>
+  </button></div>`).join('')}</div>`;
 }
 /* ----- HISTÓRICO ----- */
 function _dayLabel(ts){ const d=dayStart(ts), today=dayStart(Date.now()), day=86400000;
