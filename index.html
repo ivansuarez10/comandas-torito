@@ -1452,7 +1452,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='27 jul 2026 · v10';
+const APP_BUILD='27 jul 2026 · v11';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2534,7 +2534,7 @@ function waMessage(o){
   const av=o.items.filter(i=>i.available);
   const un=o.items.filter(i=>!i.available);
   const nm0=(o.clientName||'').trim().split(/\s+/)[0]||'';
-  let s=`Hola${nm0?' '+nm0:''} 👋 Gracias por tu pedido en *Carnicería El Torito*.\n\n*Tu pedido${o.folio?' · '+o.folio:''}:*\n\n`;
+  let s=`Hola${nm0?' '+nm0:''} 👋 Gracias por tu pedido en *Carnicería El Torito*.\n\n*Tu pedido:*\n\n`;
   av.forEach(it=>{ const q=(it.weigh&&it.weight!=null)?it.weight:it.qty;
     const nm=it.name.replace(/\s*\(paquete\)/i,'');
     s+=`${q} ${unitWord(it.unit,q)} de ${nm} .... ${moneyWA(lineAmount(it))}\n`; });
@@ -2542,22 +2542,19 @@ function waMessage(o){
   s+=`\n*Subtotal: ${moneyWA(orderTotal(o))}*\n`;
   if(o.shipping){ s+=`Envío .... ${moneyWA(o.shipping)}\n`; }
   s+=`\n*Total a pagar: ${moneyWA(fullTotal(o))}*\n`;
-  // Métodos de pago según entrega: a domicilio el pago va antes de salir; en retiro puede ser efectivo.
-  // Si hay PAY_LINK (link BAC), se ofrece el pago con tarjeta con el monto exacto; si no, queda el fallback.
-  const linkLine = PAY_LINK
-    ? `• Con tarjeta 💳: ${PAY_LINK}\n   (poné el monto: ${moneyWA(fullTotal(o))})\n`
-    : `• Link de pago con tarjeta — decime y te lo envío 💳\n`;
-  if(o.delivery){
+  // Métodos de pago: por ahora SOLO transferencia (domicilio) o efectivo/transferencia al recoger.
+  // Sin tarjeta hasta que llegue el link de BAC.
+  if(o.delivery!=='retiro'){
+    // A domicilio: el pago va antes de salir → transferencia.
     s+=`\n*¿Cómo querés pagar?*\n`;
     s+=`• Transferencia — te paso la cuenta y me mandás el comprobante 📸\n`;
-    s+=linkLine;
     s+=`\nApenas confirmes el pago salimos a entregar 🛵\n`;
     s+=`\n${PAY_INFO}`;
   } else {
+    // Retiro en tienda: efectivo al recoger o transferencia.
     s+=`\n*¿Cómo querés pagar?*\n`;
-    s+=`• Efectivo al pasar a retirar 💵\n`;
+    s+=`• Efectivo al pasar a recoger en tienda 💵\n`;
     s+=`• Transferencia si querés adelantar — me mandás el comprobante 📸\n`;
-    if(PAY_LINK) s+=linkLine;
     s+=`\n${PAY_INFO}`;
   }
   return s;
