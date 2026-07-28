@@ -117,6 +117,13 @@ input,select{font-family:inherit;font-size:16px}
 .chip.ruta{background:#EFE6D6;color:#7A5410}
 .chip.entregada{background:#E6EAE6;color:#566256}
 .chip.cancel{background:#F3DADA;color:#9a3030}
+.chip.noname{background:#F6E7C9;color:#8A5A11;letter-spacing:.01em}
+.carn-info.namebanner{background:#FBF1DA;border-color:#EAD9AC;color:#8A5A11}
+.carn-info.namebanner b{color:#7A4E0C}
+.btn.amber{background:#F6E7C9;color:#8A5A11;border:1px solid #EAD9AC;box-shadow:none}
+.btn.amber:hover{background:#F2DDB2}
+.cli-card.unnamed{border:1px solid #EAD9AC;background:#FEFBF3}
+.cli-name-cta{margin-top:9px;display:flex;align-items:center;gap:6px;color:#8A5A11;font-size:12.5px;font-weight:700}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
 .sect-label{font-family:var(--font);text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--muted);
@@ -1478,7 +1485,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='28 jul 2026 · v17';
+const APP_BUILD='28 jul 2026 · v18';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1824,7 +1831,7 @@ function akcard(o,st){
     : `<span class="kmv anav ghost"></span>`;
   return `<div class="kcard2" onclick="openAdminOrder('${o.id}')">
     <div class="kf"><span class="kfolio">#${o.folio}</span><span class="ktime">${timeAgo(o.createdAt)}</span></div>
-    <div class="kname">${esc(o.clientName)}</div>
+    <div class="kname">${dispName(o.clientName)}</div>
     <div class="kdtag">${deliveryTag(o)}</div>
     <div class="kitems">${o.items.length} productos · <b>${money(fullTotal(o))}</b></div>
     ${o.paid?`<div class="kpaid">${ic('check',14)} Pagado</div>`:""}
@@ -1981,6 +1988,44 @@ function clientByPhone(phone){
   const o=allOrders().find(x=>_phoneKey(x.phone)===np);
   return o? {phone:o.phone,name:o.clientName,zone:o.zone,addr:o.addr} : null;
 }
+/* ----- CLIENTES WEB SIN NOMBRE -----
+   Un pedido de la tienda web llega a veces solo con el teléfono: clientName = "31738030".
+   isPhoneName() lo detecta; el admin le pone nombre de un toque (nameWebPrompt/nameWebSave). */
+function isPhoneName(s){ const t=(s||'').trim(); if(!t) return false;
+  if(/[a-zA-ZÀ-ÿ]/.test(t)) return false;      // tiene letras → es un nombre real
+  return _digits(t).length>=6; }               // solo dígitos/símbolos y ≥6 dígitos → es un teléfono
+// Nombre a mostrar: si es un teléfono sin nombre, añade una etiqueta ámbar.
+function dispName(name){ return isPhoneName(name)
+  ? `${esc(name)} <span class="chip noname">${ic('user',11)} Sin nombre</span>`
+  : esc(name); }
+// Cuántos clientes web (activos, no cancelados) siguen sin nombre.
+function unnamedWebCount(){ const s=new Set();
+  allOrders().filter(o=>o.status!=='cancelada'&&isPhoneName(o.clientName)).forEach(o=>s.add(_phoneKey(o.phone||o.clientName)));
+  return s.size; }
+let _nameTargetPhone=null;
+function nameWebPrompt(phone){
+  _nameTargetPhone=_digits(phone);
+  $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()">
+    <div class="sheet" style="max-width:420px"><div class="sheet-head"><span class="sh-name">Ponerle nombre</span><button class="x" onclick="closeSheet()" aria-label="Cerrar">${ic('x',16)}</button></div>
+    <div class="sheet-body">
+      <div class="kempty" style="margin:0 0 12px;text-align:left">Este pedido llegó de la web solo con el teléfono <b>${esc(_nameTargetPhone||'—')}</b>. Ponle el nombre del cliente para reconocerlo en el tablero y el historial.</div>
+      <div class="field"><label>Nombre del cliente</label><input class="inp" id="nwName" placeholder="Ej: Doña María" autocomplete="off" enterkeyhint="done"></div>
+      <button class="btn red lg block btn-ic" style="margin-top:6px" onclick="nameWebSave()">${ic('check',17)} Guardar nombre</button>
+    </div></div></div>`;
+  setTimeout(()=>{ const i=$("#nwName"); if(i){ i.focus(); i.onkeydown=e=>{ if(e.key==='Enter') nameWebSave(); }; } },60);
+}
+function nameWebSave(){
+  const name=((($("#nwName")||{}).value)||'').trim();
+  if(!name){ toast('Escribe el nombre del cliente'); return; }
+  if(!_nameTargetPhone){ closeSheet(); return; }
+  const key=_phoneKey(_nameTargetPhone), touched=[];
+  // Renombra TODAS las comandas de ese teléfono que aún salen como número.
+  allOrders().forEach(x=>{ if(_phoneKey(x.phone||x.clientName)===key && isPhoneName(x.clientName)){
+    x._prevName=x.clientName; if(!x.phone) x.phone=_nameTargetPhone; x.clientName=name; touched.push(x); save(x); } });
+  upsertClient({phone:_nameTargetPhone, name}); // guarda el cliente para autollenar en el futuro
+  closeSheet(); rerender();
+  toast('Cliente nombrado: '+name, ()=>{ touched.forEach(x=>{ if(x._prevName!==undefined){ x.clientName=x._prevName; delete x._prevName; save(x); } }); rerender(); });
+}
 // IA (Claude/OpenAI vía Edge Function). Timeout 7s. Si falla → throw y caemos al parser local.
 async function aiParse(text){
   const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),7000);
@@ -2107,13 +2152,17 @@ function adminClientes(){
     else { map[k].name=c.name||map[k].name; map[k].phone=c.phone||map[k].phone;
       map[k].zone=c.zone||map[k].zone; map[k].addr=c.addr||map[k].addr; map[k].note=c.note||''; } });
   _cliMap=map;
-  const cls=Object.values(map).sort((a,b)=>b.total-a.total);
+  // Los clientes web sin nombre van PRIMERO (para nombrarlos fácil); luego por total gastado.
+  const cls=Object.values(map).sort((a,b)=>(isPhoneName(b.name)-isPhoneName(a.name))||(b.total-a.total));
+  const nSin=cls.filter(c=>isPhoneName(c.name)).length;
   return `<div class="view-head"><div><h2>Clientes</h2><div class="vh-sub">${cls.length} clientes · toca uno para ver su perfil</div></div></div>
+    ${nSin?`<button class="carn-info namebanner" onclick="go('clientes')" style="cursor:default">${ic('user',15)} <span><b>${nSin}</b> cliente${nSin>1?'s':''} de la web sin nombre · tócalos abajo para nombrarlos</span></button>`:''}
     ${cls.length? `<div class="olist">${cls.map(c=>{
       const top=Object.entries(c.prods).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join(", ");
-      return `<div class="card cli-card" style="padding:14px;cursor:pointer" onclick="openClientProfile('${c.key}')">
+      const sinN=isPhoneName(c.name);
+      return `<div class="card cli-card${sinN?' unnamed':''}" style="padding:14px;cursor:pointer" onclick="${sinN?`nameWebPrompt('${esc(c.phone||c.name)}')`:`openClientProfile('${c.key}')`}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-          <div style="min-width:0"><div style="font-weight:700;font-size:15.5px">${esc(c.name)}</div>
+          <div style="min-width:0"><div style="font-weight:700;font-size:15.5px">${dispName(c.name)}</div>
             <div style="font-size:12.5px;color:var(--muted);margin-top:2px">${esc(c.phone||'—')} · ${esc(c.zone||'')}</div></div>
           <div style="display:flex;align-items:flex-start;gap:4px;flex:none">
             <div style="text-align:right"><div class="disp" style="font-weight:600;font-size:18px;color:var(--rojo)">${money(c.total)}</div>
@@ -2123,7 +2172,9 @@ function adminClientes(){
         </div>
         ${c.note?`<div style="font-size:12.5px;color:var(--muted);margin-top:9px;background:#F5F5F7;border-radius:9px;padding:7px 10px">${ic('note',13)} ${esc(c.note)}</div>`:""}
         ${top?`<div style="font-size:12.5px;color:var(--muted);margin-top:9px">Compra seguido: <b style="color:var(--ink)">${esc(top)}</b></div>`:""}
-        <div style="margin-top:9px;display:flex;align-items:center;gap:6px;color:var(--rojo);font-size:12.5px;font-weight:600">${ic('eye',14)} Ver perfil e historial ${ic('right',13)}</div>
+        ${sinN
+          ? `<div class="cli-name-cta">${ic('user',14)} Ponerle nombre ${ic('right',13)}</div>`
+          : `<div style="margin-top:9px;display:flex;align-items:center;gap:6px;color:var(--rojo);font-size:12.5px;font-weight:600">${ic('eye',14)} Ver perfil e historial ${ic('right',13)}</div>`}
       </div>`;}).join("")}</div>`
     : `<div class="empty-state"><div class="es-ic">${ic('user',40)}</div><p>Aún no hay clientes.<br>Se crean solos al capturar comandas con teléfono.</p></div>`}`;
 }
@@ -2290,6 +2341,7 @@ function adminResumen(g){
       <button class="act-card" onclick="go('bandeja')"><span class="act-ic">${ic('truck',20)}</span><span class="act-n">${g.entregar.length}</span><span class="act-l">Por entregar</span></button>
     </div>
     <div class="carn-info" onclick="go('bandeja')">${ic('knife',15)} <span>Con el carnicero: <b>${g.proceso.length}</b> en proceso (cotizar / preparación)</span></div>
+    ${(()=>{const n=unnamedWebCount();return n?`<div class="carn-info namebanner" onclick="go('clientes')">${ic('user',15)} <span><b>${n}</b> cliente${n>1?'s':''} de la web sin nombre · ponles nombre ${ic('right',13)}</span></div>`:'';})()}
     <div class="sect-label">Ventas · últimos 7 días <button class="link-btn" onclick="go('reporte')">Reporte del mes ${ic('right',13)}</button></div>
     <div class="card chart-card">
       <div class="chart-top"><div class="kl">Vendido este mes</div><div class="chart-big">${money(ventasMes)}</div></div>
@@ -2601,7 +2653,10 @@ function openAdminOrder(id){
     ${o.addr?`<div class="kv"><span class="k">Dirección</span><span class="v">${esc(o.addr)}</span></div>`:''}
     <div class="kv"><span class="k">Fecha</span><span class="v">${new Date(o.createdAt).toLocaleString('es-HN',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>
     ${o.note?`<div class="kv"><span class="k">${ic('note',14)} Indicación</span><span class="v" style="max-width:60%;text-align:right">${esc(o.note)}</span></div>`:''}`;
+  const nameBar = isPhoneName(o.clientName)
+    ? `<button class="btn amber block btn-ic" style="margin-bottom:12px" onclick="nameWebPrompt('${esc(o.phone||o.clientName)}')">${ic('user',16)} Pedido web sin nombre — ponerle nombre</button>` : '';
   sheet(o, `
+    ${nameBar}
     ${info}
     <div class="sect-label" style="margin-top:8px">Productos</div>
     ${lines}
@@ -2648,7 +2703,22 @@ function waMessage(o){
     .replace(/ {2,}/g,' '); // "Hola  👋" (sin nombre) → "Hola 👋"
 }
 function repartidorFicha(o){
-  return `Cliente: ${o.clientName}\nTeléfono: ${o.phone||'—'}\nDirección: ${o.addr||o.zone||'—'}`;
+  // La dirección puede traer el link de ubicación embebido (lo manda la tienda web: "… · 📍 Ubicación: <maps>").
+  // Lo separamos en su propia línea para que el repartidor lo abra de un toque; sin link (pedido manual) queda limpio.
+  var raw=(o.addr||o.zone||'').trim();
+  var link='', addr=raw;
+  var m=raw.match(/https?:\/\/\S+/);
+  if(m){
+    link=m[0];
+    var cut=raw.search(/·?\s*📍|Ubicaci[oó]n\s*:/i);
+    addr=(cut>=0?raw.slice(0,cut):raw.replace(link,'')).replace(/[·•\s]+$/,'').trim();
+  }
+  var L=['🛵 Entrega · Pedido '+(o.folio||''),
+    'Cliente: '+(o.clientName||'—'),
+    'Teléfono: '+(o.phone||'—'),
+    'Dirección: '+(addr||'—')];
+  if(link) L.push('📍 Ubicación: '+link);
+  return L.join('\n');
 }
 function markPaid(id){ const o=orderById(id); if(!o) return; o.paid=true; o.paidAt=Date.now(); setStatus(o,"preparacion"); save(o); closeSheet(); toast("Pagado · pasó a preparación", ()=>revertStatus(id, x=>{x.paid=false; x.paidAt=null;})); }
 // RETIRO — poner en espera: entra a "En preparación" PERO en pausa (held), sin pagar (paga efectivo al retirar).
@@ -3025,7 +3095,7 @@ function sheet(o,bodyHtml,titleOverride){
   $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()">
     <div class="sheet"><div class="sheet-head">
       <span class="sh-folio">#${o.folio}</span>
-      <span class="sh-name">${esc(o.clientName)}</span>
+      <span class="sh-name">${dispName(o.clientName)}</span>
       ${!titleOverride?`<span class="chip ${CHIP[o.status]}" style="margin-left:4px">${STATUS[o.status]}</span>`:''}
       <button class="x" onclick="closeSheet()">${ic('x',16)}</button>
     </div><div class="sheet-body">${bodyHtml}</div></div></div>`;
