@@ -516,10 +516,7 @@ html.bigtext .cmt-area{font-size:16px}
 .cmt-label svg{color:var(--rojo)}
 .cmt-opt{font-weight:600;font-size:12px;color:var(--muted-2);text-transform:none}
 /* Editor de mensaje (Ajustes del negocio) */
-.var-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
-.var-chip{font-family:var(--font);font-size:12.5px;font-weight:700;color:var(--rojo);background:#FBF1F1;border:1px solid #efdcdc;border-radius:8px;padding:5px 9px;cursor:pointer}
-.var-chip:active{background:#f6e4e4}
-.msg-tpl{width:100%;resize:vertical;min-height:150px;font-size:15px;line-height:1.5;padding:13px 14px;border-radius:14px;box-shadow:var(--sh);white-space:pre-wrap}
+.msg-tpl{width:100%;resize:vertical;min-height:90px;font-size:15px;line-height:1.5;padding:13px 14px;border-radius:14px;box-shadow:var(--sh);white-space:pre-wrap}
 #bizPrev{white-space:pre-wrap}
 /* Navegador de día en el Resumen (flechas ‹ fecha ›) */
 .res-datenav{display:flex;align-items:center;justify-content:center;gap:16px;margin:2px 0 16px}
@@ -848,8 +845,9 @@ const AUTH_EMAILS = { admin:"admin@eltorito.hn", carnicero:"carnicero@eltorito.h
 const BIZ_DEFAULTS = {
   bizName:"Carnicería El Torito",
   payName:"IVAN ALEJANDRO SUAREZ VELASQUEZ", payAccount:"729447561", payLink:"", repartidor:"50431565418",
-  // Plantilla del mensaje al cliente. Variables: {cliente} {negocio} {pedido} {totales} {pago}
-  msgTemplate:"Hola {cliente} 👋 Gracias por tu pedido en *{negocio}*.\n\n*Tu pedido:*\n\n{pedido}\n\n{totales}\n\n{pago}"
+  // Textos editables del mensaje al cliente (el saludo, productos y totales se arman solos).
+  payIntro:"*¿Cómo querés pagar?*\n• Transferencia — te paso la cuenta y me mandás el comprobante 📸",
+  payClosing:"Apenas confirmes el pago salimos a entregar 🛵"
 };
 function loadBiz(){ try{ return {...BIZ_DEFAULTS, ...(JSON.parse(localStorage.getItem('ct_v2_biz')||'{}'))}; }catch(e){ return {...BIZ_DEFAULTS}; } }
 let biz = loadBiz();
@@ -1465,7 +1463,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='27 jul 2026 · v13';
+const APP_BUILD='28 jul 2026 · v14';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2309,19 +2307,16 @@ const SAMPLE_ORDER = {clientName:'María López', delivery:'envio', shipping:50,
   {name:'Chorizo Parrillero (paquete)', unit:'Paquete', price:60, weigh:false, qty:2, available:true}
 ]};
 function adminAjustes(){
-  const VARS=['{cliente}','{negocio}','{pedido}','{totales}','{pago}'];
   return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Ajustes del negocio</h2><div class="vh-sub">Mensaje al cliente, pago y repartidor</div></div></div>
     <div class="sect-label">Negocio</div>
-    <div class="field"><label>Nombre del negocio (aparece en el mensaje)</label><input class="inp" id="bizNegocio" value="${esc(biz.bizName)}" oninput="bizPreview()"></div>
-    <div class="sect-label">Mensaje al cliente</div>
-    <div class="pp-note" style="margin:0 0 8px">Escribilo a tu gusto. Tocá una <b>variable</b> para insertarla; se reemplaza sola al enviar:
-      <div class="var-chips">${VARS.map(v=>`<button type="button" class="var-chip" onclick="insertVar('${v}')">${v}</button>`).join('')}</div>
-      <span style="color:var(--muted-2)">{pedido}=productos · {totales}=subtotal/envío/total · {pago}=cómo pagar + tu cuenta</span></div>
-    <textarea class="inp msg-tpl" id="bizMsg" rows="9" oninput="bizPreview()">${esc(biz.msgTemplate)}</textarea>
-    <button type="button" class="btn ghost block sm btn-ic" style="margin-top:8px" onclick="restoreMsg()">${ic('history',15)} Restaurar mensaje original</button>
-    <div class="sect-label" style="margin-top:14px">Vista previa (pedido de ejemplo)</div>
+    <div class="field"><label>Nombre del negocio (aparece en el saludo)</label><input class="inp" id="bizNegocio" value="${esc(biz.bizName)}" oninput="bizPreview()"></div>
+    <div class="sect-label">Textos del mensaje al cliente</div>
+    <div class="pp-note" style="margin:0 0 10px">El saludo, los productos y los totales se arman solos con cada pedido. Vos solo editás estas dos frases del pago.</div>
+    <div class="field"><label>Cómo pagar (va antes de la cuenta)</label><textarea class="inp msg-tpl" id="bizIntro" rows="3" oninput="bizPreview()">${esc(biz.payIntro)}</textarea></div>
+    <div class="field"><label>Frase de cierre — solo a domicilio (después de la cuenta)</label><input class="inp" id="bizClose" value="${esc(biz.payClosing)}" oninput="bizPreview()"></div>
+    <div class="sect-label" style="margin-top:8px">Así queda el mensaje (ejemplo)</div>
     <div class="msgbox" id="bizPrev"></div>
-    <div class="sect-label" style="margin-top:16px">Datos de pago</div>
+    <div class="sect-label" style="margin-top:16px">Datos de pago (aparecen en el mensaje)</div>
     <div class="field"><label>Titular de la cuenta</label><input class="inp" id="bizPayName" value="${esc(biz.payName)}" oninput="bizPreview()"></div>
     <div class="field"><label>Número de cuenta BAC</label><input class="inp" id="bizAcc" value="${esc(biz.payAccount)}" inputmode="numeric" oninput="bizPreview()"></div>
     <div class="field"><label>Link de pago con tarjeta (BAC)</label><input class="inp" id="bizLink" value="${esc(biz.payLink)}" placeholder="https://…  (vacío = no se ofrece tarjeta)" oninput="bizPreview()"></div>
@@ -2331,31 +2326,26 @@ function adminAjustes(){
     <div class="pp-note" style="margin-top:12px">Se guarda en <b>este dispositivo</b>. Cuando BAC te dé el <b>link de pago</b>, pegalo arriba y "Con tarjeta 💳" aparece sola en el mensaje.</div>
     <div style="height:24px"></div>`;
 }
-// Vista previa en vivo: usa lo que hay escrito en el form (sin guardar) sobre un pedido de ejemplo.
+// Vista previa en vivo: usa lo escrito en el form (sin guardar) sobre un pedido de ejemplo.
 function bizPreview(){
   const el=$("#bizPrev"); if(!el) return;
   const g=id=>(($("#"+id)||{}).value)||'';
-  const snap={bizName:biz.bizName, payName:biz.payName, payAccount:biz.payAccount, payLink:biz.payLink};
+  const snap={bizName:biz.bizName, payName:biz.payName, payAccount:biz.payAccount, payLink:biz.payLink, payIntro:biz.payIntro, payClosing:biz.payClosing};
   biz.bizName=g('bizNegocio').trim()||BIZ_DEFAULTS.bizName; biz.payName=g('bizPayName').trim()||BIZ_DEFAULTS.payName;
   biz.payAccount=g('bizAcc').trim(); biz.payLink=g('bizLink').trim();
-  el.textContent = renderMsg(g('bizMsg'), SAMPLE_ORDER);
-  Object.assign(biz, snap); // no guardar hasta que toque "Guardar todo"
+  biz.payIntro=g('bizIntro'); biz.payClosing=g('bizClose');
+  el.textContent = waMessage(SAMPLE_ORDER);
+  Object.assign(biz, snap); // no guardar hasta "Guardar todo"
 }
-function insertVar(v){
-  const ta=$("#bizMsg"); if(!ta) return;
-  const s=ta.selectionStart??ta.value.length, e=ta.selectionEnd??ta.value.length;
-  ta.value=ta.value.slice(0,s)+v+ta.value.slice(e);
-  ta.focus(); ta.selectionStart=ta.selectionEnd=s+v.length; bizPreview();
-}
-function restoreMsg(){ const ta=$("#bizMsg"); if(ta){ ta.value=BIZ_DEFAULTS.msgTemplate; bizPreview(); toast('Mensaje restaurado (aún no guardado)'); } }
 function saveBizForm(){
   const v=id=>((($("#"+id)||{}).value)||'').trim();
   biz.bizName=v('bizNegocio')||BIZ_DEFAULTS.bizName;
   biz.payName=v('bizPayName')||BIZ_DEFAULTS.payName;
   biz.payAccount=v('bizAcc');
   biz.payLink=v('bizLink');
+  biz.payIntro=(($("#bizIntro")||{}).value)||BIZ_DEFAULTS.payIntro;
+  biz.payClosing=v('bizClose')||BIZ_DEFAULTS.payClosing;
   biz.repartidor=v('bizRep').replace(/\D/g,'')||BIZ_DEFAULTS.repartidor;
-  biz.msgTemplate=(($("#bizMsg")||{}).value)||BIZ_DEFAULTS.msgTemplate;
   saveBiz(); toast('Ajustes del negocio guardados'); go('resumen');
 }
 /* ----- NAVEGACIÓN POR DÍA (dentro del Resumen): flechas ‹ › debajo de la fecha ----- */
@@ -2617,26 +2607,19 @@ function totalsBlock(o){
   return s+`\n*Total a pagar: ${moneyWA(fullTotal(o))}*`;
 }
 function payBlock(o){
-  // La opción "Con tarjeta" aparece sola cuando hay link de BAC en Ajustes del negocio.
-  const cardLine = biz.payLink ? `• Con tarjeta 💳: ${biz.payLink} (monto exacto: ${moneyWA(fullTotal(o))})\n` : '';
-  if(o.delivery!=='retiro'){
-    return `*¿Cómo querés pagar?*\n• Transferencia — te paso la cuenta y me mandás el comprobante 📸\n${cardLine}\nApenas confirmes el pago salimos a entregar 🛵\n\n${payInfo()}`;
-  }
-  return `*¿Cómo querés pagar?*\n• Efectivo al pasar a recoger en tienda 💵\n• Transferencia si querés adelantar — me mandás el comprobante 📸\n${cardLine}\n${payInfo()}`;
+  // Frases editables (Ajustes) + la cuenta. "Con tarjeta" aparece sola si hay link de BAC.
+  const card = biz.payLink ? `\n• Con tarjeta 💳: ${biz.payLink} (monto exacto: ${moneyWA(fullTotal(o))})` : '';
+  let s = `${biz.payIntro||BIZ_DEFAULTS.payIntro}\n${payInfo()}${card}`;
+  const close = biz.payClosing||BIZ_DEFAULTS.payClosing;
+  if(o.delivery!=='retiro' && close) s += `\n\n${close}`; // el cierre habla de entrega → solo a domicilio
+  return s;
 }
-// Sustituye las variables de la plantilla por los bloques reales del pedido.
-function renderMsg(tpl, o){
+// Arma el mensaje: saludo + productos + totales + pago (lo dinámico se llena solo; las frases de pago son editables).
+function waMessage(o){
   const nm0=(o.clientName||'').trim().split(/\s+/)[0]||'';
-  return (tpl||'')
-    .replace(/{cliente}/g, nm0)
-    .replace(/{negocio}/g, biz.bizName||BIZ_DEFAULTS.bizName)
-    .replace(/{pedido}/g, orderLinesBlock(o))
-    .replace(/{totales}/g, totalsBlock(o))
-    .replace(/{pago}/g, payBlock(o))
-    .replace(/ {2,}/g,' ')        // "Hola  👋" (sin nombre) → "Hola 👋"
-    .replace(/\n{3,}/g,'\n\n');   // sin huecos grandes si una variable queda vacía
+  return `Hola${nm0?' '+nm0:''} 👋 Gracias por tu pedido en *${biz.bizName||BIZ_DEFAULTS.bizName}*.\n\n*Tu pedido:*\n\n`
+    + orderLinesBlock(o) + `\n\n` + totalsBlock(o) + `\n\n` + payBlock(o);
 }
-function waMessage(o){ return renderMsg(biz.msgTemplate||BIZ_DEFAULTS.msgTemplate, o); }
 function repartidorFicha(o){
   return `Cliente: ${o.clientName}\nTeléfono: ${o.phone||'—'}\nDirección: ${o.addr||o.zone||'—'}`;
 }
