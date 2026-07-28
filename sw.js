@@ -1,6 +1,6 @@
 /* Comandas/Pedidos El Torito — Service Worker (app-shell offline).
    NUNCA cachea Supabase (datos + realtime deben ir siempre a la red). */
-const CACHE = 'torito-v19';
+const CACHE = 'torito-v20';
 const SHELL = [
   './',
   './index.html',
