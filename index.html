@@ -838,18 +838,20 @@ html.lite .kcard2,html.lite .ocard,html.lite .card,html.lite .oitem,html.lite .k
 /* ============ CONFIG ============ */
 const CREDS = { admin:"1970", carnicero:"0707" }; // fallback SOLO si no hay nube (Supabase Auth es el login real)
 const AUTH_EMAILS = { admin:"admin@eltorito.hn", carnicero:"carnicero@eltorito.hn" }; // cuentas reales en Supabase
-const PAY_INFO = "Cliente: IVAN ALEJANDRO SUAREZ VELASQUEZ\nNúmero de cuenta BAC: 729447561";
-// Link fijo de pago con tarjeta (BAC "Pagá con tarjeta"). Vacío = todavía no llega de BAC.
-// Cuando te lo den: pegá la URL aquí entre comillas y volvé a subir el archivo. Listo, se cobra en línea.
-const PAY_LINK = "";
-const REPARTIDOR_PHONE = "50431565418"; // WhatsApp del repartidor (+504 3156-5418).
+// Datos del negocio EDITABLES desde Admin → Ajustes del negocio (persisten en este dispositivo).
+const BIZ_DEFAULTS = { payName:"IVAN ALEJANDRO SUAREZ VELASQUEZ", payAccount:"729447561", payLink:"", repartidor:"50431565418" };
+function loadBiz(){ try{ return {...BIZ_DEFAULTS, ...(JSON.parse(localStorage.getItem('ct_v2_biz')||'{}'))}; }catch(e){ return {...BIZ_DEFAULTS}; } }
+let biz = loadBiz();
+function saveBiz(){ try{ localStorage.setItem('ct_v2_biz', JSON.stringify(biz)); }catch(e){} }
+// Datos de pago que van en el mensaje al cliente (titular + cuenta BAC).
+function payInfo(){ return `Cliente: ${biz.payName}\nNúmero de cuenta BAC: ${biz.payAccount}`; }
 // Abre WhatsApp Web (en la compu, con la sesión Business) o la app, con el mensaje ya escrito. No auto-envía.
 function _waPhone(p){ let d=(p||'').replace(/\D/g,''); if(!d) return ''; if(d.length===8) d='504'+d; return d; }
 function waSend(phone,text){ const t=encodeURIComponent(text||''); const p=_waPhone(phone);
   const url = p ? ('https://web.whatsapp.com/send?phone='+p+'&text='+t) : ('https://wa.me/?text='+t);
   window.open(url,'_blank','noopener'); }
 function waSendClient(id){ const o=orderById(id); if(!o) return; waSend(o.phone, waMessage(o)); }
-function waSendRepartidor(id){ const o=orderById(id); if(!o) return; waSend(REPARTIDOR_PHONE, repartidorFicha(o)); }
+function waSendRepartidor(id){ const o=orderById(id); if(!o) return; waSend(biz.repartidor, repartidorFicha(o)); }
 /* ============ SUPABASE (nube + tiempo real) ============ */
 const SUPA_URL = "https://dnyzokgmjuvbrcxxdatr.supabase.co";
 const SUPA_KEY = "sb_publishable_jO4pGdkTBporf_cndos9OA_K_8tVn3A";
@@ -1452,7 +1454,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='27 jul 2026 · v11';
+const APP_BUILD='27 jul 2026 · v12';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1687,6 +1689,7 @@ function renderAdmin(){
   else if(adminView==="clientes") content=adminClientes();
   else if(adminView==="reporte") content=adminReporte();
   else if(adminView==="historico") content=adminHistorico();
+  else if(adminView==="ajustes") content=adminAjustes();
   else if(adminView==="catalogo") content=adminCatalogo();
   else if(adminView==="dispositivos") content=adminDispositivos();
 
@@ -2255,6 +2258,8 @@ function adminResumen(g){
     <button class="hist-link card" onclick="go('historico')"><span class="act-ic">${ic('history',20)}</span><span class="hist-tx"><b>${(state.history||[]).length} comandas archivadas</b><small>Entregadas de días anteriores</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div class="sect-label">Avisos</div>
     <button class="hist-link card" onclick="go('dispositivos')"><span class="act-ic">${ic('bell',20)}</span><span class="hist-tx"><b>Dispositivos con avisos</b><small>Ver y quitar dónde suenan las comandas</small></span><span class="hist-ch">${ic('right',18)}</span></button>
+    <div class="sect-label">Ajustes</div>
+    <button class="hist-link card" onclick="go('ajustes')"><span class="act-ic">${ic('gear',20)}</span><span class="hist-tx"><b>Ajustes del negocio</b><small>Datos de pago, cuenta BAC, link de tarjeta, repartidor</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     ` : `
     <div class="sect-label">${dayAll.length} comanda${dayAll.length!==1?'s':''} de este día</div>
     ${dayOrdersListHtml(sel)}
@@ -2286,6 +2291,27 @@ async function loadDispositivos(){
 async function removeDispositivo(endpoint){ if(!confirm('¿Quitar este dispositivo de los avisos?')) return;
   try{ await supa.from('push_subs').delete().eq('endpoint',endpoint); }catch(e){}
   toast('Dispositivo quitado'); loadDispositivos(); }
+/* ----- AJUSTES DEL NEGOCIO (admin): datos de pago + repartidor editables ----- */
+function adminAjustes(){
+  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Ajustes del negocio</h2><div class="vh-sub">Datos de pago y repartidor</div></div></div>
+    <div class="sect-label">Datos de pago (van en el mensaje al cliente)</div>
+    <div class="field"><label>Titular de la cuenta</label><input class="inp" id="bizName" value="${esc(biz.payName)}"></div>
+    <div class="field"><label>Número de cuenta BAC</label><input class="inp" id="bizAcc" value="${esc(biz.payAccount)}" inputmode="numeric"></div>
+    <div class="field"><label>Link de pago con tarjeta (BAC)</label><input class="inp" id="bizLink" value="${esc(biz.payLink)}" placeholder="https://…  (vacío = no se ofrece tarjeta)"></div>
+    <div class="sect-label">Repartidor</div>
+    <div class="field"><label>WhatsApp del repartidor (solo números)</label><input class="inp" id="bizRep" value="${esc(biz.repartidor)}" inputmode="numeric"></div>
+    <button class="btn red lg block btn-ic" style="margin-top:16px" onclick="saveBizForm()">${ic('check',18)} Guardar</button>
+    <div class="pp-note" style="margin-top:12px">Se guarda en <b>este dispositivo</b>. El mensaje al cliente usa estos datos. Cuando BAC te dé el <b>link de pago</b>, pegalo arriba y la opción "Con tarjeta 💳" aparece sola en el mensaje.</div>
+    <div style="height:24px"></div>`;
+}
+function saveBizForm(){
+  const v=id=>((($("#"+id)||{}).value)||'').trim();
+  biz.payName=v('bizName')||BIZ_DEFAULTS.payName;
+  biz.payAccount=v('bizAcc');
+  biz.payLink=v('bizLink');
+  biz.repartidor=v('bizRep').replace(/\D/g,'')||BIZ_DEFAULTS.repartidor;
+  saveBiz(); toast('Datos del negocio guardados'); go('resumen');
+}
 /* ----- NAVEGACIÓN POR DÍA (dentro del Resumen): flechas ‹ › debajo de la fecha ----- */
 let dayFilter=null; // ts del día visto en el Resumen (null = hoy)
 function shiftDay(n){ const base=dayFilter!=null?dayFilter:dayStart(Date.now()); const next=dayStart(base)+n*86400000; if(next>dayStart(Date.now())) return; dayFilter=next; renderAdmin(); window.scrollTo(0,0); }
@@ -2542,20 +2568,23 @@ function waMessage(o){
   s+=`\n*Subtotal: ${moneyWA(orderTotal(o))}*\n`;
   if(o.shipping){ s+=`Envío .... ${moneyWA(o.shipping)}\n`; }
   s+=`\n*Total a pagar: ${moneyWA(fullTotal(o))}*\n`;
-  // Métodos de pago: por ahora SOLO transferencia (domicilio) o efectivo/transferencia al recoger.
-  // Sin tarjeta hasta que llegue el link de BAC.
+  // Métodos de pago: transferencia (domicilio) o efectivo/transferencia al recoger.
+  // La opción de tarjeta aparece SOLA cuando se pega el link de BAC en Ajustes del negocio.
+  const cardLine = biz.payLink ? `• Con tarjeta 💳: ${biz.payLink}\n   (poné el monto exacto: ${moneyWA(fullTotal(o))})\n` : '';
   if(o.delivery!=='retiro'){
     // A domicilio: el pago va antes de salir → transferencia.
     s+=`\n*¿Cómo querés pagar?*\n`;
     s+=`• Transferencia — te paso la cuenta y me mandás el comprobante 📸\n`;
+    s+=cardLine;
     s+=`\nApenas confirmes el pago salimos a entregar 🛵\n`;
-    s+=`\n${PAY_INFO}`;
+    s+=`\n${payInfo()}`;
   } else {
     // Retiro en tienda: efectivo al recoger o transferencia.
     s+=`\n*¿Cómo querés pagar?*\n`;
     s+=`• Efectivo al pasar a recoger en tienda 💵\n`;
     s+=`• Transferencia si querés adelantar — me mandás el comprobante 📸\n`;
-    s+=`\n${PAY_INFO}`;
+    s+=cardLine;
+    s+=`\n${payInfo()}`;
   }
   return s;
 }
