@@ -517,6 +517,12 @@ html.bigtext .cmt-area{font-size:16px}
 .cmt-opt{font-weight:600;font-size:12px;color:var(--muted-2);text-transform:none}
 /* Editor de mensaje (Ajustes del negocio) */
 .msg-tpl{width:100%;resize:vertical;min-height:90px;font-size:15px;line-height:1.5;padding:13px 14px;border-radius:14px;box-shadow:var(--sh);white-space:pre-wrap}
+/* Chip de modo de entrega (retiro/domicilio) en las tarjetas */
+.kdtag{margin-top:6px}
+.dtag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;letter-spacing:.02em;padding:3px 9px;border-radius:999px}
+.dtag.retiro{background:#EAF0F5;color:#3f566b}
+.dtag.domi{background:#F5EEE7;color:#8a5a34}
+.dtag svg{width:12px;height:12px}
 #bizPrev{white-space:pre-wrap}
 /* Navegador de día en el Resumen (flechas ‹ fecha ›) */
 .res-datenav{display:flex;align-items:center;justify-content:center;gap:16px;margin:2px 0 16px}
@@ -845,7 +851,7 @@ const AUTH_EMAILS = { admin:"admin@eltorito.hn", carnicero:"carnicero@eltorito.h
 const BIZ_DEFAULTS = {
   repartidor:"50431565418",
   // Mensaje al cliente = texto LIBRE. Solo 2 variables se llenan por pedido: {name}=nombre · {pedido}=productos+total.
-  msg:"Hola {name} 👋 Gracias por tu pedido en *Carnicería El Torito*.\n\n*Tu pedido:*\n\n{pedido}\n\n*Método de pago*\n• Transferencia — te paso la cuenta y me mandás el comprobante 📸\nCliente: IVAN ALEJANDRO SUAREZ VELASQUEZ\nNúmero de cuenta BAC: 729447561\n• Efectivo — al momento de retirar en tienda\n\nApenas confirmes el pago salimos a entregar 🛵"
+  msg:"Hola {name} 👋 Gracias por tu pedido en *Carnicería El Torito*.\n\n*Tu pedido:*\n\n{pedido}\n\n*Método de pago*\n• Transferencia — te paso la cuenta y me mandás el comprobante 📸\nCliente: IVAN ALEJANDRO SUAREZ VELASQUEZ\nNúmero de cuenta BAC: 729447561\n• Efectivo — al momento de retirar en tienda\n\n{entrega}"
 };
 function loadBiz(){ try{ return {...BIZ_DEFAULTS, ...(JSON.parse(localStorage.getItem('ct_v2_biz')||'{}'))}; }catch(e){ return {...BIZ_DEFAULTS}; } }
 let biz = loadBiz();
@@ -1175,6 +1181,15 @@ function archiveStaleListas(){
   if(changed){ state.orders=keep; save(); }
 }
 const allOrders=()=> state.orders.concat(state.history||[]);
+// Modo de entrega normalizado: la WEB manda delivery=true(domicilio)/false(retiro); la captura MANUAL usa 'envio'/'retiro'.
+function isRetiro(o){ return !!o && (o.delivery===false || o.delivery==='retiro' || o.delivery==='pickup'); }
+// Hora de retiro: la web la guarda dentro de la nota como "Retiro: 3:00 PM · ...". Devuelve la hora o ''.
+function retiroHora(o){ const m=/Retiro:\s*([^·\n]+)/i.exec((o&&o.note)||''); return m?m[1].trim():''; }
+// Cierre del mensaje según el modo (variable {entrega}).
+function entregaLine(o){ return isRetiro(o) ? 'Tu pedido se prepara una vez estés en el local 🏪' : 'Apenas confirmes el pago salimos a entregar 🛵'; }
+// Chip visual del modo de entrega (tarjetas y detalle).
+function deliveryTag(o){ if(isRetiro(o)){ const h=retiroHora(o); return `<span class="dtag retiro">${ic('store',12)} Retiro${h?' · '+esc(h):''}</span>`; }
+  return `<span class="dtag domi">${ic('truck',12)} Domicilio${o.zone?' · '+esc(o.zone):''}</span>`; }
 const bc = ("BroadcastChannel" in window)? new BroadcastChannel("ct_v2"):null;
 if(bc) bc.onmessage=()=>{ if(USE_SUPA) return; load(); lastSync=Date.now(); tapSafeRerender(); };
 window.addEventListener("storage",e=>{ if(USE_SUPA) return; if(e.key===KEY){ load(); lastSync=Date.now(); tapSafeRerender(); }});
@@ -1459,7 +1474,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='28 jul 2026 · v15';
+const APP_BUILD='28 jul 2026 · v16';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1789,6 +1804,7 @@ function akcard(o,st){
   return `<div class="kcard2" onclick="openAdminOrder('${o.id}')">
     <div class="kf"><span class="kfolio">#${o.folio}</span><span class="ktime">${timeAgo(o.createdAt)}</span></div>
     <div class="kname">${esc(o.clientName)}</div>
+    <div class="kdtag">${deliveryTag(o)}</div>
     <div class="kitems">${o.items.length} productos · <b>${money(fullTotal(o))}</b></div>
     ${o.paid?`<div class="kpaid">${ic('check',14)} Pagado</div>`:""}
     ${tag}
@@ -2306,8 +2322,8 @@ function adminAjustes(){
   return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Ajustes del negocio</h2><div class="vh-sub">Mensaje al cliente y repartidor</div></div></div>
     <div class="sect-label">Mensaje al cliente</div>
     <div class="pp-note" style="margin:0 0 8px">Escribí el mensaje completo a tu gusto. Solo estas <b>dos partes</b> se llenan solas con cada pedido:<br>
-      <b>{name}</b> = nombre del cliente · <b>{pedido}</b> = los productos y el total.<br>
-      Todo lo demás (método de pago, cuenta, cierre) es texto que escribís vos.</div>
+      <b>{name}</b> = nombre del cliente · <b>{pedido}</b> = los productos y el total · <b>{entrega}</b> = el cierre (se adapta solo: a domicilio "salimos a entregar", retiro "se prepara al llegar").<br>
+      Todo lo demás (método de pago, cuenta) es texto que escribís vos.</div>
     <textarea class="inp msg-tpl" id="bizMsg" rows="13" oninput="bizPreview()">${esc(biz.msg)}</textarea>
     <button type="button" class="btn ghost block sm btn-ic" style="margin-top:8px" onclick="restoreMsg()">${ic('history',15)} Restaurar mensaje original</button>
     <div class="sect-label" style="margin-top:14px">Así se envía (pedido de ejemplo)</div>
@@ -2463,7 +2479,7 @@ function exportReporte(){
       return qy+' '+(it.unit==='Libra'?'lb':it.unit)+' '+it.name+(it.available?'':' (no disponible)'); }).join('; ');
     const lb=orderLibras(o); totLb+=lb;
     lines.push([o.folio, d.toLocaleDateString('es-HN'), d.toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'}),
-      o.clientName, o.phone||'', o.zone||'', o.delivery==='envio'?'Envío':'Recoge', STATUS[o.status]||o.status,
+      o.clientName, o.phone||'', o.zone||'', isRetiro(o)?'Retiro':'Envío', STATUS[o.status]||o.status,
       o.paid?'Sí':'No', prods, (Math.round(lb*10)/10).toFixed(1), orderTotal(o).toFixed(2), (o.shipping||0).toFixed(2), fullTotal(o).toFixed(2)].map(q).join(','));
   });
   // fila de totales
@@ -2551,7 +2567,7 @@ function openAdminOrder(id){
   const showClientMsg = ["espera_pago","preparacion"].includes(o.status); // en Por entregar/En ruta ya no se le pide pago
   const info = `
     ${o.phone?`<div class="kv"><span class="k">Teléfono</span><span class="v">${esc(o.phone)}</span></div>`:''}
-    <div class="kv"><span class="k">Entrega</span><span class="v">${o.delivery==='retiro'?'Retiro en local':'A domicilio'}${o.zone?' · '+esc(o.zone):''}</span></div>
+    <div class="kv"><span class="k">Entrega</span><span class="v">${isRetiro(o)?('Retiro en local'+(retiroHora(o)?' · '+esc(retiroHora(o)):'')):('A domicilio'+(o.zone?' · '+esc(o.zone):''))}</span></div>
     ${o.addr?`<div class="kv"><span class="k">Dirección</span><span class="v">${esc(o.addr)}</span></div>`:''}
     <div class="kv"><span class="k">Fecha</span><span class="v">${new Date(o.createdAt).toLocaleString('es-HN',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>
     ${o.note?`<div class="kv"><span class="k">${ic('note',14)} Indicación</span><span class="v" style="max-width:60%;text-align:right">${esc(o.note)}</span></div>`:''}`;
@@ -2598,6 +2614,7 @@ function waMessage(o){
   return (biz.msg||BIZ_DEFAULTS.msg)
     .replace(/\{name\}|\{nombre\}|\{cliente\}/gi, nm0)
     .replace(/\{pedido\}|\{productos\}/gi, orderBlock(o))
+    .replace(/\{entrega\}/gi, entregaLine(o))
     .replace(/ {2,}/g,' '); // "Hola  👋" (sin nombre) → "Hola 👋"
 }
 function repartidorFicha(o){
@@ -2676,6 +2693,7 @@ function kcard(o,st){
   return `<div class="kcard2 ${urgent?'urgent':''}" onclick="openCarniceroOrder('${o.id}')">
     <div class="kf"><span class="kfolio">#${o.folio}</span>${timeHtml}</div>
     <div class="kname">${esc(o.clientName)}</div>
+    <div class="kdtag">${deliveryTag(o)}</div>
     <div class="kitems">${o.items.length} productos · <b>${money(fullTotal(o))}</b></div>
     ${o.note?`<div class="knote">${ic('note',15)} ${esc(o.note)}</div>`:""}
     ${o.paid?`<div class="kpaid">${ic('check',15)} Pagado</div>`:(st==='espera_pago'?`<div class="kwait">${ic('clock',15)} Pendiente de pago (admin)</div>`:"")}
