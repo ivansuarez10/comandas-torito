@@ -515,6 +515,12 @@ html.bigtext .cmt-area{font-size:16px}
 .cmt-label{display:flex;align-items:center;gap:7px;font-size:14px;color:var(--muted);font-weight:600;margin-bottom:8px}
 .cmt-label svg{color:var(--rojo)}
 .cmt-opt{font-weight:600;font-size:12px;color:var(--muted-2);text-transform:none}
+/* Editor de mensaje (Ajustes del negocio) */
+.var-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.var-chip{font-family:var(--font);font-size:12.5px;font-weight:700;color:var(--rojo);background:#FBF1F1;border:1px solid #efdcdc;border-radius:8px;padding:5px 9px;cursor:pointer}
+.var-chip:active{background:#f6e4e4}
+.msg-tpl{width:100%;resize:vertical;min-height:150px;font-size:15px;line-height:1.5;padding:13px 14px;border-radius:14px;box-shadow:var(--sh);white-space:pre-wrap}
+#bizPrev{white-space:pre-wrap}
 /* Navegador de día en el Resumen (flechas ‹ fecha ›) */
 .res-datenav{display:flex;align-items:center;justify-content:center;gap:16px;margin:2px 0 16px}
 .rdn-lbl{font-family:var(--font);font-size:16px;font-weight:700;color:var(--ink);text-transform:capitalize;min-width:150px;text-align:center;letter-spacing:-.01em}
@@ -839,7 +845,12 @@ html.lite .kcard2,html.lite .ocard,html.lite .card,html.lite .oitem,html.lite .k
 const CREDS = { admin:"1970", carnicero:"0707" }; // fallback SOLO si no hay nube (Supabase Auth es el login real)
 const AUTH_EMAILS = { admin:"admin@eltorito.hn", carnicero:"carnicero@eltorito.hn" }; // cuentas reales en Supabase
 // Datos del negocio EDITABLES desde Admin → Ajustes del negocio (persisten en este dispositivo).
-const BIZ_DEFAULTS = { payName:"IVAN ALEJANDRO SUAREZ VELASQUEZ", payAccount:"729447561", payLink:"", repartidor:"50431565418" };
+const BIZ_DEFAULTS = {
+  bizName:"Carnicería El Torito",
+  payName:"IVAN ALEJANDRO SUAREZ VELASQUEZ", payAccount:"729447561", payLink:"", repartidor:"50431565418",
+  // Plantilla del mensaje al cliente. Variables: {cliente} {negocio} {pedido} {totales} {pago}
+  msgTemplate:"Hola {cliente} 👋 Gracias por tu pedido en *{negocio}*.\n\n*Tu pedido:*\n\n{pedido}\n\n{totales}\n\n{pago}"
+};
 function loadBiz(){ try{ return {...BIZ_DEFAULTS, ...(JSON.parse(localStorage.getItem('ct_v2_biz')||'{}'))}; }catch(e){ return {...BIZ_DEFAULTS}; } }
 let biz = loadBiz();
 function saveBiz(){ try{ localStorage.setItem('ct_v2_biz', JSON.stringify(biz)); }catch(e){} }
@@ -1454,7 +1465,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='27 jul 2026 · v12';
+const APP_BUILD='27 jul 2026 · v13';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1709,6 +1720,7 @@ function renderAdmin(){
       ${nav.slice(2).map(([k,l,i])=>`<button class="${adminView===k?'act':''}" onclick="go('${k}')"><span class="bi">${ic(i,22)}</span>${l}</button>`).join("")}
     </nav>`;
   if(adminView==="nueva") initNueva();
+  if(adminView==="ajustes") bizPreview();
 }
 function go(v){ adminView=v; if(v==="nueva"){ draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null}; prodOpen=false; } if(v==="bandeja") bandejaQ=''; if(v==="resumen") dayFilter=null; renderAdmin(); window.scrollTo(0,0); }
 
@@ -2292,25 +2304,59 @@ async function removeDispositivo(endpoint){ if(!confirm('¿Quitar este dispositi
   try{ await supa.from('push_subs').delete().eq('endpoint',endpoint); }catch(e){}
   toast('Dispositivo quitado'); loadDispositivos(); }
 /* ----- AJUSTES DEL NEGOCIO (admin): datos de pago + repartidor editables ----- */
+const SAMPLE_ORDER = {clientName:'María López', delivery:'envio', shipping:50, items:[
+  {name:'Rib eye', unit:'Libra', price:195, weigh:true, weight:1.4, qty:1, available:true},
+  {name:'Chorizo Parrillero (paquete)', unit:'Paquete', price:60, weigh:false, qty:2, available:true}
+]};
 function adminAjustes(){
-  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Ajustes del negocio</h2><div class="vh-sub">Datos de pago y repartidor</div></div></div>
-    <div class="sect-label">Datos de pago (van en el mensaje al cliente)</div>
-    <div class="field"><label>Titular de la cuenta</label><input class="inp" id="bizName" value="${esc(biz.payName)}"></div>
-    <div class="field"><label>Número de cuenta BAC</label><input class="inp" id="bizAcc" value="${esc(biz.payAccount)}" inputmode="numeric"></div>
-    <div class="field"><label>Link de pago con tarjeta (BAC)</label><input class="inp" id="bizLink" value="${esc(biz.payLink)}" placeholder="https://…  (vacío = no se ofrece tarjeta)"></div>
+  const VARS=['{cliente}','{negocio}','{pedido}','{totales}','{pago}'];
+  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Ajustes del negocio</h2><div class="vh-sub">Mensaje al cliente, pago y repartidor</div></div></div>
+    <div class="sect-label">Negocio</div>
+    <div class="field"><label>Nombre del negocio (aparece en el mensaje)</label><input class="inp" id="bizNegocio" value="${esc(biz.bizName)}" oninput="bizPreview()"></div>
+    <div class="sect-label">Mensaje al cliente</div>
+    <div class="pp-note" style="margin:0 0 8px">Escribilo a tu gusto. Tocá una <b>variable</b> para insertarla; se reemplaza sola al enviar:
+      <div class="var-chips">${VARS.map(v=>`<button type="button" class="var-chip" onclick="insertVar('${v}')">${v}</button>`).join('')}</div>
+      <span style="color:var(--muted-2)">{pedido}=productos · {totales}=subtotal/envío/total · {pago}=cómo pagar + tu cuenta</span></div>
+    <textarea class="inp msg-tpl" id="bizMsg" rows="9" oninput="bizPreview()">${esc(biz.msgTemplate)}</textarea>
+    <button type="button" class="btn ghost block sm btn-ic" style="margin-top:8px" onclick="restoreMsg()">${ic('history',15)} Restaurar mensaje original</button>
+    <div class="sect-label" style="margin-top:14px">Vista previa (pedido de ejemplo)</div>
+    <div class="msgbox" id="bizPrev"></div>
+    <div class="sect-label" style="margin-top:16px">Datos de pago</div>
+    <div class="field"><label>Titular de la cuenta</label><input class="inp" id="bizPayName" value="${esc(biz.payName)}" oninput="bizPreview()"></div>
+    <div class="field"><label>Número de cuenta BAC</label><input class="inp" id="bizAcc" value="${esc(biz.payAccount)}" inputmode="numeric" oninput="bizPreview()"></div>
+    <div class="field"><label>Link de pago con tarjeta (BAC)</label><input class="inp" id="bizLink" value="${esc(biz.payLink)}" placeholder="https://…  (vacío = no se ofrece tarjeta)" oninput="bizPreview()"></div>
     <div class="sect-label">Repartidor</div>
     <div class="field"><label>WhatsApp del repartidor (solo números)</label><input class="inp" id="bizRep" value="${esc(biz.repartidor)}" inputmode="numeric"></div>
-    <button class="btn red lg block btn-ic" style="margin-top:16px" onclick="saveBizForm()">${ic('check',18)} Guardar</button>
-    <div class="pp-note" style="margin-top:12px">Se guarda en <b>este dispositivo</b>. El mensaje al cliente usa estos datos. Cuando BAC te dé el <b>link de pago</b>, pegalo arriba y la opción "Con tarjeta 💳" aparece sola en el mensaje.</div>
+    <button class="btn red lg block btn-ic" style="margin-top:16px" onclick="saveBizForm()">${ic('check',18)} Guardar todo</button>
+    <div class="pp-note" style="margin-top:12px">Se guarda en <b>este dispositivo</b>. Cuando BAC te dé el <b>link de pago</b>, pegalo arriba y "Con tarjeta 💳" aparece sola en el mensaje.</div>
     <div style="height:24px"></div>`;
 }
+// Vista previa en vivo: usa lo que hay escrito en el form (sin guardar) sobre un pedido de ejemplo.
+function bizPreview(){
+  const el=$("#bizPrev"); if(!el) return;
+  const g=id=>(($("#"+id)||{}).value)||'';
+  const snap={bizName:biz.bizName, payName:biz.payName, payAccount:biz.payAccount, payLink:biz.payLink};
+  biz.bizName=g('bizNegocio').trim()||BIZ_DEFAULTS.bizName; biz.payName=g('bizPayName').trim()||BIZ_DEFAULTS.payName;
+  biz.payAccount=g('bizAcc').trim(); biz.payLink=g('bizLink').trim();
+  el.textContent = renderMsg(g('bizMsg'), SAMPLE_ORDER);
+  Object.assign(biz, snap); // no guardar hasta que toque "Guardar todo"
+}
+function insertVar(v){
+  const ta=$("#bizMsg"); if(!ta) return;
+  const s=ta.selectionStart??ta.value.length, e=ta.selectionEnd??ta.value.length;
+  ta.value=ta.value.slice(0,s)+v+ta.value.slice(e);
+  ta.focus(); ta.selectionStart=ta.selectionEnd=s+v.length; bizPreview();
+}
+function restoreMsg(){ const ta=$("#bizMsg"); if(ta){ ta.value=BIZ_DEFAULTS.msgTemplate; bizPreview(); toast('Mensaje restaurado (aún no guardado)'); } }
 function saveBizForm(){
   const v=id=>((($("#"+id)||{}).value)||'').trim();
-  biz.payName=v('bizName')||BIZ_DEFAULTS.payName;
+  biz.bizName=v('bizNegocio')||BIZ_DEFAULTS.bizName;
+  biz.payName=v('bizPayName')||BIZ_DEFAULTS.payName;
   biz.payAccount=v('bizAcc');
   biz.payLink=v('bizLink');
   biz.repartidor=v('bizRep').replace(/\D/g,'')||BIZ_DEFAULTS.repartidor;
-  saveBiz(); toast('Datos del negocio guardados'); go('resumen');
+  biz.msgTemplate=(($("#bizMsg")||{}).value)||BIZ_DEFAULTS.msgTemplate;
+  saveBiz(); toast('Ajustes del negocio guardados'); go('resumen');
 }
 /* ----- NAVEGACIÓN POR DÍA (dentro del Resumen): flechas ‹ › debajo de la fecha ----- */
 let dayFilter=null; // ts del día visto en el Resumen (null = hoy)
@@ -2556,38 +2602,41 @@ function openAdminOrder(id){
     </div>
   `);
 }
-function waMessage(o){
-  const av=o.items.filter(i=>i.available);
-  const un=o.items.filter(i=>!i.available);
-  const nm0=(o.clientName||'').trim().split(/\s+/)[0]||'';
-  let s=`Hola${nm0?' '+nm0:''} 👋 Gracias por tu pedido en *Carnicería El Torito*.\n\n*Tu pedido:*\n\n`;
-  av.forEach(it=>{ const q=(it.weigh&&it.weight!=null)?it.weight:it.qty;
-    const nm=it.name.replace(/\s*\(paquete\)/i,'');
+// Bloques que se inyectan en la plantilla del mensaje (variables {pedido} {totales} {pago}).
+function orderLinesBlock(o){
+  const av=(o.items||[]).filter(i=>i.available), un=(o.items||[]).filter(i=>!i.available);
+  let s='';
+  av.forEach(it=>{ const q=(it.weigh&&it.weight!=null)?it.weight:it.qty; const nm=it.name.replace(/\s*\(paquete\)/i,'');
     s+=`${q} ${unitWord(it.unit,q)} de ${nm} .... ${moneyWA(lineAmount(it))}\n`; });
   un.forEach(it=>{ s+=`${it.name} .... hoy no disponible\n`; });
-  s+=`\n*Subtotal: ${moneyWA(orderTotal(o))}*\n`;
-  if(o.shipping){ s+=`Envío .... ${moneyWA(o.shipping)}\n`; }
-  s+=`\n*Total a pagar: ${moneyWA(fullTotal(o))}*\n`;
-  // Métodos de pago: transferencia (domicilio) o efectivo/transferencia al recoger.
-  // La opción de tarjeta aparece SOLA cuando se pega el link de BAC en Ajustes del negocio.
-  const cardLine = biz.payLink ? `• Con tarjeta 💳: ${biz.payLink}\n   (poné el monto exacto: ${moneyWA(fullTotal(o))})\n` : '';
-  if(o.delivery!=='retiro'){
-    // A domicilio: el pago va antes de salir → transferencia.
-    s+=`\n*¿Cómo querés pagar?*\n`;
-    s+=`• Transferencia — te paso la cuenta y me mandás el comprobante 📸\n`;
-    s+=cardLine;
-    s+=`\nApenas confirmes el pago salimos a entregar 🛵\n`;
-    s+=`\n${payInfo()}`;
-  } else {
-    // Retiro en tienda: efectivo al recoger o transferencia.
-    s+=`\n*¿Cómo querés pagar?*\n`;
-    s+=`• Efectivo al pasar a recoger en tienda 💵\n`;
-    s+=`• Transferencia si querés adelantar — me mandás el comprobante 📸\n`;
-    s+=cardLine;
-    s+=`\n${payInfo()}`;
-  }
-  return s;
+  return s.replace(/\n+$/,'');
 }
+function totalsBlock(o){
+  let s=`*Subtotal: ${moneyWA(orderTotal(o))}*`;
+  if(o.shipping) s+=`\nEnvío .... ${moneyWA(o.shipping)}`;
+  return s+`\n*Total a pagar: ${moneyWA(fullTotal(o))}*`;
+}
+function payBlock(o){
+  // La opción "Con tarjeta" aparece sola cuando hay link de BAC en Ajustes del negocio.
+  const cardLine = biz.payLink ? `• Con tarjeta 💳: ${biz.payLink} (monto exacto: ${moneyWA(fullTotal(o))})\n` : '';
+  if(o.delivery!=='retiro'){
+    return `*¿Cómo querés pagar?*\n• Transferencia — te paso la cuenta y me mandás el comprobante 📸\n${cardLine}\nApenas confirmes el pago salimos a entregar 🛵\n\n${payInfo()}`;
+  }
+  return `*¿Cómo querés pagar?*\n• Efectivo al pasar a recoger en tienda 💵\n• Transferencia si querés adelantar — me mandás el comprobante 📸\n${cardLine}\n${payInfo()}`;
+}
+// Sustituye las variables de la plantilla por los bloques reales del pedido.
+function renderMsg(tpl, o){
+  const nm0=(o.clientName||'').trim().split(/\s+/)[0]||'';
+  return (tpl||'')
+    .replace(/{cliente}/g, nm0)
+    .replace(/{negocio}/g, biz.bizName||BIZ_DEFAULTS.bizName)
+    .replace(/{pedido}/g, orderLinesBlock(o))
+    .replace(/{totales}/g, totalsBlock(o))
+    .replace(/{pago}/g, payBlock(o))
+    .replace(/ {2,}/g,' ')        // "Hola  👋" (sin nombre) → "Hola 👋"
+    .replace(/\n{3,}/g,'\n\n');   // sin huecos grandes si una variable queda vacía
+}
+function waMessage(o){ return renderMsg(biz.msgTemplate||BIZ_DEFAULTS.msgTemplate, o); }
 function repartidorFicha(o){
   return `Cliente: ${o.clientName}\nTeléfono: ${o.phone||'—'}\nDirección: ${o.addr||o.zone||'—'}`;
 }
