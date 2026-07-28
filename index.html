@@ -484,6 +484,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .numbox.needw.active{animation:none}
 @keyframes needwPulse{0%,100%{box-shadow:0 0 0 3px rgba(159,38,41,.14)}50%{box-shadow:0 0 0 5px rgba(159,38,41,.22)}}
 html.lite .numbox.needw{animation:none}
+/* CONFIRMAR DE UN TOQUE lo que no se pesa (fase cotizar): pendiente = ámbar; confirmado = verde. */
+.okbox{display:inline-flex;align-items:center;gap:7px;padding:12px 16px;border-radius:13px;font-family:var(--font);font-weight:800;font-size:15px;cursor:pointer;
+  border:1.5px solid #EAD9AC;background:#FBF1DA;color:#8A5A11;box-shadow:0 0 0 3px rgba(184,134,20,.12);animation:needcPulse 1.8s ease-in-out infinite}
+.okbox:active{transform:scale(.97)}
+.okbox.on{border-color:transparent;background:var(--ok);color:#fff;box-shadow:0 3px 10px rgba(46,125,82,.22);animation:none}
+@keyframes needcPulse{0%,100%{box-shadow:0 0 0 3px rgba(184,134,20,.12)}50%{box-shadow:0 0 0 5px rgba(184,134,20,.20)}}
+html.lite .okbox{animation:none}
+.confirm-all{width:100%;padding:14px;border:1.5px solid #EAD9AC;border-radius:14px;background:#FBF1DA;color:#8A5A11;font-weight:800;font-size:15px;margin:2px 0 12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.confirm-all:active{background:#F2DDB2}
+html.bigtext .okbox{font-size:16.5px}
 /* TEXTO GRANDE / ALTO CONTRASTE — lectura a distancia en el mostrador (toggle en Ajustes) */
 html.bigtext{--muted:#48484D;--muted-2:#55555A}
 html.bigtext .kcol-head .kn{font-size:16px}
@@ -1485,7 +1495,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='28 jul 2026 · v18';
+const APP_BUILD='28 jul 2026 · v19';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2888,6 +2898,10 @@ function oitemRow(it,i,vo){
       r2+=`<span class="lbl">Precio/lb</span>
         <button class="numbox ${activeEdit&&activeEdit.i===i&&activeEdit.field==='price'?'active':''}" id="pb${i}" onclick="startEdit(${i},'price')">${it.price!=null?'L'+it.price:'L'}<span class="nbu">${it.price!=null?'/lb':'encargo'}</span></button>`;
     }
+    // COTIZAR: lo que no se pesa se confirma de un toque ("lo tengo"). Ámbar = pendiente, verde = confirmado.
+    if(curCotizar && !it.weigh){
+      r2+=`<button class="okbox ${it._confirmed?'on':''}" onclick="toggleConfirm(${i})" aria-label="${it._confirmed?'Confirmado':'Confirmar que lo tengo'}">${ic('check',16)} ${it._confirmed?'Confirmado':'Lo tengo'}</button>`;
+    }
   } else if(it.available && vo){
     r2=`<span class="lbl">${it.weigh?(it.weight!=null?it.weight+' lb':'—'):it.qty+' '+unit}</span>`;
   }
@@ -2934,6 +2948,7 @@ function renderCarnOrder(o,vo){
     ? `<button class="btn green lg block btn-ic" onclick="arriveForPickup('${o.id}')">${ic('store',18)} Cliente llegó → preparar</button>`
     : `<button class="btn green lg block btn-ic" onclick="markReady('${o.id}')">${ic('check',18)} Marcar listo para entrega</button>`;
   curSheetVO=vo;
+  curCotizar = (o.status==='cotizar' && !vo && !adminEditMode); // fase donde se confirma lo que no se pesa
   const voNote = (o.status==='preparacion'&&o.held)?('⏸ En espera del cliente'+(retiroHora(o)?' · recoge ~'+retiroHora(o):'')+' · NO preparar aún'):o.status==='preparacion'?'Pagado · toca el círculo para tachar lo que ya preparaste':o.status==='lista'?'Lista para entrega · solo lectura':'Entregada · solo lectura';
   $("#overlayHost").innerHTML=`<div class="overlay osheet" onclick="if(event.target===this)closeCarn()">
     <div class="sheet"><div class="sheet-head">
@@ -2944,6 +2959,7 @@ function renderCarnOrder(o,vo){
         ${vo?`<div class="viewonly-tag">${ic('eye',15)} ${voNote}</div>`:''}
         ${(o.status==='preparacion'&&!o.held)?`<div class="prep-prog" id="prepProg">${prepProgInner()}</div>`:''}
         <div id="oitems">${oitemSeqHtml(vo)}</div>
+        <div id="confirmAllHost">${curCotizar?confirmAllBtnHtml():''}</div>
         ${vo?'':`<button class="add-prod btn-ic" onclick="openAddProduct()">${ic('plus',18)} Agregar producto</button>`}
         ${vo
           ? (o.note?`<div class="note-banner">${ic('note',16)} <b>Indicación:</b> ${esc(o.note)}</div>`:'')
@@ -2953,7 +2969,7 @@ function renderCarnOrder(o,vo){
         ${action?`<div style="margin-top:6px">${action}</div>`:''}
       </div></div></div>`;
 }
-let curSheetVO=false;
+let curSheetVO=false, curCotizar=false;
 // Orden de las líneas: en vista editable (cotizar/espera_pago) primero los productos que se PESAN
 // y siguen disponibles → el carnicero valida esos pesos de una. En solo-lectura (preparación/lista)
 // se respeta el orden original. Devuelve índices a editItems (los callbacks siguen usando el índice real).
@@ -2978,7 +2994,18 @@ function oitemSequence(vo){
   return seq;
 }
 function oitemSeqHtml(vo){ return oitemSequence(vo).map(e=> e.header!==undefined ? `<div class="ocat-head">${esc(e.header)}</div>` : oitemRow(editItems[e.i],e.i,vo)).join(""); }
-function rerenderOitems(){ const el=$("#oitems"); if(el) el.innerHTML=oitemSeqHtml(curSheetVO); }
+function rerenderOitems(){ const el=$("#oitems"); if(el) el.innerHTML=oitemSeqHtml(curSheetVO);
+  const ca=$("#confirmAllHost"); if(ca) ca.innerHTML=curCotizar?confirmAllBtnHtml():''; }
+// CONFIRMAR LO QUE NO SE PESA (fase cotizar): un toque por línea, o todas de golpe.
+function toggleConfirm(i){ if(!editItems||!editItems[i]) return; editItems[i]._confirmed=!editItems[i]._confirmed; persistEdits(); rerenderOitems(); }
+function confirmAllNonWeigh(){ if(!editItems) return; let n=0;
+  editItems.forEach(it=>{ if(it.available && !it.weigh && !it._confirmed){ it._confirmed=true; n++; } });
+  if(n){ persistEdits(); rerenderOitems(); toast(n+' confirmado'+(n>1?'s':'')); } }
+function confirmAllBtnHtml(){ if(!editItems) return '';
+  const nonW=editItems.filter(it=>it.available && !it.weigh).length;
+  const pend=editItems.filter(it=>it.available && !it.weigh && !it._confirmed).length;
+  if(nonW<2 || !pend) return '';
+  return `<button class="confirm-all" onclick="confirmAllNonWeigh()">${ic('check',17)} Confirmar todo lo que no se pesa (${pend})</button>`; }
 // Contador de avance "X de Y preparados" (encabezado de la comanda en preparación).
 function prepProgInner(){ const total=(editItems||[]).length, done=(editItems||[]).filter(x=>x.done).length;
   const all=total>0&&done===total;
@@ -3065,6 +3092,9 @@ function confirmCotizarV2(){ const o=orderById(currentSheetId); if(!o) return;
   const faltan=editItems.filter(it=>it.available && it.weigh && !it._wtouched);
   if(faltan.length){ toast('Valida el peso de: '+faltan.map(f=>f.name).join(', '));
     const idx=editItems.indexOf(faltan[0]); if(idx>=0) startEdit(idx,'weight'); return; }
+  // Ni sin confirmar de un toque lo que no se pesa.
+  const faltanConf=editItems.filter(it=>it.available && !it.weigh && !it._confirmed);
+  if(faltanConf.length){ toast('Confirma lo que no se pesa: '+faltanConf.map(f=>f.name).join(', ')); rerenderOitems(); return; }
   const id=o.id; persistEdits(true); setStatus(o,'espera_pago'); save(o); closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
 function guardarV2(){ persistEdits(); closeCarn(); toast('Cambios guardados'); }
 function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(o); closeCarn(); toast('Listo para entrega', ()=>revertStatus(id, x=>{x.listaAt=prevLista;})); }
