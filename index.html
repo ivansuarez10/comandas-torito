@@ -523,6 +523,10 @@ html.bigtext .cmt-area{font-size:16px}
 .dtag.retiro{background:#EAF0F5;color:#3f566b}
 .dtag.domi{background:#F5EEE7;color:#8a5a34}
 .dtag svg{width:12px;height:12px}
+/* Retiro EN PAUSA (esperando al cliente): tarjeta atenuada + banner ámbar "EN ESPERA · recoge hora" */
+.kcard2.held{opacity:.86;background:#FCFAF4}
+.khold{margin-top:7px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;letter-spacing:.02em;color:#9a6a12;background:#FBF3DE;border-radius:9px;padding:6px 9px;text-transform:uppercase}
+.khold svg{width:14px;height:14px;flex:none}
 #bizPrev{white-space:pre-wrap}
 /* Navegador de día en el Resumen (flechas ‹ fecha ›) */
 .res-datenav{display:flex;align-items:center;justify-content:center;gap:16px;margin:2px 0 16px}
@@ -1197,8 +1201,8 @@ window.addEventListener("storage",e=>{ if(USE_SUPA) return; if(e.key===KEY){ loa
 setInterval(()=>{ if(USE_SUPA) return; const p=+(localStorage.getItem("ct_v2_ping")||0); if(p>lastPing){ lastPing=p; load(); lastSync=Date.now(); tapSafeRerender(); } },1200);
 
 /* ====== Capa de datos Supabase ====== */
-function toRow(o){ return {id:o.id,folio:o.folio,client_name:o.clientName,phone:o.phone,zone:o.zone,addr:o.addr,delivery:o.delivery,shipping:o.shipping||0,note:o.note,status:o.status,paid:!!o.paid,paid_at:o.paidAt||null,lista_at:o.listaAt||null,archived:!!o.archived,archived_at:o.archivedAt||null,created_at:o.createdAt,items:o.items||[],hist:o.hist||[]}; }
-function fromRow(r){ return {id:r.id,folio:r.folio,clientName:r.client_name,phone:r.phone,zone:r.zone,addr:r.addr,delivery:r.delivery,shipping:Number(r.shipping)||0,note:r.note,status:r.status,paid:!!r.paid,paidAt:r.paid_at,listaAt:r.lista_at,archived:!!r.archived,archivedAt:r.archived_at,createdAt:Number(r.created_at),items:r.items||[],hist:r.hist||[]}; }
+function toRow(o){ return {id:o.id,folio:o.folio,client_name:o.clientName,phone:o.phone,zone:o.zone,addr:o.addr,delivery:o.delivery,shipping:o.shipping||0,note:o.note,status:o.status,paid:!!o.paid,paid_at:o.paidAt||null,lista_at:o.listaAt||null,archived:!!o.archived,archived_at:o.archivedAt||null,created_at:o.createdAt,held:!!o.held,items:o.items||[],hist:o.hist||[]}; }
+function fromRow(r){ return {id:r.id,folio:r.folio,clientName:r.client_name,phone:r.phone,zone:r.zone,addr:r.addr,delivery:r.delivery,shipping:Number(r.shipping)||0,note:r.note,status:r.status,paid:!!r.paid,paidAt:r.paid_at,listaAt:r.lista_at,archived:!!r.archived,archivedAt:r.archived_at,createdAt:Number(r.created_at),held:!!r.held,items:r.items||[],hist:r.hist||[]}; }
 async function dbFetch(){
   const {data,error}=await supa.from('orders').select('*');
   if(error){ console.warn('Supabase fetch:',error.message); return false; }
@@ -1474,7 +1478,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='28 jul 2026 · v16';
+const APP_BUILD='28 jul 2026 · v17';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1530,7 +1534,24 @@ applyBigText();
 function sndToggle(){ soundOn=!soundOn; localStorage.setItem('ct_v2_sound', soundOn?'on':'off'); openSoundSheet(); if(soundOn) playDing(true); }
 // TIMBRE INSISTENTE: mientras haya comandas "Por cotizar" sin atender, re-suena cada 25 s
 // (no interrumpe si están trabajando una comanda con la hoja abierta; se calla con la bocina).
+// Hora de retiro parseada a un Date de HOY (para la alerta). "3:00 PM", "10:30 AM", "15:00"; sin hora → null.
+function pickupDate(o){ const s=retiroHora(o); if(!s) return null;
+  const m=/(\d{1,2}):(\d{2})\s*(a\.?\s?m\.?|p\.?\s?m\.?|am|pm)?/i.exec(s); if(!m) return null;
+  let h=+m[1]; const min=+m[2], ap=(m[3]||'').replace(/[^apm]/gi,'').toLowerCase();
+  if(ap.startsWith('p') && h<12) h+=12; if(ap.startsWith('a') && h===12) h=0;
+  const d=new Date(); d.setHours(h,min,0,0); return d; }
+// Alerta 20 min antes de la hora de retiro (para estar listos). Una vez por comanda.
+let _pickupAlerted={};
+function checkPickupAlerts(){
+  const now=Date.now();
+  state.orders.filter(o=>o.status==='preparacion' && o.held && isRetiro(o)).forEach(o=>{
+    const t=pickupDate(o); if(!t) return; const diff=t.getTime()-now;
+    if(diff>0 && diff<=20*60000 && !_pickupAlerted[o.id]){ _pickupAlerted[o.id]=true; playDing(true);
+      const c=$("#colC3"); if(c){ c.classList.add('alerted'); setTimeout(()=>c.classList.remove('alerted'),1800); }
+      toast('⏰ Retiro de '+o.clientName+' se acerca ('+retiroHora(o)+') — alistate'); } });
+}
 setInterval(()=>{ if(session.role!=='carnicero'||!soundOn) return;
+  checkPickupAlerts(); // alerta de retiro: corre aunque haya una hoja abierta
   if(document.querySelector('.overlay')) return;
   const n=state.orders.filter(o=>o.status==='cotizar').length;
   if(n>0 && Date.now()-lastDingAt>25000){ playDing();
@@ -2552,16 +2573,25 @@ function openAdminOrder(id){
   }).join("");
   let actions="";
   if(o.status==="espera_pago"){
-    actions=`<button class="btn red lg block" onclick="markPaid('${o.id}')">${ic('check',18)} Marcar pagado</button>
-      <button class="btn ghost block sm btn-ic" style="margin-top:10px" onclick="returnToCotizar('${o.id}')">${ic('left',16)} Devolver a cotización</button>`;
+    actions = isRetiro(o)
+      ? `<button class="btn red lg block btn-ic" onclick="holdForPickup('${o.id}')">${ic('store',18)} Poner en espera de retiro</button>
+         <div class="kempty" style="margin-top:8px">Paga en efectivo al retirar. Se prepara cuando el cliente llegue.</div>
+         <button class="btn ghost block sm btn-ic" style="margin-top:8px" onclick="returnToCotizar('${o.id}')">${ic('left',16)} Devolver a cotización</button>`
+      : `<button class="btn red lg block" onclick="markPaid('${o.id}')">${ic('check',18)} Marcar pagado</button>
+         <button class="btn ghost block sm btn-ic" style="margin-top:10px" onclick="returnToCotizar('${o.id}')">${ic('left',16)} Devolver a cotización</button>`;
   } else if(o.status==="lista"){
-    actions=`<button class="btn lg block" onclick="sendRepartidor('${o.id}')">${ic('truck',18)} Generar ficha de repartidor</button>`;
+    actions = isRetiro(o)
+      ? `<button class="btn green lg block btn-ic" onclick="deliverPickup('${o.id}')">${ic('check',18)} Entregar y cobrar (efectivo)</button>`
+      : `<button class="btn lg block" onclick="sendRepartidor('${o.id}')">${ic('truck',18)} Generar ficha de repartidor</button>`;
   } else if(o.status==="en_ruta"){
     actions=`<button class="btn green lg block" onclick="markDelivered('${o.id}')">${ic('check',18)} Marcar entregada</button>`;
   } else if(o.status==="cotizar"){
     actions=`<div class="kempty">${ic('clock',16)} El carnicero está cotizando peso y precio.</div>`;
   } else if(o.status==="preparacion"){
-    actions=`<div class="kempty">${ic('knife',16)} En preparación.</div>`;
+    actions = o.held
+      ? `<button class="btn green lg block btn-ic" onclick="arriveForPickup('${o.id}')">${ic('store',18)} Cliente llegó → preparar</button>
+         <div class="kempty" style="margin-top:8px">En espera del cliente${retiroHora(o)?' (~'+esc(retiroHora(o))+')':''}.</div>`
+      : `<div class="kempty">${ic('knife',16)} En preparación.</div>`;
   }
   const msg = waMessage(o);
   const showClientMsg = ["espera_pago","preparacion"].includes(o.status); // en Por entregar/En ruta ya no se le pide pago
@@ -2621,6 +2651,18 @@ function repartidorFicha(o){
   return `Cliente: ${o.clientName}\nTeléfono: ${o.phone||'—'}\nDirección: ${o.addr||o.zone||'—'}`;
 }
 function markPaid(id){ const o=orderById(id); if(!o) return; o.paid=true; o.paidAt=Date.now(); setStatus(o,"preparacion"); save(o); closeSheet(); toast("Pagado · pasó a preparación", ()=>revertStatus(id, x=>{x.paid=false; x.paidAt=null;})); }
+// RETIRO — poner en espera: entra a "En preparación" PERO en pausa (held), sin pagar (paga efectivo al retirar).
+function holdForPickup(id){ const o=orderById(id); if(!o) return; o.held=true; setStatus(o,"preparacion"); save(o); closeSheet();
+  toast("En espera de retiro · se prepara cuando el cliente llegue", ()=>revertStatus(id, x=>{x.held=false;})); }
+// RETIRO — el cliente llegó (manual, no por la hora): saca la pausa → preparación activa.
+function arriveForPickup(id){ const o=orderById(id); if(!o) return; if(!o.held){ closeSheet(); if(session.role==='carnicero') openCarniceroOrder(id); return; }
+  o.held=false; save(o); closeSheet(); rerender();
+  const un=()=>{ const x=orderById(id); if(x){ x.held=true; save(x); rerender(); } };
+  toast("#"+o.folio+" · cliente llegó, a preparar", un);
+  if(session.role==='carnicero') openCarniceroOrder(id); }
+// RETIRO — entregar en el mostrador y cobrar en efectivo.
+function deliverPickup(id){ const o=orderById(id); if(!o) return; o.paid=true; o.paidAt=Date.now(); setStatus(o,"entregada"); save(o); closeSheet();
+  toast("Entregado y cobrado (efectivo)", ()=>revertStatus(id, x=>{x.paid=false; x.paidAt=null;})); }
 function returnToCotizar(id){ const o=orderById(id); if(!o) return; setStatus(o,"cotizar"); save(o); closeSheet(); toast("Devuelta a cotización", ()=>revertStatus(id)); }
 function sendRepartidor(id){ const o=orderById(id); if(!o) return; const f=repartidorFicha(o);
   // open a sub view in sheet
@@ -2650,7 +2692,7 @@ function renderCarnicero(){
   if(prevCotizar!==null && cotizarCount>prevCotizar){ playDing(); alertC1=true; setTimeout(()=>{alertC1=false; const c=$("#colC1"); if(c) c.classList.remove('alerted');},1800); }
   prevCotizar=cotizarCount;
   // Aviso al carnicero cuando el ADMIN marca PAGADO → la comanda entra a "En preparación" y ya puede prepararla.
-  const prepCount = state.orders.filter(o=>o.status==='preparacion').length;
+  const prepCount = state.orders.filter(o=>o.status==='preparacion' && !o.held).length; // en pausa (retiro) no cuenta como "a preparar"
   if(prevPreparacion!==null && prepCount>prevPreparacion){ playDing(); alertC3=true; setTimeout(()=>{alertC3=false; const c=$("#colC3"); if(c) c.classList.remove('alerted');},1800); }
   prevPreparacion=prepCount;
   const sig=_carnSig();
@@ -2685,15 +2727,18 @@ function kcard(o,st){
   let footer='';
   if(st==='cotizar') footer=`<button class="kmv fwd" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('edit',17)} Cotizar</button>`;
   else if(st==='espera_pago') footer=`<button class="kmv" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('edit',17)} Editar pedido</button>`;
-  else if(st==='preparacion') footer=`<button class="kmv fwd" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('knife',17)} Preparar</button>`;
+  else if(st==='preparacion') footer = o.held
+    ? `<button class="kmv fwd" onclick="event.stopPropagation();arriveForPickup('${o.id}')">${ic('store',17)} Cliente llegó → preparar</button>`
+    : `<button class="kmv fwd" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('knife',17)} Preparar</button>`;
   else if(st==='lista') footer=`<button class="kmv del" onclick="event.stopPropagation();askDelete('${o.id}')">${ic('trash',17)} Eliminar</button>`;
   const waitMin=(Date.now()-o.createdAt)/60000;
   const urgent = st==='cotizar' && waitMin>10;
   const timeHtml = urgent ? `<span class="ktime urg">${ic('clock',13)} ${timeAgo(o.createdAt)}</span>` : `<span class="ktime">${timeAgo(o.createdAt)}</span>`;
-  return `<div class="kcard2 ${urgent?'urgent':''}" onclick="openCarniceroOrder('${o.id}')">
+  return `<div class="kcard2 ${urgent?'urgent':''} ${o.held?'held':''}" onclick="openCarniceroOrder('${o.id}')">
     <div class="kf"><span class="kfolio">#${o.folio}</span>${timeHtml}</div>
     <div class="kname">${esc(o.clientName)}</div>
     <div class="kdtag">${deliveryTag(o)}</div>
+    ${o.held?`<div class="khold">${ic('clock',14)} EN ESPERA · recoge ${esc(retiroHora(o)||'—')} · no preparar aún</div>`:''}
     <div class="kitems">${o.items.length} productos · <b>${money(fullTotal(o))}</b></div>
     ${o.note?`<div class="knote">${ic('note',15)} ${esc(o.note)}</div>`:""}
     ${o.paid?`<div class="kpaid">${ic('check',15)} Pagado</div>`:(st==='espera_pago'?`<div class="kwait">${ic('clock',15)} Pendiente de pago (admin)</div>`:"")}
@@ -2815,9 +2860,11 @@ function renderCarnOrder(o,vo){
   if(adminEditMode) action=`<button class="btn red lg block btn-ic" onclick="guardarAdminEdit()">${ic('check',18)} Guardar cambios</button>`;
   else if(o.status==='cotizar') action=`<button class="btn red lg block btn-ic" onclick="confirmCotizarV2()">${ic('check',18)} Guardar y pasar a pago</button>`;
   else if(o.status==='espera_pago') action=`<button class="btn red lg block btn-ic" onclick="guardarV2()">${ic('check',18)} Guardar cambios</button>`;
-  else if(o.status==='preparacion') action=`<button class="btn green lg block btn-ic" onclick="markReady('${o.id}')">${ic('check',18)} Marcar listo para entrega</button>`;
+  else if(o.status==='preparacion') action = o.held
+    ? `<button class="btn green lg block btn-ic" onclick="arriveForPickup('${o.id}')">${ic('store',18)} Cliente llegó → preparar</button>`
+    : `<button class="btn green lg block btn-ic" onclick="markReady('${o.id}')">${ic('check',18)} Marcar listo para entrega</button>`;
   curSheetVO=vo;
-  const voNote = o.status==='preparacion'?'Pagado · toca el círculo para tachar lo que ya preparaste':o.status==='lista'?'Lista para entrega · solo lectura':'Entregada · solo lectura';
+  const voNote = (o.status==='preparacion'&&o.held)?('⏸ En espera del cliente'+(retiroHora(o)?' · recoge ~'+retiroHora(o):'')+' · NO preparar aún'):o.status==='preparacion'?'Pagado · toca el círculo para tachar lo que ya preparaste':o.status==='lista'?'Lista para entrega · solo lectura':'Entregada · solo lectura';
   $("#overlayHost").innerHTML=`<div class="overlay osheet" onclick="if(event.target===this)closeCarn()">
     <div class="sheet"><div class="sheet-head">
       <span class="sh-folio">#${o.folio}</span><span class="sh-name">${esc(o.clientName)}</span>
@@ -2825,7 +2872,7 @@ function renderCarnOrder(o,vo){
       <button class="x" onclick="closeCarn()" aria-label="Cerrar">${ic('x',16)}</button></div>
       <div class="sheet-body" id="carnBody">
         ${vo?`<div class="viewonly-tag">${ic('eye',15)} ${voNote}</div>`:''}
-        ${o.status==='preparacion'?`<div class="prep-prog" id="prepProg">${prepProgInner()}</div>`:''}
+        ${(o.status==='preparacion'&&!o.held)?`<div class="prep-prog" id="prepProg">${prepProgInner()}</div>`:''}
         <div id="oitems">${oitemSeqHtml(vo)}</div>
         ${vo?'':`<button class="add-prod btn-ic" onclick="openAddProduct()">${ic('plus',18)} Agregar producto</button>`}
         ${vo
