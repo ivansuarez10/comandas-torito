@@ -1495,7 +1495,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='28 jul 2026 · v19';
+const APP_BUILD='28 jul 2026 · v20';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -3092,6 +3092,10 @@ function confirmCotizarV2(){ const o=orderById(currentSheetId); if(!o) return;
   const faltan=editItems.filter(it=>it.available && it.weigh && !it._wtouched);
   if(faltan.length){ toast('Valida el peso de: '+faltan.map(f=>f.name).join(', '));
     const idx=editItems.indexOf(faltan[0]); if(idx>=0) startEdit(idx,'weight'); return; }
+  // Red de seguridad: un "por encargo" (sin precio) no puede pasar a pago en L0 — se le pone el precio negociado.
+  const faltanPrecio=editItems.filter(it=>it.available && it.price==null);
+  if(faltanPrecio.length){ toast('Ponle precio a: '+faltanPrecio.map(f=>f.name).join(', '));
+    const idx=editItems.indexOf(faltanPrecio[0]); if(idx>=0) startEdit(idx,'price'); return; }
   // Ni sin confirmar de un toque lo que no se pesa.
   const faltanConf=editItems.filter(it=>it.available && !it.weigh && !it._confirmed);
   if(faltanConf.length){ toast('Confirma lo que no se pesa: '+faltanConf.map(f=>f.name).join(', ')); rerenderOitems(); return; }
@@ -3111,7 +3115,12 @@ function openAddProduct(){
 function renderAddGrid(){
   const t=$("#addTabs"); if(t) t.innerHTML=CAT.map(g=>`<button class="${addCat===g.cat?'on':''}" onclick="addCat='${g.cat}';renderAddGrid()">${g.cat}</button>`).join('');
   const g=$("#addGrid"); if(!g) return;
-  g.innerHTML=PRODUCTS.filter(p=>p.cat===addCat && !p.disabled).map(p=>`<button class="pchip" onclick="pickAdd('${p.id}')"><div class="pn">${esc(p.name)}</div><div class="pp">${p.price==null?'por encargo':money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div></button>`).join('');
+  // Los "por encargo" (sin precio de catálogo) NO se piden por la app: se atienden por WhatsApp
+  // y se negocia el precio. Se ocultan del grid para que no se carguen como comanda.
+  const items=PRODUCTS.filter(p=>p.cat===addCat && !p.disabled && p.price!=null);
+  g.innerHTML=items.length
+    ? items.map(p=>`<button class="pchip" onclick="pickAdd('${p.id}')"><div class="pn">${esc(p.name)}</div><div class="pp">${money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div></button>`).join('')
+    : `<div class="kempty" style="grid-column:1/-1">No hay productos para pedir en esta categoría.</div>`;
 }
 function pickAdd(id){ const p=prodById(id);
   editItems.push({prodId:p.id,name:p.name,unit:p.unit,price:p.price,weigh:p.weigh,qty:1,available:true,weight:p.weigh?1:null,note:''});
