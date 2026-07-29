@@ -1495,7 +1495,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='28 jul 2026 · v20';
+const APP_BUILD='28 jul 2026 · v21';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -3153,8 +3153,35 @@ setTimeout(()=>{ const w=$("#cloudWarn"); if(w && !USE_SUPA) w.textContent="Sin 
 new MutationObserver(()=>{ document.documentElement.classList.toggle('ov-open', $("#overlayHost").children.length>0); })
   .observe($("#overlayHost"),{childList:true});
 
-/* ===== PWA: instalable + offline (service worker) ===== */
-if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+/* ===== PWA: instalable + offline + AUTO-ACTUALIZACIÓN =====
+   La app se actualiza SOLA a la última versión (nadie descarga ni toca nada), pero
+   recarga únicamente cuando es SEGURO: nunca en medio de una cotización, con una hoja
+   abierta, con el teclado numérico o mientras alguien escribe. Si está ocupado, espera. */
+if('serviceWorker' in navigator){
+  const _wasControlled = !!navigator.serviceWorker.controller; // ¿la página ya venía servida por un SW?
+  let _autoUpdating=false;
+  const _busy=()=>{
+    if(typeof activeEdit!=='undefined' && activeEdit) return true;               // numpad / edición activa
+    const ov=$("#overlayHost"); if(ov && ov.innerHTML.trim()!=='') return true;  // hoja / modal abierto
+    const np=$("#numpadHost");  if(np && np.innerHTML.trim()!=='') return true;  // teclado numérico abierto
+    const ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return true; // escribiendo
+    return false;
+  };
+  const _safeReload=()=>{
+    if(_busy()){ setTimeout(_safeReload, 6000); return; }   // ocupado → reintentar en 6s
+    try{ toast('Actualizando a la última versión…'); }catch(_){}
+    setTimeout(()=>location.reload(), 700);
+  };
+  // Un SW nuevo tomó control = hay deploy nuevo → recargar solo (si la página ya estaba controlada).
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    if(!_wasControlled || _autoUpdating) return;
+    _autoUpdating=true; _safeReload();
+  });
+  const _checkUpd=()=>{ navigator.serviceWorker.getRegistration().then(r=>{ if(r) r.update().catch(()=>{}); }).catch(()=>{}); };
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').then(()=>_checkUpd()).catch(()=>{}); });
+  setInterval(_checkUpd, 4*60*1000);                                              // revisa cada 4 min
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) _checkUpd(); }); // y al volver a primer plano
+}
 </script>
 </body>
 </html>
