@@ -1495,7 +1495,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='28 jul 2026 · v21';
+const APP_BUILD='28 jul 2026 · v22';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1746,6 +1746,7 @@ function renderAdmin(){
   else if(adminView==="nueva") content=adminNueva();
   else if(adminView==="clientes") content=adminClientes();
   else if(adminView==="reporte") content=adminReporte();
+  else if(adminView==="cierre") content=adminCierre();
   else if(adminView==="historico") content=adminHistorico();
   else if(adminView==="ajustes") content=adminAjustes();
   else if(adminView==="catalogo") content=adminCatalogo();
@@ -2352,6 +2353,8 @@ function adminResumen(g){
     </div>
     <div class="carn-info" onclick="go('bandeja')">${ic('knife',15)} <span>Con el carnicero: <b>${g.proceso.length}</b> en proceso (cotizar / preparación)</span></div>
     ${(()=>{const n=unnamedWebCount();return n?`<div class="carn-info namebanner" onclick="go('clientes')">${ic('user',15)} <span><b>${n}</b> cliente${n>1?'s':''} de la web sin nombre · ponles nombre ${ic('right',13)}</span></div>`:'';})()}
+    <div class="sect-label">Caja</div>
+    <button class="hist-link card" onclick="go('cierre')"><span class="act-ic">${ic('cash',20)}</span><span class="hist-tx"><b>Cierre de caja del día</b><small>Efectivo vs transferencia · cuadre</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div class="sect-label">Ventas · últimos 7 días <button class="link-btn" onclick="go('reporte')">Reporte del mes ${ic('right',13)}</button></div>
     <div class="card chart-card">
       <div class="chart-top"><div class="kl">Vendido este mes</div><div class="chart-big">${money(ventasMes)}</div></div>
@@ -2532,6 +2535,7 @@ function adminReporte(){
   const done=ventasDelMes(); // el reporte dice "Este mes" → ahora de verdad es el mes
   const total=done.reduce((s,o)=>s+fullTotal(o),0);
   const tick=done.length?total/done.length:0;
+  let efe=0,tra=0,nEfe=0,nTra=0; done.forEach(o=>{ if(payMethodOf(o)==='efectivo'){efe+=fullTotal(o);nEfe++;} else {tra+=fullTotal(o);nTra++;} });
   const pend=state.orders.filter(o=>!["entregada","cancelada"].includes(o.status)).length;
   const byProd={}, byCli={};
   done.forEach(o=>{ byCli[o.clientName]=(byCli[o.clientName]||0)+fullTotal(o);
@@ -2545,6 +2549,11 @@ function adminReporte(){
       <div class="kpi"><div class="kl">Ticket prom.</div><div class="kvv">${money(tick)}</div></div>
       <div class="kpi"><div class="kl">Activas</div><div class="kvv">${pend}</div></div>
     </div>
+    <div class="sect-label">Por método de pago</div>
+    <div class="kpis">
+      <div class="kpi"><div class="kl">${ic('cash',15)} Efectivo · ${nEfe}</div><div class="kvv">${money(efe)}</div></div>
+      <div class="kpi"><div class="kl">${ic('send',15)} Transferencia · ${nTra}</div><div class="kvv">${money(tra)}</div></div>
+    </div>
     <div class="sect-label">Top productos</div><div class="rank">${rank(byProd)||'<div class="kempty">Sin datos</div>'}</div>
     <div class="sect-label">Top clientes</div><div class="rank">${rank(byCli)||'<div class="kempty">Sin datos</div>'}</div>
     <div style="margin-top:14px"><button class="btn ghost block btn-ic" onclick="exportReporte()">${ic('doc',16)} Descargar Excel (CSV)</button></div>`;
@@ -2554,7 +2563,7 @@ function exportReporte(){
   const rows=ventasDelMes().sort((a,b)=>_refVenta(a)-_refVenta(b));
   if(!rows.length){ toast('No hay ventas este mes para exportar'); return; }
   const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
-  const head=['Folio','Fecha','Hora','Cliente','Teléfono','Zona','Entrega','Estado','Pagado','Productos','Libras','Subtotal (L)','Envío (L)','Total (L)'];
+  const head=['Folio','Fecha','Hora','Cliente','Teléfono','Zona','Entrega','Método','Estado','Pagado','Productos','Libras','Subtotal (L)','Envío (L)','Total (L)'];
   const lines=[head.map(q).join(',')];
   let totLb=0;
   rows.forEach(o=>{ const d=new Date(_refVenta(o));
@@ -2562,11 +2571,11 @@ function exportReporte(){
       return qy+' '+(it.unit==='Libra'?'lb':it.unit)+' '+it.name+(it.available?'':' (no disponible)'); }).join('; ');
     const lb=orderLibras(o); totLb+=lb;
     lines.push([o.folio, d.toLocaleDateString('es-HN'), d.toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'}),
-      o.clientName, o.phone||'', o.zone||'', isRetiro(o)?'Retiro':'Envío', STATUS[o.status]||o.status,
+      o.clientName, o.phone||'', o.zone||'', isRetiro(o)?'Retiro':'Envío', payMethodLabel(payMethodOf(o)), STATUS[o.status]||o.status,
       o.paid?'Sí':'No', prods, (Math.round(lb*10)/10).toFixed(1), orderTotal(o).toFixed(2), (o.shipping||0).toFixed(2), fullTotal(o).toFixed(2)].map(q).join(','));
   });
   // fila de totales
-  lines.push(['TOTAL','','','','','','','','','', (Math.round(totLb*10)/10).toFixed(1),
+  lines.push(['TOTAL','','','','','','','','','','', (Math.round(totLb*10)/10).toFixed(1),
     rows.reduce((s,o)=>s+orderTotal(o),0).toFixed(2), rows.reduce((s,o)=>s+(o.shipping||0),0).toFixed(2), rows.reduce((s,o)=>s+fullTotal(o),0).toFixed(2)].map(q).join(','));
   const dN=new Date();
   const blob=new Blob(["\ufeff"+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
@@ -2575,6 +2584,64 @@ function exportReporte(){
   document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
   toast('Reporte descargado · '+rows.length+' comandas');
+}
+/* ----- CIERRE DE CAJA (cuadre del día) -----
+   El método de pago se DEDUCE del tipo de entrega (regla del negocio, confirmada por Ivan):
+   Retiro en local = efectivo · Domicilio = transferencia. Sin excepciones → sin campo en la BD. */
+const payMethodOf=o=>isRetiro(o)?'efectivo':'transferencia';
+const payMethodLabel=m=>m==='efectivo'?'Efectivo':'Transferencia';
+function adminCierre(){
+  const now=Date.now(), today=dayStart(now), day=86400000;
+  const sel=dayStart(dayFilter!=null?dayFilter:now), isToday=sel===today;
+  // Ventas atribuidas al día en que ENTRÓ el dinero (paidAt/listaAt), no al día de creación.
+  const ventas=allOrders().filter(o=>_esVenta(o) && dayStart(_refVenta(o))===sel);
+  let efe=0, tra=0, nEfe=0, nTra=0;
+  ventas.forEach(o=>{ const t=fullTotal(o); if(payMethodOf(o)==='efectivo'){efe+=t;nEfe++;} else {tra+=t;nTra++;} });
+  const total=efe+tra;
+  const lbl=isToday?'Hoy':(sel===today-day?'Ayer':new Date(sel).toLocaleDateString('es-HN',{weekday:'long',day:'numeric',month:'long'}));
+  const nav=`<div class="res-datenav">
+      <button class="daynav" onclick="shiftDay(-1)" aria-label="Día anterior">${ic('left',18)}</button>
+      <span class="rdn-lbl">${esc(lbl)}</span>
+      <button class="daynav" onclick="shiftDay(1)" ${isToday?'disabled':''} aria-label="Día siguiente">${ic('right',18)}</button>
+    </div>`;
+  const list=ventas.slice().sort((a,b)=>_refVenta(b)-_refVenta(a)).map(o=>{
+    const m=payMethodOf(o);
+    return `<button class="ocard" onclick="openAdminOrder('${o.id}')">
+      <span class="folio">#${o.folio}</span>
+      <span class="obody"><span class="oname">${dispName(o.clientName)}</span>
+        <span class="ometa"><span class="chip ${m==='efectivo'?'lista':'espera'}">${payMethodLabel(m)}</span> · ${new Date(_refVenta(o)).toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'})}</span></span>
+      <span class="oright"><span class="ototal">${money(fullTotal(o))}</span></span></button>`;
+  }).join('')||'<div class="kempty">Sin ventas este día</div>';
+  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Cierre de caja</h2><div class="vh-sub">Cuánto entró y cómo · para cuadrar al cerrar</div></div></div>
+    ${nav}
+    <div class="kpis">
+      <div class="kpi accent"><div class="kl">Total del día</div><div class="kvv">${money(total)}</div></div>
+      <div class="kpi"><div class="kl">Comandas vendidas</div><div class="kvv">${ventas.length}</div></div>
+    </div>
+    <div class="sect-label">Desglose por método</div>
+    <div class="kpis">
+      <div class="kpi"><div class="kl">${ic('cash',15)} Efectivo · ${nEfe}</div><div class="kvv">${money(efe)}</div></div>
+      <div class="kpi"><div class="kl">${ic('send',15)} Transferencia · ${nTra}</div><div class="kvv">${money(tra)}</div></div>
+    </div>
+    <div class="sect-label">Cuadre de efectivo</div>
+    <div class="card" style="padding:14px">
+      <div class="kv"><span class="k">Efectivo esperado en caja</span><span class="v" style="font-weight:700">${money(efe)}</span></div>
+      <div class="field" style="margin-top:10px"><label>Efectivo contado (lo que hay en la caja)</label>
+        <input class="inp" id="cashCount" inputmode="decimal" placeholder="0" oninput="updateCuadre(${efe})"></div>
+      <div class="kv" id="cuadreDiff" style="margin-top:6px"><span class="k">Diferencia</span><span class="v">—</span></div>
+      <div class="pp-note" style="margin-top:8px">Solo es una ayuda para cuadrar al cierre; no se guarda.</div>
+    </div>
+    <div class="sect-label">Ventas del día · ${ventas.length}</div>
+    <div class="olist">${list}</div>
+    <div style="height:24px"></div>`;
+}
+function updateCuadre(esperado){
+  const raw=(($("#cashCount")||{}).value||'').replace(',','.');
+  const el=$("#cuadreDiff"); if(!el) return;
+  if(raw.trim()===''){ el.innerHTML=`<span class="k">Diferencia</span><span class="v">—</span>`; return; }
+  const v=parseFloat(raw)||0, diff=v-esperado, ok=Math.abs(diff)<0.005;
+  const color= ok ? 'var(--ok)' : (diff<0 ? '#b03a3a' : '#8A5A11');
+  el.innerHTML=`<span class="k">Diferencia</span><span class="v" style="color:${color};font-weight:700">${diff>0?'+':''}${money(diff)}${ok?' ✓ cuadra':(diff<0?' (falta)':' (sobra)')}</span>`;
 }
 
 /* ----- CATÁLOGO ----- */
@@ -2672,7 +2739,7 @@ function openAdminOrder(id){
     ${lines}
     ${o.shipping?`<div class="kv"><span class="k">Subtotal productos</span><span class="v">${money(orderTotal(o))}</span></div>
     <div class="kv"><span class="k">${ic('truck',15)} Envío</span><span class="v">${money(o.shipping)}</span></div>`:""}
-    <div class="total-bar"><span class="tl">Total${o.paid?' · PAGADO':''}</span><span class="tv">${money(fullTotal(o))}</span></div>
+    <div class="total-bar"><span class="tl">Total${o.paid?' · PAGADO · '+payMethodLabel(payMethodOf(o)):''}</span><span class="tv">${money(fullTotal(o))}</span></div>
     ${showClientMsg? `
       <div class="sect-label" style="margin-top:6px">Mensaje para el cliente</div>
       <div class="msgbox" id="waBox">${esc(msg)}</div>
