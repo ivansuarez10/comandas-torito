@@ -498,6 +498,13 @@ html.bigtext .okbox{font-size:16.5px}
 .coedit-warn{display:flex;align-items:center;gap:8px;background:#FBF1DA;border:1px solid #EAD9AC;color:#8A5A11;border-radius:11px;padding:10px 12px;margin-bottom:12px;font-size:13.5px;font-weight:700;line-height:1.3}
 .coedit-warn svg{flex:none}
 html.bigtext .coedit-warn{font-size:15px}
+/* Recordatorios (Resumen admin): comandas atascadas demasiado tiempo */
+.rem-row{width:100%;display:flex;align-items:center;gap:10px;text-align:left;background:#FBF1DA;border:1px solid #EAD9AC;border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer;color:#8A5A11}
+.rem-row:active{background:#F2DDB2}
+.rem-row svg{flex:none}
+.rem-row .rem-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.rem-row .rem-tx b{color:var(--ink);font-size:14px}
+.rem-row .rem-tx small{color:#8A5A11;font-size:12.5px;font-weight:600}
 /* TEXTO GRANDE / ALTO CONTRASTE — lectura a distancia en el mostrador (toggle en Ajustes) */
 html.bigtext{--muted:#48484D;--muted-2:#55555A}
 html.bigtext .kcol-head .kn{font-size:16px}
@@ -1424,6 +1431,17 @@ const orderById=id=>state.orders.find(o=>o.id===id)||(state.history||[]).find(o=
 function timeAgo(ts){const s=(Date.now()-ts)/1000; if(s<60)return"hace instantes"; const m=Math.floor(s/60);
   if(m<60)return"hace "+m+" min"; const h=Math.floor(m/60); if(h<24)return"hace "+h+" h"; return"hace "+Math.floor(h/24)+" d";}
 function setStatus(o,s){ o.status=s; o.hist.push({s,at:Date.now()}); }
+// Cuándo entró la comanda a un estado (última vez), para medir antigüedad/estancamiento.
+function _enteredAt(o,s){ if(o&&o.hist){ for(let i=o.hist.length-1;i>=0;i--){ if(o.hist[i].s===s) return o.hist[i].at; } } return o?o.createdAt:Date.now(); }
+// Minutos que lleva una comanda estancada en su estación (según su estado actual).
+function stuckMin(o){ const now=Date.now();
+  if(o.status==='cotizar') return (now-o.createdAt)/60000;
+  if(o.status==='preparacion' && !o.held) return (now-_enteredAt(o,'preparacion'))/60000;
+  if(o.status==='espera_pago') return (now-_enteredAt(o,'espera_pago'))/60000;
+  if(o.status==='lista') return (now-(o.listaAt||_enteredAt(o,'lista')))/60000;
+  return 0; }
+// Umbrales (min) para marcar "lleva mucho aquí".
+const STUCK={cotizar:10, preparacion:15, espera_pago:20, lista:30};
 let toastT, toastUndo=null;
 function toast(m, undo){
   const t=$("#toast"); $("#toastMsg").textContent=m;
@@ -1520,7 +1538,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='28 jul 2026 · v23';
+const APP_BUILD='28 jul 2026 · v24';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2335,6 +2353,13 @@ function adminResumen(g){
   const ventasHoy=todayDone.reduce((s,o)=>s+fullTotal(o),0);
   const ticket=todayDone.length?ventasHoy/todayDone.length:0;
   const activas=state.orders.filter(o=>["cotizar","espera_pago","preparacion","lista","en_ruta"].includes(o.status)).length;
+  // RECORDATORIOS: comandas atascadas demasiado tiempo en su estación.
+  const stuckCobrar=state.orders.filter(o=>o.status==='espera_pago' && stuckMin(o)>STUCK.espera_pago).sort((a,b)=>stuckMin(b)-stuckMin(a));
+  const stuckEntregar=state.orders.filter(o=>o.status==='lista' && stuckMin(o)>STUCK.lista).sort((a,b)=>stuckMin(b)-stuckMin(a));
+  const remRow=(o,txt)=>`<button class="rem-row" onclick="openAdminOrder('${o.id}')">${ic('clock',16)}<span class="rem-tx"><b>#${o.folio} ${esc(o.clientName)}</b><small>${txt} · hace ${Math.round(stuckMin(o))} min</small></span>${ic('right',15)}</button>`;
+  const recordatorios = (stuckCobrar.length||stuckEntregar.length)
+    ? `<div class="sect-label">Recordatorios</div>${stuckCobrar.map(o=>remRow(o,'Por cobrar sin confirmar pago')).join('')}${stuckEntregar.map(o=>remRow(o,'Lista, sin entregar')).join('')}`
+    : '';
   const dN=new Date(now);
   const monthDone=done.filter(o=>{const d=new Date(refTs(o)); return d.getMonth()===dN.getMonth()&&d.getFullYear()===dN.getFullYear();});
   const ventasMes=monthDone.reduce((s,o)=>s+fullTotal(o),0);
@@ -2371,6 +2396,7 @@ function adminResumen(g){
         : `<div class="kpi"><div class="kl">Canceladas</div><div class="kvv">${canc}</div></div>`}
     </div>
     ${isToday ? `
+    ${recordatorios}
     <div class="sect-label">Necesita tu mano</div>
     <div class="act-grid">
       <button class="act-card" onclick="go('bandeja')"><span class="act-ic">${ic('cash',20)}</span><span class="act-n">${g.cobrar.length}</span><span class="act-l">Por cobrar</span></button>
@@ -2903,9 +2929,12 @@ function kcard(o,st){
     ? `<button class="kmv fwd" onclick="event.stopPropagation();arriveForPickup('${o.id}')">${ic('store',17)} Cliente llegó → preparar</button>`
     : `<button class="kmv fwd" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('knife',17)} Preparar</button>`;
   else if(st==='lista') footer=`<button class="kmv del" onclick="event.stopPropagation();askDelete('${o.id}')">${ic('trash',17)} Eliminar</button>`;
-  const waitMin=(Date.now()-o.createdAt)/60000;
-  const urgent = st==='cotizar' && waitMin>10;
-  const timeHtml = urgent ? `<span class="ktime urg">${ic('clock',13)} ${timeAgo(o.createdAt)}</span>` : `<span class="ktime">${timeAgo(o.createdAt)}</span>`;
+  // Estancada: cotizar >10min (desde que entró) o preparación >15min (desde que entró a preparar).
+  const mins=stuckMin(o);
+  const urgent = (st==='cotizar' && mins>STUCK.cotizar) || (st==='preparacion' && !o.held && mins>STUCK.preparacion);
+  // Con urgencia, el reloj muestra el tiempo estancado en ESTA estación; si no, la antigüedad total.
+  const badgeTs = (st==='preparacion' && !o.held) ? _enteredAt(o,'preparacion') : o.createdAt;
+  const timeHtml = urgent ? `<span class="ktime urg">${ic('clock',13)} ${timeAgo(badgeTs)}</span>` : `<span class="ktime">${timeAgo(o.createdAt)}</span>`;
   return `<div class="kcard2 ${urgent?'urgent':''} ${o.held?'held':''}" onclick="openCarniceroOrder('${o.id}')">
     <div class="kf"><span class="kfolio">#${o.folio}</span>${timeHtml}</div>
     <div class="kname">${esc(o.clientName)}</div>
