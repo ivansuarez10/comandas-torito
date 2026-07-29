@@ -1389,21 +1389,30 @@ function deviceLabel(){ const u=navigator.userAgent||'';
   if(/Macintosh|Mac OS/.test(u)) return 'Mac';
   if(/Windows/.test(u)) return 'PC Windows';
   return 'Dispositivo'; }
-async function savePushSub(sub){ if(!USE_SUPA) return; const j=sub.toJSON(); j.label=deviceLabel();
+async function savePushSub(sub, role){ if(!USE_SUPA) return; const j=sub.toJSON(); j.label=deviceLabel(); j.role=role||'carnicero';
   try{ await supa.from('push_subs').upsert({endpoint:j.endpoint, sub:j, created_at:new Date().toISOString()}); }catch(e){ console.warn('push sub:',e.message); } }
 async function removePushSub(endpoint){ if(!USE_SUPA) return; try{ await supa.from('push_subs').delete().eq('endpoint',endpoint); }catch(e){} }
-async function togglePush(){
+async function togglePush(role){
+  role = role || (session&&session.role) || 'carnicero';
   if(!pushSupported()){ toast('Este dispositivo/navegador no soporta avisos push'); return; }
   try{
     const reg=await navigator.serviceWorker.ready;
-    if(pushOn){ const sub=await reg.pushManager.getSubscription(); if(sub){ await removePushSub(sub.endpoint); await sub.unsubscribe(); } pushOn=false; renderCarnicero(); toast('Avisos desactivados en este dispositivo'); return; }
+    if(pushOn){ const sub=await reg.pushManager.getSubscription(); if(sub){ await removePushSub(sub.endpoint); await sub.unsubscribe(); } pushOn=false; rerender(); toast('Avisos desactivados en este dispositivo'); return; }
     const perm=await Notification.requestPermission();
     if(perm!=='granted'){ toast(perm==='denied'?'Permiso bloqueado. Actívalo en ajustes del navegador.':'Permiso de avisos no concedido'); return; }
     const sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64ToU8(VAPID_PUBLIC)});
-    await savePushSub(sub);
-    pushOn=true; renderCarnicero(); toast('✓ Avisos activados en este dispositivo');
+    await savePushSub(sub, role);
+    pushOn=true; rerender(); toast('✓ Avisos activados en este dispositivo');
   }catch(e){ toast('No pude activar los avisos: '+(e.message||e)); }
 }
+// Avisa a los dispositivos ADMIN (celu/compu de Ivan) cuando el carnicero mueve a por cobrar / por entregar.
+// Usa una Edge Function APARTE (notify-status): si aún no está desplegada, el fetch 404ea sin efecto.
+async function notifyAdmin(title, body){ if(!USE_SUPA) return;
+  let exclude='';
+  try{ if(pushSupported()){ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if(sub) exclude=sub.endpoint; } }catch(e){}
+  try{ fetch(SUPA_URL+'/functions/v1/notify-status',{ method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},
+    body:JSON.stringify({title, body, exclude}) }).catch(()=>{}); }catch(e){} }
 // Al crear una comanda nueva, dispara el push al dispositivo del carnicero (fire-and-forget).
 // exclude = la suscripción de ESTE dispositivo → nunca se avisa a sí mismo (el que crea no suena).
 async function notifyNewOrder(o){ if(!USE_SUPA||!o) return;
@@ -1538,7 +1547,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='28 jul 2026 · v24';
+const APP_BUILD='28 jul 2026 · v25';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1712,6 +1721,8 @@ async function enterApp(role){
   if(role==='carnicero'){
     keepAwake(); // pantalla siempre despierta en el puesto del carnicero
     refreshPushState().then(()=>{ if(session.role==='carnicero') renderCarnicero(); });
+  } else {
+    refreshPushState().then(()=>{ if(session.role==='admin') renderAdmin(); }); // estado del botón "Activar avisos" del admin
   }
 }
 function logout(){ session.role=null; clearInterval(clockT); releaseWake(); prevCotizar=null; prevPreparacion=null;
@@ -2416,6 +2427,7 @@ function adminResumen(g){
     <div class="sect-label">Histórico</div>
     <button class="hist-link card" onclick="go('historico')"><span class="act-ic">${ic('history',20)}</span><span class="hist-tx"><b>${(state.history||[]).length} comandas archivadas</b><small>Entregadas de días anteriores</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div class="sect-label">Avisos</div>
+    <button class="hist-link card" onclick="togglePush('admin')"><span class="act-ic">${ic(pushOn?'bell':'belloff',20)}</span><span class="hist-tx"><b>${pushOn?'Avisos activados en este dispositivo':'Activar avisos en este dispositivo'}</b><small>Te avisa cuando hay algo por cobrar o por entregar</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <button class="hist-link card" onclick="go('dispositivos')"><span class="act-ic">${ic('bell',20)}</span><span class="hist-tx"><b>Dispositivos con avisos</b><small>Ver y quitar dónde suenan las comandas</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div class="sect-label">Ajustes</div>
     <button class="hist-link card" onclick="go('ajustes')"><span class="act-ic">${ic('gear',20)}</span><span class="hist-tx"><b>Ajustes del negocio</b><small>Mensaje al cliente y repartidor</small></span><span class="hist-ch">${ic('right',18)}</span></button>
@@ -3222,9 +3234,13 @@ function confirmCotizarV2(){ const o=orderById(currentSheetId); if(!o) return;
   // Ni sin confirmar de un toque lo que no se pesa.
   const faltanConf=editItems.filter(it=>it.available && !it.weigh && !it._confirmed);
   if(faltanConf.length){ toast('Confirma lo que no se pesa: '+faltanConf.map(f=>f.name).join(', ')); rerenderOitems(); return; }
-  const id=o.id; persistEdits(true); setStatus(o,'espera_pago'); save(o); closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
+  const id=o.id; persistEdits(true); setStatus(o,'espera_pago'); save(o);
+  notifyAdmin('💵 Por cobrar #'+o.folio, o.clientName+' · '+money(fullTotal(o))); // avisa al admin
+  closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
 function guardarV2(){ persistEdits(); closeCarn(); toast('Cambios guardados'); }
-function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(o); closeCarn(); toast('Listo para entrega', ()=>revertStatus(id, x=>{x.listaAt=prevLista;})); }
+function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(o);
+  notifyAdmin('📦 Por entregar #'+o.folio, o.clientName+' · '+(isRetiro(o)?'Retiro':'Domicilio'+(o.zone?' · '+o.zone:''))); // avisa al admin
+  closeCarn(); toast('Listo para entrega', ()=>revertStatus(id, x=>{x.listaAt=prevLista;})); }
 function closeCarn(){ $("#overlayHost").innerHTML=''; const h=$("#numpadHost"); if(h) h.innerHTML=''; activeEdit=null; editItems=null; currentSheetId=null; adminEditMode=false; _openOrderId=null; _coEditTrack(); rerender(); }
 /* add product mid-process */
 let addCat="Res";
