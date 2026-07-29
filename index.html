@@ -494,6 +494,10 @@ html.lite .okbox{animation:none}
 .confirm-all{width:100%;padding:14px;border:1.5px solid #EAD9AC;border-radius:14px;background:#FBF1DA;color:#8A5A11;font-weight:800;font-size:15px;margin:2px 0 12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
 .confirm-all:active{background:#F2DDB2}
 html.bigtext .okbox{font-size:16.5px}
+/* Aviso: otro dispositivo tiene la MISMA comanda abierta (co-edición) */
+.coedit-warn{display:flex;align-items:center;gap:8px;background:#FBF1DA;border:1px solid #EAD9AC;color:#8A5A11;border-radius:11px;padding:10px 12px;margin-bottom:12px;font-size:13.5px;font-weight:700;line-height:1.3}
+.coedit-warn svg{flex:none}
+html.bigtext .coedit-warn{font-size:15px}
 /* TEXTO GRANDE / ALTO CONTRASTE — lectura a distancia en el mostrador (toggle en Ajustes) */
 html.bigtext{--muted:#48484D;--muted-2:#55555A}
 html.bigtext .kcol-head .kn{font-size:16px}
@@ -1186,6 +1190,10 @@ function load(){ try{const r=localStorage.getItem(KEY); state=r?JSON.parse(r):se
 // _recentSave[id]=timestamp → una comanda tocada localmente hace poco NO se deja revertir por el
 // refetch de la nube (evita la carrera "guardé y el refresco bajó el estado viejo").
 const _recentSave={};
+// CO-EDICIÓN: id estable de este dispositivo + canal de presencia + comanda que tengo abierta.
+const DEVICE_ID=(()=>{ let d; try{ d=localStorage.getItem('ct_device_id'); }catch(e){}
+  if(!d){ d='d'+Math.random().toString(36).slice(2,10)+Date.now().toString(36); try{ localStorage.setItem('ct_device_id',d); }catch(e){} } return d; })();
+let _coEditChan=null, _openOrderId=null;
 function save(order){ if(order&&order.id) _recentSave[order.id]=Date.now();
   if(USE_SUPA){ if(order) dbSyncOrder(order); else dbSyncAll(); return; } localStorage.setItem(KEY,JSON.stringify(state)); lastPing=Date.now(); localStorage.setItem("ct_v2_ping",lastPing); bc&&bc.postMessage("sync"); }
 const dayStart=ts=>{ const d=new Date(ts); d.setHours(0,0,0,0); return d.getTime(); };
@@ -1298,7 +1306,24 @@ async function initSupaData(){
     supa.channel('config-rt').on('postgres_changes',{event:'*',schema:'public',table:'app_config'},()=>{
       dbFetchMenu().then(()=>{ if(editingCatalog()) return; if(session.role==='admin' && !safeToRefreshAdmin()) return; rerender(); });
     }).subscribe();
+    // Presencia: quién tiene abierta cada comanda AHORA (efímero, sin tabla). Avisa co-edición.
+    _coEditChan=supa.channel('presence-orders',{config:{presence:{key:DEVICE_ID}}});
+    _coEditChan.on('presence',{event:'sync'},()=>_updateCoEditWarn());
+    _coEditChan.subscribe(async(status)=>{ if(status==='SUBSCRIBED') await _coEditTrack(); });
   }
+}
+/* ===== CO-EDICIÓN: aviso "otro dispositivo está en esta comanda" (presencia en vivo) ===== */
+async function _coEditTrack(){ if(!_coEditChan) return; try{ await _coEditChan.track({ orderId:_openOrderId, role:(session&&session.role)||'', at:Date.now() }); }catch(e){} }
+function _othersOnOrder(id){ if(!_coEditChan||!id) return [];
+  let st={}; try{ st=_coEditChan.presenceState()||{}; }catch(e){ return []; }
+  const roles=[]; Object.keys(st).forEach(key=>{ if(key===DEVICE_ID) return;
+    (st[key]||[]).forEach(m=>{ if(m && m.orderId===id) roles.push(m.role||'otro'); }); });
+  return roles; }
+function _updateCoEditWarn(){ const el=$("#coEditWarn"); if(!el) return;
+  const roles=_othersOnOrder(_openOrderId);
+  if(!roles.length){ el.innerHTML=''; return; }
+  const who = roles.includes('admin') ? 'El administrador' : 'Otro carnicero';
+  el.innerHTML=`<div class="coedit-warn">${ic('user',15)} ${who} tiene esta comanda abierta ahora — pónganse de acuerdo para no pisar cambios.</div>`;
 }
 /* ===== Sync del CATÁLOGO en la nube (tabla app_config, opcional; funciona antes/después de crearla) ===== */
 const editingCatalog=()=>adminView==='catalogo' && document.activeElement && (document.activeElement.classList.contains('ce-inp')||document.activeElement.classList.contains('ce-nameinp'));
@@ -1495,7 +1520,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='28 jul 2026 · v22';
+const APP_BUILD='28 jul 2026 · v23';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -3023,6 +3048,7 @@ function renderCarnOrder(o,vo){
       <span class="chip ${CHIP[o.status]}" style="margin-left:4px">${STATUS[o.status]}</span>
       <button class="x" onclick="closeCarn()" aria-label="Cerrar">${ic('x',16)}</button></div>
       <div class="sheet-body" id="carnBody">
+        <div id="coEditWarn"></div>
         ${vo?`<div class="viewonly-tag">${ic('eye',15)} ${voNote}</div>`:''}
         ${(o.status==='preparacion'&&!o.held)?`<div class="prep-prog" id="prepProg">${prepProgInner()}</div>`:''}
         <div id="oitems">${oitemSeqHtml(vo)}</div>
@@ -3035,6 +3061,7 @@ function renderCarnOrder(o,vo){
         ${osumHtml(vo)}
         ${action?`<div style="margin-top:6px">${action}</div>`:''}
       </div></div></div>`;
+  _openOrderId=o.id; _coEditTrack(); setTimeout(_updateCoEditWarn,60); // co-edición: anunciar y revisar
 }
 let curSheetVO=false, curCotizar=false;
 // Orden de las líneas: en vista editable (cotizar/espera_pago) primero los productos que se PESAN
@@ -3169,7 +3196,7 @@ function confirmCotizarV2(){ const o=orderById(currentSheetId); if(!o) return;
   const id=o.id; persistEdits(true); setStatus(o,'espera_pago'); save(o); closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
 function guardarV2(){ persistEdits(); closeCarn(); toast('Cambios guardados'); }
 function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(o); closeCarn(); toast('Listo para entrega', ()=>revertStatus(id, x=>{x.listaAt=prevLista;})); }
-function closeCarn(){ $("#overlayHost").innerHTML=''; const h=$("#numpadHost"); if(h) h.innerHTML=''; activeEdit=null; editItems=null; currentSheetId=null; adminEditMode=false; rerender(); }
+function closeCarn(){ $("#overlayHost").innerHTML=''; const h=$("#numpadHost"); if(h) h.innerHTML=''; activeEdit=null; editItems=null; currentSheetId=null; adminEditMode=false; _openOrderId=null; _coEditTrack(); rerender(); }
 /* add product mid-process */
 let addCat="Res";
 function openAddProduct(){
