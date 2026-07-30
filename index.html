@@ -1574,7 +1574,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='30 jul 2026 · v27';
+const APP_BUILD='30 jul 2026 · v28';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -3288,7 +3288,7 @@ function kcard(o,st){
   else if(st==='preparacion') footer = o.held
     ? `<button class="kmv fwd" onclick="event.stopPropagation();arriveForPickup('${o.id}')">${ic('store',17)} Cliente llegó → preparar</button>`
     : `<button class="kmv fwd" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('knife',17)} Preparar</button>`;
-  else if(st==='lista') footer=`<button class="kmv del" onclick="event.stopPropagation();askDelete('${o.id}')">${ic('trash',17)} Eliminar</button>`;
+  // En "Lista para entrega" el carnicero NO tiene botón: eliminar comandas es solo del admin.
   // Estancada: cotizar >10min (desde que entró) o preparación >15min (desde que entró a preparar).
   const mins=stuckMin(o);
   const urgent = (st==='cotizar' && mins>STUCK.cotizar) || (st==='preparacion' && !o.held && mins>STUCK.preparacion);
@@ -3303,7 +3303,7 @@ function kcard(o,st){
     <div class="kitems">${o.items.length} productos · <b>${money(fullTotal(o))}</b></div>
     ${o.note?`<div class="knote">${ic('note',15)} ${esc(o.note)}</div>`:""}
     ${o.paid?`<div class="kpaid">${ic('check',15)} Pagado</div>`:(st==='espera_pago'?`<div class="kwait">${ic('clock',15)} Pendiente de pago (admin)</div>`:"")}
-    <div class="kmove">${footer}</div>
+    ${footer?`<div class="kmove">${footer}</div>`:""}
   </div>`;
 }
 function moveCard(id,dir){
