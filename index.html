@@ -1574,7 +1574,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='30 jul 2026 · v28';
+const APP_BUILD='30 jul 2026 · v29';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -3108,8 +3108,11 @@ function openAdminOrder(id){
   const o=orderById(id); if(!o) return;
   const cotizado=["espera_pago","preparacion","lista","en_ruta","entregada"].includes(o.status);
   const lines=o.items.map(it=>{
-    const amt=lineAmount(it); const w=it.weigh&&it.weight!=null?` · ${it.weight} lb`:"";
-    return `<div class="kv"><span class="k">${esc(it.name)}${it.available?'':' · <b style="color:#b03a3a">NO disponible</b>'}${it.available?w:''}</span><span class="v">${money(amt)}</span></div>`;
+    const amt=lineAmount(it);
+    const uab=it.unit==='Libra'?'lb':it.unit==='Unidad'?'u':it.unit==='Paquete'?'paq':it.unit;
+    // Muestra la cantidad: el peso real si el carnicero ya cotizó, si no la cantidad PEDIDA por el cliente.
+    const qty=(it.weigh&&it.weight!=null)?`${it.weight} lb`:`${it.qty} ${uab}`;
+    return `<div class="kv"><span class="k">${esc(it.name)}${it.available?'':' · <b style="color:#b03a3a">NO disponible</b>'}${it.available?' · '+qty:''}</span><span class="v">${money(amt)}</span></div>`;
   }).join("");
   let actions="";
   if(o.status==="espera_pago"){
