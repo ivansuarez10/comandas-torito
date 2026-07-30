@@ -838,6 +838,32 @@ html.lite .kcol,html.lite .kcol.c1,html.lite .kcol.c2,html.lite .kcol.c3,html.li
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:#ECECEF!important}
 html.lite .kanban{scroll-snap-type:none!important}
 html.lite .kcard2,html.lite .ocard,html.lite .card,html.lite .oitem,html.lite .kpi{box-shadow:0 1px 2px rgba(0,0,0,.08)!important}
+
+/* ===== ENVÍOS (jul 30): calculadora de costo por distancia — sección propia + autollenado en comanda nueva ===== */
+.ship-search{position:relative}
+.ship-sug{position:absolute;left:0;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);
+  border-radius:14px;overflow:hidden;z-index:40;box-shadow:0 14px 34px rgba(0,0,0,.16)}
+.ship-sug button{display:block;width:100%;text-align:left;padding:11px 13px;border-bottom:1px solid var(--line-2);
+  font-size:14px;font-weight:600;color:var(--ink);background:#fff}
+.ship-sug button:last-child{border-bottom:none}
+.ship-sug button.on{background:#F2F2F6}
+.ship-sug .s2{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:2px}
+.ship-sug .empty{padding:11px 13px;font-size:13px;color:var(--muted)}
+#shipMapEl{height:300px;border-radius:16px;border:1px solid var(--line);margin-top:12px;z-index:1;background:#ECECEF}
+.ship-read{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;
+  padding:14px 15px;background:#fff;border:1px solid var(--line);border-radius:16px}
+.ship-read .rl{display:block;font-size:12.5px;color:var(--muted);margin-bottom:2px}
+.ship-read .rn{font-size:15px;font-weight:700;color:var(--ink);overflow-wrap:anywhere}
+.ship-read .rc{font-family:var(--font);font-weight:700;font-size:26px;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.ship-read.out{border-color:#E6C3C4;background:#FDF4F4}
+.ship-read.out .rc{color:var(--rojo);font-size:19px}
+.ship-note{font-size:12.5px;color:var(--muted);line-height:1.65;margin-top:9px}
+.ship-note b{color:var(--ink)}
+.ship-acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.shiphint{margin-top:8px;font-size:12.5px;color:var(--muted);line-height:1.6}
+.shiphint b{color:var(--ink)}
+.shiphint .lnk{color:var(--rojo);font-weight:700;text-decoration:underline;text-underline-offset:2px;margin-left:8px}
 </style>
 </head>
 <body>
@@ -1350,6 +1376,7 @@ async function dbFetchStoreCatalog(){
     const {data,error}=await supa.from('app_config').select('value').eq('key','store_catalog').maybeSingle();
     if(error||!data||!data.value||!Array.isArray(data.value.products)||!data.value.products.length){ return; }
     STORE_CATALOG=data.value.products;
+    shipApplyMeta(data.value.meta); // base/L por km/punto 0 del envío: los edita el panel de la tienda, acá solo se leen
     rebuildCatalog();
   }catch(e){ /* sin nube / sin store_catalog → sigue con el CAT local */ }
 }
@@ -1547,7 +1574,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='28 jul 2026 · v25';
+const APP_BUILD='30 jul 2026 · v26';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1670,6 +1697,7 @@ function ic(n,s=20){const p={
   sync:'<path d="M20 12a8 8 0 01-14 5.7M4 12a8 8 0 0114-5.7M18 4v3h-3M6 20v-3h3"/>',
   camera:'<path d="M3 8.5A1.5 1.5 0 014.5 7H7l1.2-1.8h7.6L17 7h2.5A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/><circle cx="12" cy="13" r="3.3"/>',
   search:'<circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8L20.5 20.5"/>',
+  pin:'<path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
   sound:'<path d="M4 9.5h3L12 5v14l-5-4.5H4zM15.5 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12"/>',
   soundoff:'<path d="M4 9.5h3L12 5v14l-5-4.5H4zM16 9.5l5 5M21 9.5l-5 5"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>'
@@ -1793,7 +1821,7 @@ function renderAdmin(){
     ruta: state.orders.filter(o=>o.status==="en_ruta"),
     hoy: state.orders.filter(o=>o.status==="entregada"),
   };
-  const nav=[["resumen","Resumen","home"],["bandeja","Bandeja","inbox"],["clientes","Clientes","user"],["catalogo","Catálogo","tag"]];
+  const nav=[["resumen","Resumen","home"],["bandeja","Bandeja","inbox"],["clientes","Clientes","user"],["catalogo","Catálogo","tag"],["envios","Envíos","pin"]];
   let content="";
   if(adminView==="resumen") content=adminResumen(groups);
   else if(adminView==="bandeja") content=adminBandeja(groups);
@@ -1804,6 +1832,7 @@ function renderAdmin(){
   else if(adminView==="historico") content=adminHistorico();
   else if(adminView==="ajustes") content=adminAjustes();
   else if(adminView==="catalogo") content=adminCatalogo();
+  else if(adminView==="envios") content=adminEnvios();
   else if(adminView==="dispositivos") content=adminDispositivos();
 
   $("#app").innerHTML = topbar(
@@ -1823,8 +1852,9 @@ function renderAdmin(){
     </nav>`;
   if(adminView==="nueva") initNueva();
   if(adminView==="ajustes") bizPreview();
+  if(adminView==="envios"){ shipMountMap(); shipWireSearch(); }
 }
-function go(v){ adminView=v; if(v==="nueva"){ draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null}; prodOpen=false; } if(v==="bandeja") bandejaQ=''; if(v==="resumen") dayFilter=null; renderAdmin(); window.scrollTo(0,0); }
+function go(v){ adminView=v; if(v==="nueva"){ draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null,shipAuto:true,shipCalc:null}; prodOpen=false; _shipAutoLast=''; } if(v==="bandeja") bandejaQ=''; if(v==="resumen") dayFilter=null; renderAdmin(); window.scrollTo(0,0); }
 
 function ocard(o,actionHtml){
   return `<button class="ocard" onclick="openAdminOrder('${o.id}')">
@@ -1906,7 +1936,7 @@ function akcard(o,st){
 }
 
 /* ----- NUEVA COMANDA ----- */
-let draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null};
+let draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null,shipAuto:true,shipCalc:null};
 let nuevaCat="Res";
 let prodOpen=false; // selector de productos colapsado por defecto (no estorba la lectura del pedido pegado)
 function draftGrand(){ return draftTotal() + (draft.delivery==='envio'?(+draft.shipping||0):0); }
@@ -1966,13 +1996,14 @@ function adminNueva(){
     </div>
     <div class="field"><label>Entrega</label>
       <div class="seg"><button id="segRec" class="${draft.delivery==='recoge'?'on':''}" onclick="draft.delivery='recoge';syncDraft();initNueva()">${ic('store',18)} Recoge</button>
-        <button id="segEnv" class="${draft.delivery==='envio'?'on':''}" onclick="draft.delivery='envio';syncDraft();initNueva()">${ic('truck',18)} Envío</button></div>
+        <button id="segEnv" class="${draft.delivery==='envio'?'on':''}" onclick="draft.delivery='envio';syncDraft();initNueva();shipAutoQueue()">${ic('truck',18)} Envío</button></div>
     </div>
     <div class="field addrF" ${draft.delivery==='envio'?'':'style="display:none"'}>
       <div style="display:flex;gap:10px">
         <div style="flex:2"><label>Dirección de entrega</label><input class="inp" id="dAddr" placeholder="Dirección + referencia" value="${esc(draft.addr)}"></div>
         <div style="flex:1"><label>Costo de envío (L)</label><input class="inp" id="dShip" inputmode="decimal" placeholder="0" value="${draft.shipping||''}"></div>
       </div>
+      <div class="shiphint" id="shipHint">${shipHintHtml()}</div>
     </div>
 
     <div class="sect-label">En la comanda <span class="cnt" id="cartCount">${draft.items.length}</span></div>
@@ -2007,10 +2038,14 @@ function initNueva(){
   // re-render only dynamic parts by re-rendering view (keeps simple)
   const v=$(".view"); if(v) v.innerHTML=adminNueva();
   renderCart();
-  ["dName","dPhone","dZone","dAddr","dNote","dShip"].forEach(id=>{const e=$("#"+id); if(e) e.oninput=()=>{syncDraft(); const dt=$("#draftTotal"); if(dt) dt.textContent=money(draftGrand());};});
+  ["dName","dPhone","dZone","dAddr","dNote","dShip"].forEach(id=>{const e=$("#"+id); if(e) e.oninput=()=>{
+    syncDraft(); const dt=$("#draftTotal"); if(dt) dt.textContent=money(draftGrand());
+    if(id==="dShip") draft.shipAuto=false;            // lo escribió a mano → el cálculo ya no lo pisa
+    if(id==="dZone"||id==="dAddr") shipAutoQueue();   // colonia o link de ubicación → calcula el envío solo
+  };});
   const pt=$("#dPaste"); if(pt) pt.oninput=()=>{ draft.pasteText=pt.value; }; // no se borra al re-renderizar
   const pp=$("#dPastePhone"); if(pp) pp.oninput=()=>{ draft.pastePhone=pp.value; };
-  const ph=$("#dPhone"); if(ph) ph.onblur=()=>{ syncDraft(); const c=clientByPhone(ph.value); if(c&&c.name&&!($("#dName")||{}).value){ draft.phone=ph.value; draft.clientName=c.name; draft.zone=c.zone||draft.zone; draft.addr=c.addr||draft.addr; initNueva(); toast('Cliente identificado: '+c.name); } };
+  const ph=$("#dPhone"); if(ph) ph.onblur=()=>{ syncDraft(); const c=clientByPhone(ph.value); if(c&&c.name&&!($("#dName")||{}).value){ draft.phone=ph.value; draft.clientName=c.name; draft.zone=c.zone||draft.zone; draft.addr=c.addr||draft.addr; initNueva(); shipAutoQueue(); toast('Cliente identificado: '+c.name); } };
 }
 function renderCart(){
   const c=$("#cart"); if(!c) return;
@@ -2134,7 +2169,7 @@ async function autollenarPedido(btn){
   if(items.length){ draft.items=items.map(it=>{const p=prodByName(it.name); return p?{prodId:p.id,qty:it.qty}:null;}).filter(Boolean); }
   let foundClient=false;
   if(phone){ draft.phone=phone; const c=clientByPhone(phone); if(c){ draft.clientName=c.name||draft.clientName; draft.zone=c.zone||draft.zone; draft.addr=c.addr||draft.addr; foundClient=true; } }
-  initNueva();
+  initNueva(); shipAutoQueue(); // la dirección del cliente ya conocida también dispara el cálculo del envío
   const cart=$("#cart"); if(cart) cart.scrollIntoView({block:'center',behavior:'smooth'});
   let msg=items.length? (items.length+" productos cargados"+(usedAI?" (IA)":"")) : "No reconocí productos";
   if(ambiguous.length) msg+=" · "+ambiguous.length+" por confirmar (res/cerdo)";
@@ -2191,6 +2226,313 @@ async function tomarFotoPedido(input){
     return;
   }
   if(btn){ btn.disabled=false; btn.innerHTML=old; }
+}
+
+/* ================= ENVÍOS · calculadora de costo por distancia =================
+   Misma cuenta que la tienda en línea (index.html · updateShip):
+       costo = max(base, redondeoA5(base + L_por_km × km))   con km en LÍNEA RECTA desde el local.
+   Los montos y el punto 0 los edita el panel de la tienda y viajan en
+   app_config.store_catalog → meta.shipping / meta.origin. Acá SOLO se leen (nunca se escribe esa fila).
+   Si la nube no responde, quedan los valores de respaldo de abajo y la calculadora sigue sirviendo. */
+let SHIP_CFG={base:50, per_km:9, max_km:25, origin:{lat:14.1091381,lng:-87.1916749},
+              label:'Carnicería El Torito · Mercado San Pablo, El Manchén'};
+function shipApplyMeta(m){
+  if(!m) return;
+  if(m.shipping){ if(m.shipping.base!=null) SHIP_CFG.base=+m.shipping.base||SHIP_CFG.base;
+                  if(m.shipping.per_km!=null) SHIP_CFG.per_km=+m.shipping.per_km||SHIP_CFG.per_km; }
+  if(m.origin&&m.origin.lat&&m.origin.lng){ SHIP_CFG.origin={lat:+m.origin.lat,lng:+m.origin.lng};
+                                            if(m.origin.label) SHIP_CFG.label=m.origin.label; }
+}
+const shipKm=p=>{const R=6371,a=SHIP_CFG.origin,dLat=(p.lat-a.lat)*Math.PI/180,dLng=(p.lng-a.lng)*Math.PI/180,
+  la1=a.lat*Math.PI/180,la2=p.lat*Math.PI/180,
+  x=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));};
+const shipCost=km=>Math.max(SHIP_CFG.base, Math.round((SHIP_CFG.base+SHIP_CFG.per_km*km)/5)*5);
+
+/* Coordenadas dentro de un texto: link de Google Maps (?q= · @ · !3d!4d) o "14.09,-87.19" pegado a mano.
+   Los pedidos de la web ya traen "📍 Ubicación: https://maps.google.com/?q=lat,lng" dentro de la dirección. */
+function shipParseGeo(t){
+  if(!t) return null; const s=String(t);
+  const m=s.match(/[?&](?:q|ll|daddr|destination)=(-?\d{1,2}\.\d+)(?:,|%2C)\s*(-?\d{1,3}\.\d+)/i)
+       || s.match(/@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/)
+       || s.match(/!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/)
+       || s.match(/(?:^|\s)(-?\d{1,2}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})(?:\s|$)/);
+  if(!m) return null;
+  const lat=parseFloat(m[1]), lng=parseFloat(m[2]);
+  if(!isFinite(lat)||!isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180) return null;
+  return {lat,lng};
+}
+// Los links cortos (maps.app.goo.gl) no dicen coordenadas y el navegador no puede seguirlos: hay que abrirlos.
+const shipIsShortLink=t=>/(maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(t||'');
+
+/* Buscador de direcciones: Photon (OpenStreetMap) — gratis, sin llave.
+   El bbox acota a Tegucigalpa: sin él salen resultados de otros países. */
+function shipGeocode(q){
+  return fetch('https://photon.komoot.io/api/?limit=6&lang=default&bbox=-87.50,13.80,-86.90,14.40&lat='
+      +SHIP_CFG.origin.lat+'&lon='+SHIP_CFG.origin.lng+'&q='+encodeURIComponent(q))
+    .then(r=>r.json()).then(j=>(j&&j.features)||[]);
+}
+function shipLabel(f){
+  const p=f.properties||{};
+  const main=p.name||[p.street,p.housenumber].filter(Boolean).join(' ')||p.city||p.district||p.locality||'Ubicación';
+  const parts=[]; [p.district,p.suburb,p.locality,p.city].forEach(v=>{ if(v&&v!==main&&!parts.includes(v)) parts.push(v); });
+  return {main, sub:parts.slice(0,2).join(', ')};
+}
+const shipFeatPin=f=>({lat:f.geometry.coordinates[1], lng:f.geometry.coordinates[0]});
+const shipFeatName=f=>{const l=shipLabel(f); return l.main+(l.sub?' · '+l.sub:'');};
+
+/* El mapa (Leaflet + OpenStreetMap) se baja SOLO al abrir la calculadora: la app no carga más peso al arrancar. */
+let _leafletP=null;
+function ensureLeaflet(){
+  if(window.L) return Promise.resolve(window.L);
+  if(_leafletP) return _leafletP;
+  _leafletP=new Promise((res,rej)=>{
+    const css=document.createElement('link');
+    css.rel='stylesheet'; css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    css.integrity='sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='; css.crossOrigin='';
+    document.head.appendChild(css);
+    const s=document.createElement('script');
+    s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    s.integrity='sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='; s.crossOrigin='';
+    s.onload=()=>res(window.L); s.onerror=()=>{_leafletP=null; rej(new Error('mapa'));};
+    document.head.appendChild(s);
+  });
+  return _leafletP;
+}
+
+let shipPin=null, shipPlace='', _shipMap=null, _shipMark=null, _shipLine=null;
+let _shipSug=[], _shipSugI=-1, _shipT=null, _shipSeq=0, _shipSheet=false;
+
+function shipCalcHtml(sheet){
+  return `<div class="ship-search">
+      <div style="display:flex;gap:8px">
+        <input class="inp" id="shipQ" autocomplete="off" enterkeyhint="search"
+          placeholder="Colonia, referencia o link de ubicación" value="${esc(shipPlace||'')}">
+        <button class="btn ghost btn-ic" onclick="shipSearchGo()" aria-label="Buscar">${ic('search',16)}</button>
+      </div>
+      <div class="ship-sug" id="shipSug" hidden></div>
+    </div>
+    <div id="shipMapEl"></div>
+    <div class="ship-note" style="margin-top:9px">Arrastrá el pin (o tocá el mapa) para afinar el punto exacto.</div>
+    <div class="ship-read" id="shipRead"></div>
+    <div class="ship-note" id="shipCuenta"></div>
+    <div class="ship-acts">${sheet
+      ? `<button class="btn red block btn-ic" onclick="shipUseInDraft()">${ic('check',17)} Usar este envío</button>`
+      : `<button class="btn ghost btn-ic" onclick="shipCopy()">${ic('copy',16)} Copiar</button>
+         <button class="btn ghost btn-ic" onclick="shipReset()">${ic('store',16)} Volver al local</button>
+         <a class="btn ghost btn-ic" id="shipMapsLink" target="_blank" rel="noopener" href="#">${ic('pin',16)} Abrir en Maps</a>`}</div>`;
+}
+function shipMountMap(){
+  if(_shipMap){ try{_shipMap.remove();}catch(e){} _shipMap=null; _shipMark=null; _shipLine=null; }
+  shipRender();
+  // OJO: en esta app `L` ya es un helper del catálogo (const L=n=>({unit:'Libra'…})) — Leaflet SIEMPRE se usa como LF/window.L
+  ensureLeaflet().then(LF=>{
+    const el=document.getElementById('shipMapEl'); if(!el) return;
+    const start=shipPin||SHIP_CFG.origin;
+    _shipMap=LF.map(el,{zoomControl:true}).setView([start.lat,start.lng], shipPin?16:14);
+    LF.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(_shipMap);
+    LF.circleMarker([SHIP_CFG.origin.lat,SHIP_CFG.origin.lng],
+      {radius:7,color:'#9F2629',weight:2,fillColor:'#9F2629',fillOpacity:.85}).addTo(_shipMap).bindTooltip('El local');
+    _shipMark=LF.marker([start.lat,start.lng],{draggable:true,autoPan:true}).addTo(_shipMap);
+    _shipMark.on('drag',e=>shipSetPin(e.target.getLatLng(),''));
+    _shipMap.on('click',e=>{ _shipMark.setLatLng(e.latlng); shipSetPin(e.latlng,''); shipHideSug(); });
+    // el contenedor puede medirse antes de estar pintado: sin esto quedan tiles en blanco
+    setTimeout(()=>{ if(_shipMap) _shipMap.invalidateSize(); },160);
+    if(shipPin) shipSetPin(shipPin,null); else shipRender();
+  }).catch(()=>{
+    const el=document.getElementById('shipMapEl');
+    if(el) el.innerHTML='<div class="kempty" style="margin:0;padding:22px 14px">Sin internet para el mapa · podés escribir la colonia igual</div>';
+  });
+}
+function shipSetPin(ll,place){
+  shipPin={lat:ll.lat,lng:ll.lng}; if(place!=null) shipPlace=place;
+  if(_shipMap&&window.L){
+    if(_shipLine){ _shipMap.removeLayer(_shipLine); }
+    _shipLine=window.L.polyline([[SHIP_CFG.origin.lat,SHIP_CFG.origin.lng],[shipPin.lat,shipPin.lng]],
+      {color:'#9F2629',weight:2,opacity:.65,dashArray:'6 6'}).addTo(_shipMap);
+  }
+  shipRender();
+}
+function shipRender(){
+  const rd=$("#shipRead"), ct=$("#shipCuenta"), lk=$("#shipMapsLink");
+  if(!rd) return;
+  if(!shipPin){
+    rd.className='ship-read';
+    rd.innerHTML='<div><span class="rl">Distancia</span><span class="rn">Buscá la dirección o movés el pin</span></div><span class="rc">—</span>';
+    if(ct) ct.innerHTML=''; if(lk) lk.style.display='none';
+    return;
+  }
+  const km=shipKm(shipPin), here=km<0.05;
+  if(lk){ lk.style.display=''; lk.href='https://maps.google.com/?q='+shipPin.lat.toFixed(6)+','+shipPin.lng.toFixed(6); }
+  if(km>SHIP_CFG.max_km){
+    rd.className='ship-read out';
+    rd.innerHTML=`<div><span class="rl">${km.toFixed(1)} km en línea recta</span><span class="rn">Fuera de zona · más de ${SHIP_CFG.max_km} km</span></div><span class="rc">—</span>`;
+    if(ct) ct.innerHTML='La tienda no acepta pedidos a domicilio a esta distancia. Si lo vas a llevar igual, el precio se acuerda a mano.';
+    return;
+  }
+  const c=shipCost(km);
+  rd.className='ship-read';
+  rd.innerHTML=`<div><span class="rl">${here?'En el local':km.toFixed(1)+' km en línea recta'}</span>
+      <span class="rn">${esc(shipPlace||'Punto en el mapa')}</span></div><span class="rc">${money(c)}</span>`;
+  if(ct) ct.innerHTML=`Cuenta: ${money(SHIP_CFG.base)} + ${money(SHIP_CFG.per_km)} × ${km.toFixed(1)} km = ${money(Math.round(SHIP_CFG.base+SHIP_CFG.per_km*km))} → redondeado <b>${money(c)}</b>.`
+    +(here?'':`<br>Por calle suele ser ~${(km*1.3).toFixed(1)} km, que daría <b>${money(shipCost(km*1.3))}</b> · la tienda cobra el de línea recta.`);
+}
+function shipReset(){
+  shipPin=null; shipPlace='';
+  const q=$("#shipQ"); if(q) q.value='';
+  if(_shipMap){ if(_shipLine){_shipMap.removeLayer(_shipLine);_shipLine=null;}
+    _shipMap.setView([SHIP_CFG.origin.lat,SHIP_CFG.origin.lng],14);
+    if(_shipMark) _shipMark.setLatLng([SHIP_CFG.origin.lat,SHIP_CFG.origin.lng]); }
+  shipHideSug(); shipRender();
+}
+function shipCopy(){
+  if(!shipPin){ toast('Primero ubicá el punto'); return; }
+  const km=shipKm(shipPin);
+  if(km>SHIP_CFG.max_km){ toast('Fuera de zona'); return; }
+  copy('Envío a domicilio: '+money(shipCost(km))+' ('+km.toFixed(1)+' km desde el local)');
+  toast('Cotización copiada');
+}
+/* --- buscador con sugerencias --- */
+function shipHideSug(){ const s=$("#shipSug"); if(s){ s.hidden=true; s.innerHTML=''; } _shipSug=[]; _shipSugI=-1; }
+function shipPaintSug(feats){
+  const s=$("#shipSug"); if(!s) return; _shipSug=feats; _shipSugI=-1;
+  if(!feats.length){ s.innerHTML='<div class="empty">Sin resultados · movés el pin a mano</div>'; s.hidden=false; return; }
+  s.innerHTML=feats.map((f,i)=>{const l=shipLabel(f);
+    return `<button type="button" onclick="shipPickSug(${i})">${esc(l.main)}${l.sub?`<span class="s2">${esc(l.sub)}</span>`:''}</button>`;}).join('');
+  s.hidden=false;
+}
+function shipPickSug(i){
+  const f=_shipSug[i]; if(!f||!f.geometry) return;
+  const pin=shipFeatPin(f), name=shipFeatName(f);
+  const q=$("#shipQ"); if(q) q.value=name;
+  if(_shipMap&&_shipMark){ _shipMap.setView([pin.lat,pin.lng],16); _shipMark.setLatLng([pin.lat,pin.lng]); }
+  shipSetPin(pin,name); shipHideSug();
+}
+function shipSearchGo(){
+  const el=$("#shipQ"), q=el?(el.value||'').trim():''; if(!q) return;
+  const geo=shipParseGeo(q);
+  if(geo){ shipJumpTo(geo,'Ubicación compartida'); shipHideSug(); return; }
+  if(shipIsShortLink(q)){ toast('Ese link corto no trae coordenadas: abrilo y copiá el punto'); return; }
+  if(_shipSugI>=0&&_shipSug[_shipSugI]){ shipPickSug(_shipSugI); return; }
+  if(_shipSug.length){ shipPickSug(0); return; }
+  shipGeocode(q).then(fs=>{ if(fs.length){ _shipSug=fs; shipPickSug(0); } else toast('No encontré esa dirección · movés el pin'); })
+    .catch(()=>toast('Sin internet para buscar · movés el pin'));
+}
+function shipJumpTo(pin,name){
+  if(_shipMap&&_shipMark){ _shipMap.setView([pin.lat,pin.lng],16); _shipMark.setLatLng([pin.lat,pin.lng]); }
+  shipSetPin(pin,name);
+}
+function shipWireSearch(){
+  const q=$("#shipQ"); if(!q) return;
+  q.oninput=()=>{
+    const v=(q.value||'').trim();
+    clearTimeout(_shipT);
+    if(shipParseGeo(v)){ shipHideSug(); shipSearchGo(); return; }
+    if(v.length<3){ shipHideSug(); return; }
+    _shipT=setTimeout(()=>{ const my=++_shipSeq;
+      shipGeocode(v).then(fs=>{ if(my===_shipSeq) shipPaintSug(fs); }).catch(()=>{}); },350);
+  };
+  q.onkeydown=e=>{
+    const open=_shipSug.length && !($("#shipSug")||{}).hidden;
+    if(e.key==='ArrowDown'&&open){ e.preventDefault(); _shipSugI=Math.min(_shipSug.length-1,_shipSugI+1); shipMarkSug(); }
+    else if(e.key==='ArrowUp'&&open){ e.preventDefault(); _shipSugI=Math.max(0,_shipSugI-1); shipMarkSug(); }
+    else if(e.key==='Enter'){ e.preventDefault(); shipSearchGo(); }
+    else if(e.key==='Escape'){ shipHideSug(); }
+  };
+  q.onblur=()=>setTimeout(shipHideSug,180);
+}
+function shipMarkSug(){ const bs=($("#shipSug")||document.createElement('div')).querySelectorAll('button');
+  bs.forEach((b,i)=>b.classList.toggle('on',i===_shipSugI)); }
+
+/* --- Sección propia (solo cotizar) --- */
+function adminEnvios(){
+  return `<div class="view-head"><div><h2>Envíos</h2>
+      <div class="vh-sub">Cotizá cuánto cobrar por una entrega · la misma cuenta que usa la tienda</div></div></div>
+    ${shipCalcHtml(false)}
+    <div class="sect-label">Cómo se calcula</div>
+    <div class="card" style="padding:14px">
+      <div class="ship-note" style="margin:0">
+        <b>${money(SHIP_CFG.base)} de base + ${money(SHIP_CFG.per_km)} por kilómetro</b> en línea recta desde el local,
+        redondeado a L 5. Más de ${SHIP_CFG.max_km} km = fuera de zona.<br>
+        Punto de partida: ${esc(SHIP_CFG.label)}.<br>
+        Los montos se cambian en el panel de la tienda; acá se leen solos.
+      </div>
+    </div>
+    <div style="height:24px"></div>`;
+}
+
+/* --- Autollenado del envío en la comanda nueva --- */
+let _shipAutoT=null, _shipAutoLast='';
+function shipAutoQueue(){
+  if(draft.delivery!=='envio') return;
+  clearTimeout(_shipAutoT); _shipAutoT=setTimeout(shipAutoRun,700);
+}
+async function shipAutoRun(){
+  if(draft.delivery!=='envio') return;
+  const addr=(draft.addr||'').trim(), zone=(draft.zone||'').trim();
+  const geo=shipParseGeo(addr)||shipParseGeo(zone);
+  const key=geo?('@'+geo.lat.toFixed(5)+','+geo.lng.toFixed(5)):(zone||addr);
+  if(!geo && key.length<4) return;
+  if(key===_shipAutoLast) return;
+  _shipAutoLast=key;
+  try{
+    let pin=geo, place=geo?'Ubicación compartida':'';
+    if(!pin){
+      const fs=await shipGeocode(key);
+      if(!fs.length){ draft.shipCalc={err:'No encontré esa dirección'}; shipHintPaint(); return; }
+      pin=shipFeatPin(fs[0]); place=shipFeatName(fs[0]);
+    }
+    const km=shipKm(pin), out=km>SHIP_CFG.max_km;
+    draft.shipCalc={km,cost:out?0:shipCost(km),place,out,pin};
+    // No pisa lo que el admin haya escrito a mano: solo autollena mientras el costo siga siendo automático.
+    if(!out && draft.shipAuto!==false) shipApplySuggested(true);
+    shipHintPaint();
+  }catch(e){ draft.shipCalc={err:'Sin internet para calcular el envío'}; shipHintPaint(); }
+}
+function shipApplySuggested(silent){
+  const c=draft.shipCalc; if(!c||c.out||c.err) return;
+  draft.shipping=c.cost; draft.shipAuto=true;
+  const e=$("#dShip"); if(e) e.value=c.cost;
+  const dt=$("#draftTotal"); if(dt) dt.textContent=money(draftGrand());
+  if(!silent){ shipHintPaint(); toast('Envío '+money(c.cost)); }
+}
+function shipHintHtml(){
+  const c=draft.shipCalc;
+  if(!c) return 'Escribí la colonia (o pegá el link de ubicación en la dirección) y calculo el envío solo.';
+  if(c.err) return `${esc(c.err)} · ponelo a mano<button class="lnk" onclick="openShipMap()">buscar en el mapa</button>`;
+  if(c.out) return `<b>${c.km.toFixed(1)} km</b> · fuera de zona (más de ${SHIP_CFG.max_km} km) · el precio se acuerda a mano
+      <button class="lnk" onclick="openShipMap()">ver en el mapa</button>`;
+  return `<b>${c.km.toFixed(1)} km</b>${c.place?' · '+esc(c.place):''} · sugerido <b>${money(c.cost)}</b>
+      ${draft.shipAuto===false?`<button class="lnk" onclick="shipApplySuggested()">usar ${money(c.cost)}</button>`:''}
+      <button class="lnk" onclick="openShipMap()">ajustar en el mapa</button>`;
+}
+function shipHintPaint(){ const h=$("#shipHint"); if(h) h.innerHTML=shipHintHtml(); }
+
+function openShipMap(){
+  syncDraft(); _shipSheet=true;
+  const c=draft.shipCalc;
+  if(c&&c.pin){ shipPin=c.pin; shipPlace=c.place||''; } else { shipPin=null; shipPlace=(draft.zone||'').trim(); }
+  $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeShipMap()">
+    <div class="sheet" style="max-width:520px">
+      <div class="sheet-head"><span class="sh-name">Calcular envío</span>
+        <button class="x" onclick="closeShipMap()" aria-label="Cerrar">${ic('x',16)}</button></div>
+      <div class="sheet-body">${shipCalcHtml(true)}</div></div></div>`;
+  shipMountMap(); shipWireSearch();
+}
+function closeShipMap(){
+  _shipSheet=false;
+  if(_shipMap){ try{_shipMap.remove();}catch(e){} _shipMap=null; _shipMark=null; _shipLine=null; }
+  $("#overlayHost").innerHTML='';
+  if(adminView==='nueva') initNueva();
+}
+function shipUseInDraft(){
+  if(!shipPin){ toast('Primero ubicá el punto'); return; }
+  const km=shipKm(shipPin);
+  if(km>SHIP_CFG.max_km){ toast('Fuera de zona · el precio se pone a mano'); return; }
+  draft.shipCalc={km,cost:shipCost(km),place:shipPlace,out:false,pin:shipPin};
+  draft.shipping=draft.shipCalc.cost; draft.shipAuto=true;
+  _shipAutoLast='@'+shipPin.lat.toFixed(5)+','+shipPin.lng.toFixed(5); // no re-calcular encima de lo que acaba de elegir
+  closeShipMap(); toast('Envío '+money(draft.shipping));
 }
 
 /* ----- CLIENTES (editables por el admin) ----- */
