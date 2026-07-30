@@ -909,7 +909,7 @@ const AUTH_EMAILS = { admin:"admin@eltorito.hn", carnicero:"carnicero@eltorito.h
 const BIZ_DEFAULTS = {
   repartidor:"50431565418",
   // Mensaje al cliente = texto LIBRE. Solo 2 variables se llenan por pedido: {name}=nombre · {pedido}=productos+total.
-  msg:"Hola {name} 👋 Gracias por tu pedido en *Carnicería El Torito*.\n\n*Tu pedido:*\n\n{pedido}\n\n*Método de pago*\n• Transferencia — te paso la cuenta y me mandás el comprobante 📸\nCliente: IVAN ALEJANDRO SUAREZ VELASQUEZ\nNúmero de cuenta BAC: 729447561\n• Efectivo — al momento de retirar en tienda\n\n{entrega}"
+  msg:"Hola {name} 👋 Gracias por tu pedido en *Carnicería El Torito*.\n\n*Tu pedido #{folio}:*\n\n{pedido}\n\n*Método de pago*\n• Transferencia — te paso la cuenta y me mandás el comprobante 📸\nCliente: IVAN ALEJANDRO SUAREZ VELASQUEZ\nNúmero de cuenta BAC: 729447561\n• Efectivo — al momento de retirar en tienda\n\n{entrega}"
 };
 function loadBiz(){ try{ return {...BIZ_DEFAULTS, ...(JSON.parse(localStorage.getItem('ct_v2_biz')||'{}'))}; }catch(e){ return {...BIZ_DEFAULTS}; } }
 let biz = loadBiz();
@@ -1574,7 +1574,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='30 jul 2026 · v29';
+const APP_BUILD='30 jul 2026 · v30';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2818,9 +2818,9 @@ const SAMPLE_ORDER = {clientName:'María López', delivery:'envio', shipping:50,
 function adminAjustes(){
   return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Ajustes del negocio</h2><div class="vh-sub">Mensaje al cliente y repartidor</div></div></div>
     <div class="sect-label">Mensaje al cliente</div>
-    <div class="pp-note" style="margin:0 0 8px">Escribí el mensaje completo a tu gusto. Solo estas <b>dos partes</b> se llenan solas con cada pedido:<br>
-      <b>{name}</b> = nombre del cliente · <b>{pedido}</b> = los productos y el total · <b>{entrega}</b> = el cierre (se adapta solo: a domicilio "salimos a entregar", retiro "se prepara al llegar").<br>
-      Todo lo demás (método de pago, cuenta) es texto que escribís vos.</div>
+    <div class="pp-note" style="margin:0 0 8px">Escribí el mensaje completo a tu gusto. Estas partes se llenan solas con cada pedido:<br>
+      <b>{name}</b> = nombre del cliente · <b>{pedido}</b> = los productos y el total · <b>{folio}</b> = el número de la comanda (para ubicarla) · <b>{entrega}</b> = el cierre (se adapta solo: a domicilio "salimos a entregar", retiro "se prepara al llegar").<br>
+      Todo lo demás (método de pago, cuenta) es texto que escribís vos. Si quitás <b>{folio}</b>, igual se agrega arriba automáticamente.</div>
     <textarea class="inp msg-tpl" id="bizMsg" rows="13" oninput="bizPreview()">${esc(biz.msg)}</textarea>
     <button type="button" class="btn ghost block sm btn-ic" style="margin-top:8px" onclick="restoreMsg()">${ic('history',15)} Restaurar mensaje original</button>
     <div class="sect-label" style="margin-top:14px">Así se envía (pedido de ejemplo)</div>
@@ -3187,11 +3187,18 @@ function orderBlock(o){ return orderLinesBlock(o) + `\n\n` + totalsBlock(o); }
 // El mensaje es texto libre (biz.msg); solo se reemplazan {name} y {pedido}.
 function waMessage(o){
   const nm0=(o.clientName||'').trim().split(/\s+/)[0]||'';
-  return (biz.msg||BIZ_DEFAULTS.msg)
+  const tpl=(biz.msg||BIZ_DEFAULTS.msg);
+  const hasFolio=/\{folio\}|\{pedido#\}|\{id\}/i.test(tpl); // ¿la plantilla ya trae el identificador?
+  let msg=tpl
+    .replace(/\{folio\}|\{pedido#\}|\{id\}/gi, o.folio||'')
     .replace(/\{name\}|\{nombre\}|\{cliente\}/gi, nm0)
     .replace(/\{pedido\}|\{productos\}/gi, orderBlock(o))
     .replace(/\{entrega\}/gi, entregaLine(o))
     .replace(/ {2,}/g,' '); // "Hola  👋" (sin nombre) → "Hola 👋"
+  // Si el mensaje personalizado no incluye el folio, lo agregamos arriba para que el admin
+  // pueda ubicar la comanda (búsqueda por folio en la Bandeja).
+  if(!hasFolio && o.folio) msg = `*Pedido #${o.folio}*\n\n` + msg;
+  return msg;
 }
 function repartidorFicha(o){
   // La dirección puede traer el link de ubicación embebido (lo manda la tienda web: "… · 📍 Ubicación: <maps>").
