@@ -864,6 +864,20 @@ html.lite .kcard2,html.lite .ocard,html.lite .card,html.lite .oitem,html.lite .k
 .shiphint{margin-top:8px;font-size:12.5px;color:var(--muted);line-height:1.6}
 .shiphint b{color:var(--ink)}
 .shiphint .lnk{color:var(--rojo);font-weight:700;text-decoration:underline;text-underline-offset:2px;margin-left:8px}
+
+/* ── Foco visible por teclado — WCAG 2.4.7 (AA) ──────────────────────────
+   Antes no había ninguna regla :focus-visible y sí 6 con outline:none, así
+   que quien navegaba con teclado (iPad con teclado, Tab) no veía dónde
+   estaba parado. Estas reglas van AL FINAL de la hoja a propósito: igualan
+   la especificidad de las reglas :focus de arriba y ganan por orden de
+   cascada. Se usa currentColor para que el anillo se adapte solo a cada
+   superficie — oscuro sobre tarjeta clara, claro sobre la barra negra.
+   :focus-visible solo se muestra a quien navega con teclado; el ratón y el
+   dedo no lo activan, así que el aspecto para el carnicero no cambia. */
+:focus-visible{outline:3px solid currentColor;outline-offset:2px;border-radius:4px}
+.pin-input:focus-visible,.win:focus-visible,.inp:focus-visible,
+.qty input:focus-visible,.ce-inp:focus-visible,.ce-nameinp:focus-visible{
+  outline:3px solid currentColor;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -883,7 +897,7 @@ html.lite .kcard2,html.lite .ocard,html.lite .card,html.lite .oitem,html.lite .k
       </button>
     </div>
     <div class="pin-wrap">
-      <label id="pinLabel">Selecciona un acceso</label>
+      <label id="pinLabel" for="pinInput">Selecciona un acceso</label>
       <input class="pin-input" id="pinInput" type="password" placeholder="Contraseña" disabled autocomplete="current-password">
     </div>
     <button class="login-go" id="loginGo" disabled>Entrar</button>
@@ -1046,10 +1060,10 @@ function openCatalogEdit(id){ const p=prodById(id); if(!p) return; currentCatEdi
   $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeCatEdit()">
     <div class="sheet" style="max-width:460px"><div class="sheet-head"><span class="sh-name">Editar producto</span><button class="x" onclick="closeCatEdit()">${ic('x',16)}</button></div>
     <div class="sheet-body">
-      <div class="field"><label>Nombre</label><input class="inp" id="ceName" value="${esc(p.name)}"></div>
+      <div class="field"><label for="ceName">Nombre</label><input class="inp" id="ceName" value="${esc(p.name)}"></div>
       <div class="field"><label>Unidad de venta</label>
         <div class="seg unit-seg">${UNITS.map(u=>`<button type="button" class="${p.unit===u?'on':''}" onclick="ceUnit='${u}';document.querySelectorAll('.unit-seg button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${u}</button>`).join('')}</div></div>
-      <div class="field"><label>Precio (L) — vacío = por encargo</label><input class="inp" id="cePrice" inputmode="decimal" value="${p.price==null?'':p.price}"></div>
+      <div class="field"><label for="cePrice">Precio (L) — vacío = por encargo</label><input class="inp" id="cePrice" inputmode="decimal" value="${p.price==null?'':p.price}"></div>
       <div class="cat-tgs">
         <button type="button" class="cat-tg ${p.weigh?'on':''}" id="ceWeigh" onclick="this.classList.toggle('on')">${ic('check',14)} Validar peso</button>
         <button type="button" class="cat-tg danger ${p.disabled?'on':''}" id="ceOff" onclick="this.classList.toggle('on')">${ic('x',14)} Agotado (deshabilitar)</button>
@@ -1989,10 +2003,10 @@ function adminNueva(){
       <button class="cam-btn btn-ic" id="camBtn" onclick="document.getElementById('camInput').click()">${ic('camera',16)} Tomar foto del pedido (papelito)</button>
       ${parsePreviewHtml()}
     </div>
-    <div class="field"><label>Cliente</label><input class="inp" id="dName" placeholder="Nombre del cliente" value="${esc(draft.clientName)}"></div>
+    <div class="field"><label for="dName">Cliente</label><input class="inp" id="dName" placeholder="Nombre del cliente" value="${esc(draft.clientName)}"></div>
     <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Teléfono (WhatsApp)</label><input class="inp" id="dPhone" inputmode="tel" placeholder="+504 ..." value="${esc(draft.phone)}"></div>
-      <div style="flex:1"><label>Zona</label><input class="inp" id="dZone" placeholder="Colonia / barrio" value="${esc(draft.zone)}"></div>
+      <div style="flex:1"><label for="dPhone">Teléfono (WhatsApp)</label><input class="inp" id="dPhone" inputmode="tel" placeholder="+504 ..." value="${esc(draft.phone)}"></div>
+      <div style="flex:1"><label for="dZone">Zona</label><input class="inp" id="dZone" placeholder="Colonia / barrio" value="${esc(draft.zone)}"></div>
     </div>
     <div class="field"><label>Entrega</label>
       <div class="seg"><button id="segRec" class="${draft.delivery==='recoge'?'on':''}" onclick="draft.delivery='recoge';syncDraft();initNueva()">${ic('store',18)} Recoge</button>
@@ -2000,8 +2014,8 @@ function adminNueva(){
     </div>
     <div class="field addrF" ${draft.delivery==='envio'?'':'style="display:none"'}>
       <div style="display:flex;gap:10px">
-        <div style="flex:2"><label>Dirección de entrega</label><input class="inp" id="dAddr" placeholder="Dirección + referencia" value="${esc(draft.addr)}"></div>
-        <div style="flex:1"><label>Costo de envío (L)</label><input class="inp" id="dShip" inputmode="decimal" placeholder="0" value="${draft.shipping||''}"></div>
+        <div style="flex:2"><label for="dAddr">Dirección de entrega</label><input class="inp" id="dAddr" placeholder="Dirección + referencia" value="${esc(draft.addr)}"></div>
+        <div style="flex:1"><label for="dShip">Costo de envío (L)</label><input class="inp" id="dShip" inputmode="decimal" placeholder="0" value="${draft.shipping||''}"></div>
       </div>
       <div class="shiphint" id="shipHint">${shipHintHtml()}</div>
     </div>
@@ -2022,7 +2036,7 @@ function adminNueva(){
           <div class="pp">${p.price==null?'por encargo':money(p.price)}<span class="pu"> /${p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit}</span></div>
         </button>`).join("")}</div>`:''}
     </details>
-    <div class="field"><label>Nota para el carnicero</label><input class="inp" id="dNote" placeholder="Ej: el rib eye bien rojo" value="${esc(draft.note)}"></div>
+    <div class="field"><label for="dNote">Nota para el carnicero</label><input class="inp" id="dNote" placeholder="Ej: el rib eye bien rojo" value="${esc(draft.note)}"></div>
     <div class="total-bar"><span class="tl">Estimado${draft.delivery==='envio'&&(+draft.shipping)?' (con envío)':''}</span><span class="tv" id="draftTotal">${money(draftGrand())}</span></div>
     <button class="btn red lg block" onclick="submitOrder()">Enviar al carnicero ▸</button>
     <div style="height:30px"></div>`;
@@ -2109,7 +2123,7 @@ function nameWebPrompt(phone){
     <div class="sheet" style="max-width:420px"><div class="sheet-head"><span class="sh-name">Ponerle nombre</span><button class="x" onclick="closeSheet()" aria-label="Cerrar">${ic('x',16)}</button></div>
     <div class="sheet-body">
       <div class="kempty" style="margin:0 0 12px;text-align:left">Este pedido llegó de la web solo con el teléfono <b>${esc(_nameTargetPhone||'—')}</b>. Ponle el nombre del cliente para reconocerlo en el tablero y el historial.</div>
-      <div class="field"><label>Nombre del cliente</label><input class="inp" id="nwName" placeholder="Ej: Doña María" autocomplete="off" enterkeyhint="done"></div>
+      <div class="field"><label for="nwName">Nombre del cliente</label><input class="inp" id="nwName" placeholder="Ej: Doña María" autocomplete="off" enterkeyhint="done"></div>
       <button class="btn red lg block btn-ic" style="margin-top:6px" onclick="nameWebSave()">${ic('check',17)} Guardar nombre</button>
     </div></div></div>`;
   setTimeout(()=>{ const i=$("#nwName"); if(i){ i.focus(); i.onkeydown=e=>{ if(e.key==='Enter') nameWebSave(); }; } },60);
@@ -2629,11 +2643,11 @@ function openClientEdit(key){
   $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()">
     <div class="sheet" style="max-width:460px"><div class="sheet-head"><span class="sh-name">Editar cliente</span><button class="x" onclick="closeSheet()" aria-label="Cerrar">${ic('x',16)}</button></div>
     <div class="sheet-body">
-      <div class="field"><label>Nombre</label><input class="inp" id="clName" value="${esc(c.name)}"></div>
-      <div class="field"><label>Teléfono (WhatsApp) — es el ID del cliente</label><input class="inp" id="clPhone" inputmode="tel" value="${esc(c.phone||'')}" placeholder="+504 ..."></div>
-      <div class="field"><label>Zona</label><input class="inp" id="clZone" value="${esc(c.zone||'')}" placeholder="Colonia / barrio"></div>
-      <div class="field"><label>Dirección</label><input class="inp" id="clAddr" value="${esc(c.addr||'')}" placeholder="Dirección + referencia"></div>
-      <div class="field"><label>Nota (ej: cliente frecuente, cobra factura…)</label><input class="inp" id="clNote" value="${esc(c.note||'')}"></div>
+      <div class="field"><label for="clName">Nombre</label><input class="inp" id="clName" value="${esc(c.name)}"></div>
+      <div class="field"><label for="clPhone">Teléfono (WhatsApp) — es el ID del cliente</label><input class="inp" id="clPhone" inputmode="tel" value="${esc(c.phone||'')}" placeholder="+504 ..."></div>
+      <div class="field"><label for="clZone">Zona</label><input class="inp" id="clZone" value="${esc(c.zone||'')}" placeholder="Colonia / barrio"></div>
+      <div class="field"><label for="clAddr">Dirección</label><input class="inp" id="clAddr" value="${esc(c.addr||'')}" placeholder="Dirección + referencia"></div>
+      <div class="field"><label for="clNote">Nota (ej: cliente frecuente, cobra factura…)</label><input class="inp" id="clNote" value="${esc(c.note||'')}"></div>
       <button class="btn red lg block btn-ic" style="margin-top:6px" onclick="saveClientEdit()">${ic('check',17)} Guardar cliente</button>
       <button class="btn ghost block sm btn-ic" style="margin-top:10px;color:#b03a3a" onclick="askDeleteClient('${c.key}')">${ic('trash',15)} Eliminar cliente</button>
       <div class="pp-note" style="margin-top:10px">Los cambios aplican al autollenado y a esta lista. Las comandas ya creadas conservan sus datos originales.</div>
@@ -2826,7 +2840,7 @@ function adminAjustes(){
     <div class="sect-label" style="margin-top:14px">Así se envía (pedido de ejemplo)</div>
     <div class="msgbox" id="bizPrev"></div>
     <div class="sect-label" style="margin-top:16px">Repartidor</div>
-    <div class="field"><label>WhatsApp del repartidor (solo números)</label><input class="inp" id="bizRep" value="${esc(biz.repartidor)}" inputmode="numeric"></div>
+    <div class="field"><label for="bizRep">WhatsApp del repartidor (solo números)</label><input class="inp" id="bizRep" value="${esc(biz.repartidor)}" inputmode="numeric"></div>
     <button class="btn red lg block btn-ic" style="margin-top:16px" onclick="saveBizForm()">${ic('check',18)} Guardar</button>
     <div class="pp-note" style="margin-top:12px">Se guarda en <b>este dispositivo</b>. Los datos de cada cliente (nombre, teléfono, dirección) se guardan con el pedido para la entrega y el historial.</div>
     <div style="height:24px"></div>`;
@@ -3037,7 +3051,7 @@ function adminCierre(){
     <div class="sect-label">Cuadre de efectivo</div>
     <div class="card" style="padding:14px">
       <div class="kv"><span class="k">Efectivo esperado en caja</span><span class="v" style="font-weight:700">${money(efe)}</span></div>
-      <div class="field" style="margin-top:10px"><label>Efectivo contado (lo que hay en la caja)</label>
+      <div class="field" style="margin-top:10px"><label for="cashCount">Efectivo contado (lo que hay en la caja)</label>
         <input class="inp" id="cashCount" inputmode="decimal" placeholder="0" oninput="updateCuadre(${efe})"></div>
       <div class="kv" id="cuadreDiff" style="margin-top:6px"><span class="k">Diferencia</span><span class="v">—</span></div>
       <div class="pp-note" style="margin-top:8px">Solo es una ayuda para cuadrar al cierre; no se guarda.</div>
