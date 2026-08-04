@@ -1447,12 +1447,20 @@ async function togglePush(role){
   }catch(e){ toast('No pude activar los avisos: '+(e.message||e)); }
 }
 // Avisa a los dispositivos ADMIN (celu/compu de Ivan) cuando el carnicero mueve a por cobrar / por entregar.
+// Headers para invocar Edge Functions INTERNAS (notify-*, parse-order): mandan el JWT
+// de la sesión del staff (no la clave pública). La función verifica que sea admin/carnicero;
+// sin sesión válida responde 401 — justo lo que queremos si alguien no está logueado.
+async function fnHeaders(){
+  let tok=SUPA_KEY;
+  try{ if(supa){ const {data}=await supa.auth.getSession(); if(data&&data.session&&data.session.access_token) tok=data.session.access_token; } }catch(e){}
+  return {'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+tok};
+}
 // Usa una Edge Function APARTE (notify-status): si aún no está desplegada, el fetch 404ea sin efecto.
 async function notifyAdmin(title, body){ if(!USE_SUPA) return;
   let exclude='';
   try{ if(pushSupported()){ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if(sub) exclude=sub.endpoint; } }catch(e){}
   try{ fetch(SUPA_URL+'/functions/v1/notify-status',{ method:'POST',
-    headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},
+    headers: await fnHeaders(),
     body:JSON.stringify({title, body, exclude}) }).catch(()=>{}); }catch(e){} }
 // Al crear una comanda nueva, dispara el push al dispositivo del carnicero (fire-and-forget).
 // exclude = la suscripción de ESTE dispositivo → nunca se avisa a sí mismo (el que crea no suena).
@@ -1460,7 +1468,7 @@ async function notifyNewOrder(o){ if(!USE_SUPA||!o) return;
   let exclude='';
   try{ if(pushSupported()){ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if(sub) exclude=sub.endpoint; } }catch(e){}
   try{ fetch(SUPA_URL+'/functions/v1/notify-order',{ method:'POST',
-    headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},
+    headers: await fnHeaders(),
     body:JSON.stringify({folio:o.folio, clientName:o.clientName, count:(o.items||[]).length, exclude}) }).catch(()=>{}); }catch(e){} }
 
 /* ============ HELPERS ============ */
@@ -1588,7 +1596,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='30 jul 2026 · v30';
+const APP_BUILD='4 ago 2026 · v32';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2146,7 +2154,7 @@ async function aiParse(text){
   try{
     const r=await fetch(SUPA_URL+'/functions/v1/parse-order',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY,'apikey':SUPA_KEY},
+      headers: await fnHeaders(),
       body:JSON.stringify({text, catalog:PRODUCTS.filter(p=>!p.disabled).map(p=>p.canon||p.name)}),
       signal:ctrl.signal
     });
@@ -2207,7 +2215,7 @@ async function aiParseImage(dataUrl){
   const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),25000); // visión tarda más
   try{
     const r=await fetch(SUPA_URL+'/functions/v1/parse-order',{ method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY,'apikey':SUPA_KEY},
+      headers: await fnHeaders(),
       body:JSON.stringify({image:dataUrl, catalog:PRODUCTS.filter(p=>!p.disabled).map(p=>p.canon||p.name)}), signal:ctrl.signal });
     clearTimeout(to);
     if(!r.ok) throw new Error('http '+r.status);
