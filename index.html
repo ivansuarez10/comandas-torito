@@ -498,6 +498,12 @@ html.bigtext .okbox{font-size:16.5px}
 .coedit-warn{display:flex;align-items:center;gap:8px;background:#FBF1DA;border:1px solid #EAD9AC;color:#8A5A11;border-radius:11px;padding:10px 12px;margin-bottom:12px;font-size:13.5px;font-weight:700;line-height:1.3}
 .coedit-warn svg{flex:none}
 html.bigtext .coedit-warn{font-size:15px}
+/* EN VIVO: un carnicero tiene la comanda abierta ahora (visto desde el admin) */
+.klive{display:flex;align-items:center;gap:7px;color:#1f8f4d;font-size:12.5px;font-weight:700;margin-top:8px}
+.live-dot{width:9px;height:9px;border-radius:50%;background:#25c460;flex:none;box-shadow:0 0 0 0 rgba(37,196,96,.5);animation:livePulse 1.4s ease-out infinite}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(37,196,96,.5)}70%{box-shadow:0 0 0 7px rgba(37,196,96,0)}100%{box-shadow:0 0 0 0 rgba(37,196,96,0)}}
+.kcard2.islive{border-color:#bfe8cf}
+html.lite .live-dot{animation:none}
 /* Recordatorios (Resumen admin): comandas atascadas demasiado tiempo */
 .rem-row{width:100%;display:flex;align-items:center;gap:10px;text-align:left;background:#FBF1DA;border:1px solid #EAD9AC;border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer;color:#8A5A11}
 .rem-row:active{background:#F2DDB2}
@@ -1355,7 +1361,7 @@ async function initSupaData(){
     }).subscribe();
     // Presencia: quién tiene abierta cada comanda AHORA (efímero, sin tabla). Avisa co-edición.
     _coEditChan=supa.channel('presence-orders',{config:{presence:{key:DEVICE_ID}}});
-    _coEditChan.on('presence',{event:'sync'},()=>_updateCoEditWarn());
+    _coEditChan.on('presence',{event:'sync'},()=>{ _updateCoEditWarn(); _refreshLivePresence(); });
     _coEditChan.subscribe(async(status)=>{ if(status==='SUBSCRIBED') await _coEditTrack(); });
   }
 }
@@ -1366,6 +1372,16 @@ function _othersOnOrder(id){ if(!_coEditChan||!id) return [];
   const roles=[]; Object.keys(st).forEach(key=>{ if(key===DEVICE_ID) return;
     (st[key]||[]).forEach(m=>{ if(m && m.orderId===id) roles.push(m.role||'otro'); }); });
   return roles; }
+// El admin ve EN VIVO qué comandas está tocando un carnicero. Al cambiar la presencia
+// (un carnicero abre/cierra una comanda), refresca los badges del tablero y del detalle abierto.
+function _refreshLivePresence(){
+  if(!session || session.role!=='admin') return;
+  if(adminView==='bandeja'){ const k=$("#abKanban"); if(k) k.innerHTML=abColsHtml(); }
+  const lh=$("#adminLiveHost"); if(lh && currentSheetId) lh.innerHTML=adminLiveHtml(currentSheetId);
+}
+// Línea "en vivo" para el detalle admin de una comanda.
+function adminLiveHtml(id){ return _othersOnOrder(id).includes('carnicero')
+  ? `<div class="klive" style="margin:0 0 12px"><span class="live-dot"></span> Un carnicero está viendo esta comanda ahora</div>` : ''; }
 function _updateCoEditWarn(){ const el=$("#coEditWarn"); if(!el) return;
   const roles=_othersOnOrder(_openOrderId);
   if(!roles.length){ el.innerHTML=''; return; }
@@ -1596,7 +1612,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='4 ago 2026 · v33';
+const APP_BUILD='4 ago 2026 · v34';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1946,10 +1962,12 @@ function akcard(o,st){
   const arrow=(d,en)=> en
     ? `<button class="kmv anav" onclick="event.stopPropagation();adminMove('${o.id}',${d})" aria-label="${d<0?'Regresar':'Avanzar'} de estación">${ic(d<0?'left':'right',16)}</button>`
     : `<span class="kmv anav ghost"></span>`;
-  return `<div class="kcard2" onclick="openAdminOrder('${o.id}')">
+  const carnLive=_othersOnOrder(o.id).includes('carnicero'); // ¿un carnicero la tiene abierta ahora?
+  return `<div class="kcard2 ${carnLive?'islive':''}" onclick="openAdminOrder('${o.id}')">
     <div class="kf"><span class="kfolio">#${o.folio}</span><span class="ktime">${timeAgo(o.createdAt)}</span></div>
     <div class="kname">${dispName(o.clientName)}</div>
     <div class="kdtag">${deliveryTag(o)}</div>
+    ${carnLive?`<div class="klive"><span class="live-dot"></span> Un carnicero la está viendo ahora</div>`:''}
     <div class="kitems">${o.items.length} productos · <b>${money(fullTotal(o))}</b></div>
     ${o.paid?`<div class="kpaid">${ic('check',14)} Pagado</div>`:""}
     ${tag}
@@ -3175,6 +3193,7 @@ function openAdminOrder(id){
   const nameBar = isPhoneName(o.clientName)
     ? `<button class="btn amber block btn-ic" style="margin-bottom:12px" onclick="nameWebPrompt('${esc(o.phone||o.clientName)}')">${ic('user',16)} Pedido web sin nombre — ponerle nombre</button>` : '';
   sheet(o, `
+    <div id="adminLiveHost">${adminLiveHtml(o.id)}</div>
     ${nameBar}
     ${info}
     <div class="sect-label" style="margin-top:8px">Productos</div>
