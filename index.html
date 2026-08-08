@@ -1376,7 +1376,7 @@ function _othersOnOrder(id){ if(!_coEditChan||!id) return [];
 // (un carnicero abre/cierra una comanda), refresca los badges del tablero y del detalle abierto.
 function _refreshLivePresence(){
   if(!session || session.role!=='admin') return;
-  if(adminView==='bandeja'){ const k=$("#abKanban"); if(k) k.innerHTML=abColsHtml(); }
+  if(adminView==='bandeja'){ const k=$("#abKanban"); if(k){ const x=k.scrollLeft; k.innerHTML=abColsHtml(); k.scrollLeft=x; } }
   const lh=$("#adminLiveHost"); if(lh && currentSheetId) lh.innerHTML=adminLiveHtml(currentSheetId);
 }
 // Línea "en vivo" para el detalle admin de una comanda.
@@ -1612,7 +1612,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='4 ago 2026 · v34';
+const APP_BUILD='4 ago 2026 · v35';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1852,6 +1852,9 @@ function topbar(extra=""){
 
 /* ================= ADMIN ================= */
 function renderAdmin(){
+  // Preserva la posición del tablero (scroll horizontal de las columnas): al mover una comanda
+  // se reconstruye todo el DOM y, sin esto, el tablero saltaba de vuelta a la primera columna.
+  const _kx = (($("#abKanban")||{}).scrollLeft)||0;
   const groups={
     cobrar: state.orders.filter(o=>o.status==="espera_pago"),
     entregar: state.orders.filter(o=>o.status==="lista"),
@@ -1891,6 +1894,7 @@ function renderAdmin(){
   if(adminView==="nueva") initNueva();
   if(adminView==="ajustes") bizPreview();
   if(adminView==="envios"){ shipMountMap(); shipWireSearch(); }
+  if(adminView==="bandeja" && _kx){ const k=$("#abKanban"); if(k) k.scrollLeft=_kx; } // no regresar el tablero al mover una comanda
 }
 function go(v){ adminView=v; if(v==="nueva"){ draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null,shipAuto:true,shipCalc:null}; prodOpen=false; _shipAutoLast=''; } if(v==="bandeja") bandejaQ=''; if(v==="resumen") dayFilter=null; renderAdmin(); window.scrollTo(0,0); }
 
