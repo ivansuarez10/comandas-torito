@@ -118,6 +118,9 @@ input,select{font-family:inherit;font-size:16px}
 .chip.entregada{background:#E6EAE6;color:#566256}
 .chip.cancel{background:#F3DADA;color:#9a3030}
 .chip.noname{background:#F6E7C9;color:#8A5A11;letter-spacing:.01em}
+/* Cliente que además se hizo cuenta en la tienda web. Neutro a propósito: no es un
+   estado del pedido, así que no compite con los chips de la comanda. */
+.chip.webacc{background:#E3E9F2;color:#33465C;letter-spacing:.01em}
 .carn-info.namebanner{background:#FBF1DA;border-color:#EAD9AC;color:#8A5A11}
 .carn-info.namebanner b{color:#7A4E0C}
 .btn.amber{background:#F6E7C9;color:#8A5A11;border:1px solid #EAD9AC;box-shadow:none}
@@ -1237,7 +1240,7 @@ function seed(){
   };
 }
 let lastPing=0;
-function load(){ try{const r=localStorage.getItem(KEY); state=r?JSON.parse(r):seed(); }catch(e){state=seed();} if(!state.history) state.history=[]; if(!state.clients) state.clients=[]; }
+function load(){ try{const r=localStorage.getItem(KEY); state=r?JSON.parse(r):seed(); }catch(e){state=seed();} if(!state.history) state.history=[]; if(!state.clients) state.clients=[]; if(!state.webAcc) state.webAcc={}; }
 // save(order): si se pasa la comanda que cambió, sube SOLO esa a la nube (evita pisar
 // cambios de otro dispositivo con datos viejos). Sin argumento = sync completo (archivar, undo masivo).
 // _recentSave[id]=timestamp → una comanda tocada localmente hace poco NO se deja revertir por el
@@ -1301,6 +1304,14 @@ async function dbFetch(){
     if(!ce && cl && cl.length) state.clients=cl.map(fromRowC);
     else if(!state.clients || !state.clients.length) state.clients=loadClientsLocal();
   }catch(e){ if(!state.clients || !state.clients.length) state.clients=loadClientsLocal(); }
+  // ¿Cuáles de estos clientes se hicieron cuenta en la tienda web? Las cuentas NO viven en
+  // una tabla normal sino en `auth.users`, que el navegador no puede leer. Lo contesta la
+  // función `cuentas_web()` (SQL_cuentas_web.sql): solo responde a admin/carnicero y solo
+  // devuelve los últimos 8 dígitos del teléfono, el nombre con que se registró y las fechas.
+  // Si la función todavía no existe, esto no rompe nada: nadie queda marcado y ya.
+  try{ const {data:cw,error:we}=await supa.rpc('cuentas_web');
+    if(!we && Array.isArray(cw)){ const m={}; cw.forEach(r=>{ if(r&&r.tel8) m[r.tel8]=r; }); state.webAcc=m; }
+  }catch(e){ /* sin cuentas_web la app sigue igual que siempre */ }
   return true;
 }
 // Respaldo local de clientes: si la tabla `clients` no existe en la nube (SQL_clients.sql),
@@ -1612,7 +1623,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='4 ago 2026 · v35';
+const APP_BUILD='12 ago 2026 · v36';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2126,6 +2137,10 @@ function submitOrder(){
 const _digits=p=>(p||'').replace(/\D/g,'');
 // Números de Honduras = 8 dígitos; compara los últimos 8 para que "9876-5432" encuentre a "+504 9876-5432".
 const _phoneKey=p=>{ const d=_digits(p); return d.length>8?d.slice(-8):d; };
+// Cuenta de la tienda web para este teléfono, o null. Se empareja por los últimos 8 dígitos
+// porque la comanda guarda 99998888 y Supabase Auth guarda +50499998888.
+const cuentaWeb=p=>{ const k=_phoneKey(p); return (k.length===8 && state.webAcc) ? (state.webAcc[k]||null) : null; };
+const fechaCorta=t=>{ try{ return new Date(t).toLocaleDateString('es-HN',{day:'numeric',month:'short',year:'numeric'}); }catch(e){ return ''; } };
 function clientByPhone(phone){
   const np=_phoneKey(phone); if(np.length<4) return null;
   if(state.clients){ const c=state.clients.find(x=>_phoneKey(x.phone)===np); if(c) return c; }
@@ -2618,14 +2633,15 @@ function adminClientes(){
   // Los clientes web sin nombre van PRIMERO (para nombrarlos fácil); luego por total gastado.
   const cls=Object.values(map).sort((a,b)=>(isPhoneName(b.name)-isPhoneName(a.name))||(b.total-a.total));
   const nSin=cls.filter(c=>isPhoneName(c.name)).length;
-  return `<div class="view-head"><div><h2>Clientes</h2><div class="vh-sub">${cls.length} clientes · toca uno para ver su perfil</div></div></div>
+  const nWeb=cls.filter(c=>cuentaWeb(c.phone)).length;
+  return `<div class="view-head"><div><h2>Clientes</h2><div class="vh-sub">${cls.length} clientes${nWeb?` · <b>${nWeb}</b> con cuenta en la web`:''} · toca uno para ver su perfil</div></div></div>
     ${nSin?`<button class="carn-info namebanner" onclick="go('clientes')" style="cursor:default">${ic('user',15)} <span><b>${nSin}</b> cliente${nSin>1?'s':''} de la web sin nombre · tócalos abajo para nombrarlos</span></button>`:''}
     ${cls.length? `<div class="olist">${cls.map(c=>{
       const top=Object.entries(c.prods).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join(", ");
       const sinN=isPhoneName(c.name);
       return `<div class="card cli-card${sinN?' unnamed':''}" style="padding:14px;cursor:pointer" onclick="${sinN?`nameWebPrompt('${esc(c.phone||c.name)}')`:`openClientProfile('${c.key}')`}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-          <div style="min-width:0"><div style="font-weight:700;font-size:15.5px">${dispName(c.name)}</div>
+          <div style="min-width:0"><div style="font-weight:700;font-size:15.5px">${dispName(c.name)}${cuentaWeb(c.phone)?` <span class="chip webacc">${ic('user',11)} Cuenta web</span>`:''}</div>
             <div style="font-size:12.5px;color:var(--muted);margin-top:2px">${esc(c.phone||'—')} · ${esc(c.zone||'')}</div></div>
           <div style="display:flex;align-items:flex-start;gap:4px;flex:none">
             <div style="text-align:right"><div class="disp" style="font-weight:600;font-size:18px;color:var(--rojo)">${money(c.total)}</div>
@@ -2654,6 +2670,9 @@ function openClientProfile(key){
       <button class="x" onclick="closeSheet()" aria-label="Cerrar">${ic('x',16)}</button></div>
     <div class="sheet-body">
       <div class="kv"><span class="k">${ic('user',14)} Teléfono</span><span class="v">${esc(c.phone||'—')}</span></div>
+      ${(()=>{ const w=cuentaWeb(c.phone); return `<div class="kv"><span class="k">${ic('store',14)} Cuenta en la web</span><span class="v">${
+        w ? `Sí · desde ${esc(fechaCorta(w.creada))}${w.nombre&&_norm(w.nombre)!==_norm(c.name)?` · se registró como ${esc(w.nombre)}`:''}` : 'No tiene'
+      }</span></div>`; })()}
       <div class="kv"><span class="k">${ic('truck',14)} Zona</span><span class="v">${esc(c.zone||'—')}</span></div>
       <div class="kv"><span class="k">${ic('store',14)} Dirección</span><span class="v" style="max-width:60%">${esc(c.addr||'—')}</span></div>
       ${c.note?`<div class="note-banner" style="margin-top:10px">${ic('note',15)} ${esc(c.note)}</div>`:''}
