@@ -1623,7 +1623,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='12 ago 2026 · v37';
+const APP_BUILD='12 ago 2026 · v38';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -3523,15 +3523,15 @@ function renderCarnOrder(o,vo){
       <button class="x" onclick="closeCarn()" aria-label="Cerrar">${ic('x',16)}</button></div>
       <div class="sheet-body" id="carnBody">
         <div id="coEditWarn"></div>
+        ${vo
+          ? (o.note?`<div class="note-banner">${ic('note',16)} <b>Indicación:</b> ${esc(o.note)}</div>`:'')
+          : `<div class="cmt-field"><label class="cmt-label">${ic('note',15)} Indicación para el carnicero <span class="cmt-opt">(opcional)</span></label>
+             <textarea class="inp cmt-area" id="ordComment" rows="2" placeholder="" oninput="setComment(this.value)" onchange="setComment(this.value);persistEdits()">${esc(editComment)}</textarea></div>`}
         ${vo?`<div class="viewonly-tag">${ic('eye',15)} ${voNote}</div>`:''}
         ${(o.status==='preparacion'&&!o.held)?`<div class="prep-prog" id="prepProg">${prepProgInner()}</div>`:''}
         <div id="oitems">${oitemSeqHtml(vo)}</div>
         <div id="confirmAllHost">${curCotizar?confirmAllBtnHtml():''}</div>
         ${vo?'':`<button class="add-prod btn-ic" onclick="openAddProduct()">${ic('plus',18)} Agregar producto</button>`}
-        ${vo
-          ? (o.note?`<div class="note-banner">${ic('note',16)} <b>Indicación:</b> ${esc(o.note)}</div>`:'')
-          : `<div class="cmt-field"><label class="cmt-label">${ic('note',15)} Indicación para el carnicero <span class="cmt-opt">(opcional)</span></label>
-             <textarea class="inp cmt-area" id="ordComment" rows="2" placeholder="" oninput="setComment(this.value)" onchange="setComment(this.value);persistEdits()">${esc(editComment)}</textarea></div>`}
         ${osumHtml(vo)}
         ${action?`<div style="margin-top:6px">${action}</div>`:''}
       </div></div></div>`;
