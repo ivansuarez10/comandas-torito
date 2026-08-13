@@ -1623,7 +1623,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='12 ago 2026 · v36';
+const APP_BUILD='12 ago 2026 · v37';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1818,7 +1818,10 @@ function updateClock(){ const el=$("#syncClock"); if(el) el.textContent="actuali
 // Refresco automático cada 30s. NO hace logout; el logout es por inactividad (2h, abajo).
 // No refresca al admin si está capturando una comanda o con una hoja/editor abierto (perdería lo escrito).
 function safeToRefreshAdmin(){ if(adminView==='nueva') return false; if(document.querySelector('.overlay')) return false;
-  const ae=document.activeElement; if(ae && ae.id==='abSearch') return false; // no interrumpir mientras busca
+  // No re-dibujar mientras el admin ESCRIBE en cualquier campo (búsqueda de bandeja, dirección de
+  // Envíos, catálogo…): un refresco automático a media escritura le saca el foco y le revierte el texto.
+  const ae=document.activeElement;
+  if(ae && (ae.tagName==='INPUT'||ae.tagName==='TEXTAREA') && !/^(checkbox|radio|button|submit)$/.test(ae.type||'')) return false;
   return true; }
 setInterval(()=>{ archiveStaleListas();
   // Modo nube: bajar datos de verdad (red de seguridad si el realtime se cae). scheduleRefetch ya
@@ -3336,6 +3339,7 @@ function renderCarnicero(){
   const sig=_carnSig();
   if(sig===_carnSigLast){ updateClock(); return; }
   _carnSigLast=sig;
+  const _kx=(($("#carnKanban")||{}).scrollLeft)||0; // preservar el scroll del tablero al re-dibujar
   $("#app").innerHTML =
    `<div class="ctop">
       <button class="ctop-out" onclick="logout()">${ic('left',18)} Salir</button>
@@ -3345,7 +3349,7 @@ function renderCarnicero(){
       <button class="ctop-sync" id="syncBtn" onclick="manualSync()" aria-label="Actualizar tablero">${ic('sync',16)}<span id="syncClock">actualizado ahora</span></button>
    </div>
    <div class="kanban-wrap">
-     <div class="kanban">
+     <div class="kanban" id="carnKanban">
     ${C_COLS.map(([cls,label,st])=>{
       const arr=state.orders.filter(o=>o.status===st);
       // Cola FIFO en "Por cotizar": el pedido más VIEJO arriba (primero en llegar, primero en salir),
@@ -3360,6 +3364,7 @@ function renderCarnicero(){
     }).join("")}
    </div></div>`;
   updateClock();
+  if(_kx){ const k=$("#carnKanban"); if(k) k.scrollLeft=_kx; } // no regresar el tablero al salir de una comanda
 }
 function kcard(o,st){
   let footer='';
