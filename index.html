@@ -327,6 +327,20 @@ input,select{font-family:inherit;font-size:16px}
 .kcard2 .kitems{font-size:15px;color:var(--muted);margin-top:5px}
 .kcard2 .kitems b{font-weight:800;color:var(--ink);font-family:var(--font);font-size:16px}
 .kcard2 .knote{font-size:13.5px;color:#8a5a06;background:#FBF0D9;border-radius:9px;padding:7px 10px;margin-top:9px;font-weight:600}
+/* Tarjeta detallada del tablero: lista de productos + total + método de pago */
+.kcard2 .kli-list{margin-top:9px;border-top:1px dashed var(--line);padding-top:8px}
+.kcard2 .kli{display:flex;gap:8px;align-items:baseline;font-size:14px;padding:2px 0}
+.kcard2 .kli-q{flex:none;color:var(--muted);min-width:42px}
+.kcard2 .kli-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.kcard2 .kli-a{flex:none;font-weight:700}
+.kcard2 .kli-more{color:var(--muted);font-size:12.5px;padding-top:3px}
+.kcard2 .ktotrow{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.kcard2 .ktotrow .tl{color:var(--muted);font-size:13px;font-weight:600}
+.kcard2 .ktotrow .tv{font-weight:800;font-size:17px}
+.kcard2 .kpaychip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 9px;border-radius:8px;margin-top:8px}
+.kcard2 .kpaychip svg{width:13px;height:13px}
+.kpaychip.efec{background:#e7f3ec;color:#1f7a48} .kpaychip.tran{background:#e9edf3;color:#3a5478}
+html.bigtext .kcard2 .kli{font-size:15px}
 .kcard2 .kpaid{font-size:13.5px;font-weight:800;color:var(--paid);margin-top:9px}
 .kcard2 .kwait{font-size:13px;font-weight:700;color:#6b3fa0;margin-top:9px}
 .kmove{display:flex;gap:8px;margin-top:13px}
@@ -1623,7 +1637,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='12 ago 2026 · v38';
+const APP_BUILD='12 ago 2026 · v39';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1986,8 +2000,10 @@ function akcard(o,st){
     <div class="kname">${dispName(o.clientName)}</div>
     <div class="kdtag">${deliveryTag(o)}</div>
     ${carnLive?`<div class="klive"><span class="live-dot"></span> Un carnicero la está viendo ahora</div>`:''}
-    <div class="kitems">${o.items.length} productos · <b>${money(fullTotal(o))}</b></div>
-    ${o.paid?`<div class="kpaid">${ic('check',14)} Pagado</div>`:""}
+    ${o.note?`<div class="knote">${ic('note',14)} ${esc(o.note)}</div>`:""}
+    ${cardItemsHtml(o)}
+    ${cardTotalHtml(o)}
+    <div style="margin-top:8px">${cardPayChip(o)}${o.paid?` <span class="kpaychip" style="background:#e6efe9;color:#1f7a48">${ic('check',12)} Pagado</span>`:""}</div>
     ${tag}
     <div class="kmove">${arrow(-1,idx>0)}${footer||`<span style="flex:1"></span>`}${arrow(1,idx<A_ORDER.length-1)}</div>
   </div>`;
@@ -3366,6 +3382,18 @@ function renderCarnicero(){
   updateClock();
   if(_kx){ const k=$("#carnKanban"); if(k) k.scrollLeft=_kx; } // no regresar el tablero al salir de una comanda
 }
+// Lista compacta de productos para las tarjetas del tablero (qty · nombre · importe). Máx 6 + "N más".
+function cardItemsHtml(o){ const its=o.items||[]; if(!its.length) return '';
+  const uab=u=>u==='Libra'?'lb':u==='Unidad'?'u':u==='Paquete'?'paq':u;
+  const row=it=>{ const q=(it.weigh&&it.weight!=null)?`${it.weight} lb`:`${it.qty} ${uab(it.unit)}`;
+    const nm=esc(it.name)+(it.available?'':' <span style="color:#b03a3a">(no hay)</span>');
+    return `<div class="kli"><span class="kli-q">${q}</span><span class="kli-n">${nm}</span><span class="kli-a">${it.available?money(lineAmount(it)):'—'}</span></div>`; };
+  const MAX=6, shown=its.slice(0,MAX).map(row).join('');
+  const n=its.length-MAX, more=n>0?`<div class="kli-more">+${n} producto${n>1?'s':''} más…</div>`:'';
+  return `<div class="kli-list">${shown}${more}</div>`; }
+function cardTotalHtml(o){ return `<div class="ktotrow"><span class="tl">Total${o.shipping?' · con envío':''}</span><span class="tv">${money(fullTotal(o))}</span></div>`; }
+// Chip de método de pago (solo admin: el carnicero no maneja el cobro).
+function cardPayChip(o){ const m=payMethodOf(o); return `<span class="kpaychip ${m==='efectivo'?'efec':'tran'}">${ic(m==='efectivo'?'cash':'send',12)} ${payMethodLabel(m)}</span>`; }
 function kcard(o,st){
   let footer='';
   if(st==='cotizar') footer=`<button class="kmv fwd" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('edit',17)} Cotizar</button>`;
@@ -3385,8 +3413,9 @@ function kcard(o,st){
     <div class="kname">${esc(o.clientName)}</div>
     <div class="kdtag">${deliveryTag(o)}</div>
     ${o.held?`<div class="khold">${ic('clock',14)} EN ESPERA · recoge ${esc(retiroHora(o)||'—')} · no preparar aún</div>`:''}
-    <div class="kitems">${o.items.length} productos · <b>${money(fullTotal(o))}</b></div>
     ${o.note?`<div class="knote">${ic('note',15)} ${esc(o.note)}</div>`:""}
+    ${cardItemsHtml(o)}
+    ${cardTotalHtml(o)}
     ${o.paid?`<div class="kpaid">${ic('check',15)} Pagado</div>`:(st==='espera_pago'?`<div class="kwait">${ic('clock',15)} Pendiente de pago (admin)</div>`:"")}
     ${footer?`<div class="kmove">${footer}</div>`:""}
   </div>`;
