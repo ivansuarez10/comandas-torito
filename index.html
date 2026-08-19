@@ -1637,7 +1637,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='12 ago 2026 · v39';
+const APP_BUILD='12 ago 2026 · v40';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -3384,10 +3384,11 @@ function renderCarnicero(){
 }
 // Lista compacta de productos para las tarjetas del tablero (qty · nombre · importe). Máx 6 + "N más".
 function cardItemsHtml(o){ const its=o.items||[]; if(!its.length) return '';
-  const uab=u=>u==='Libra'?'lb':u==='Unidad'?'u':u==='Paquete'?'paq':u;
-  const row=it=>{ const q=(it.weigh&&it.weight!=null)?`${it.weight} lb`:`${it.qty} ${uab(it.unit)}`;
+  const uab=u=>u==='Libra'?'lb':u==='Unidad'?'u':u==='Paquete'?'paq':(u||'');
+  const row=it=>{ const q=((it.weigh&&it.weight!=null)?`${it.weight} lb`:`${it.qty} ${uab(it.unit)}`).trim();
     const nm=esc(it.name)+(it.available?'':' <span style="color:#b03a3a">(no hay)</span>');
-    return `<div class="kli"><span class="kli-q">${q}</span><span class="kli-n">${nm}</span><span class="kli-a">${it.available?money(lineAmount(it)):'—'}</span></div>`; };
+    const amt=(it.available&&it.price!=null)?money(lineAmount(it)):'—'; // sin precio (por encargo) o no disponible → —
+    return `<div class="kli"><span class="kli-q">${q}</span><span class="kli-n">${nm}</span><span class="kli-a">${amt}</span></div>`; };
   const MAX=6, shown=its.slice(0,MAX).map(row).join('');
   const n=its.length-MAX, more=n>0?`<div class="kli-more">+${n} producto${n>1?'s':''} más…</div>`:'';
   return `<div class="kli-list">${shown}${more}</div>`; }
