@@ -310,6 +310,23 @@ input,select{font-family:inherit;font-size:16px}
 .kanban{position:relative;z-index:1}
 .kcol{border-top:3px solid #C9BFAD;border-radius:15px}
 .kcol.c1,.kcol.c2,.kcol.c3,.kcol.c4{background:rgba(244,240,233,.85)}
+/* ===== PAGER DE ESTACIONES (carnicero, móvil) ===== */
+.carn-tabs{display:none}
+@media(max-width:899px){
+  .carn-tabs{display:flex;flex:none;position:relative;align-items:stretch;background:var(--negro);border-bottom:1px solid rgba(255,255,255,.08)}
+  .ctab{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px 11px;font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .ctab:active{opacity:.7}
+  .ctab-l{font-size:11.5px;font-weight:700;letter-spacing:.01em;color:#b0a89e}
+  .ctab.on .ctab-l{color:#fff}
+  .ctab-c{min-width:22px;height:20px;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.13);color:#ccc4b9;font-size:12.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;line-height:1;transition:background .15s}
+  .ctab-c.has{background:var(--rojo);color:#fff}
+  /* el subrayado NO tiene transición: sigue el scrollLeft 1:1 (swipe o deslizar suave al tocar tab) */
+  .ctab-ind{position:absolute;left:0;bottom:0;width:25%;height:3px;border-radius:3px 3px 0 0;background:var(--rojo);transform:translateX(0);pointer-events:none;will-change:transform}
+  /* cada estación llena la pantalla; el swipe hace snap a pantalla completa */
+  #carnKanban{gap:0;padding:0;scroll-padding:0}
+  #carnKanban > .kcol{flex:0 0 100%;max-width:none;border-radius:0;scroll-snap-align:center}
+  #carnKanban > .kcol .kcol-head{padding-top:14px}
+}
 .kcol.c1{border-top-color:#A9741A} .kcol.c2{border-top-color:#5C6B79}
 .kcol.c3{border-top-color:#9F2629} .kcol.c4{border-top-color:#2F6B57}
 .kcol-head .kn{font-size:14px;letter-spacing:.06em}
@@ -1637,7 +1654,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='12 ago 2026 · v40';
+const APP_BUILD='17 ago 2026 · v41';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -3343,6 +3360,47 @@ const C_EMPTY={cotizar:"Nada por cotizar",espera_pago:"Nada en espera",preparaci
 let _carnSigLast='';
 function _carnSig(){ return Math.floor(Date.now()/60000)+'~'+soundOn+'~'+pushOn+'~'+
   state.orders.filter(o=>C_ORDER.includes(o.status)).map(o=>[o.id,o.status,o.paid?1:0,o.clientName,o.note||'',o.items.length,fullTotal(o),o.createdAt].join('|')).join(';'); }
+/* ===== PAGER DE ESTACIONES (carnicero, móvil): cada estación = pantalla completa,
+   se cambia con swipe (snap nativo) o tocando la tab. La "estación actual" se guarda como
+   ESTADO (carnStation), así el refresco de cada minuto no te patea de vuelta a la primera. ===== */
+let carnStation=0; // 0..3 — estación visible en el pager
+const CARN_TABS=[["Cotizar","cotizar"],["Pago","espera_pago"],["Preparar","preparacion"],["Listas","lista"]];
+function carnColsHtml(){
+  return C_COLS.map(([cls,label,st])=>{
+    const arr=state.orders.filter(o=>o.status===st);
+    if(st==='cotizar') arr.sort((a,b)=>a.createdAt-b.createdAt); // FIFO: el más viejo arriba
+    const urge=(st==='cotizar'||st==='preparacion')&&arr.length?' urge':'';
+    return `<div class="kcol ${cls}${urge} ${(st==='cotizar'&&alertC1)||(st==='preparacion'&&alertC3)?'alerted':''}" id="col${cls.toUpperCase()}">
+      <div class="kcol-head"><span class="kn">${label}</span><span class="kc">${arr.length}</span></div>
+      <div class="kcol-body">
+        ${arr.length?arr.map(o=>kcard(o,st)).join(""):`<div class="kempty"><div class="ke-ic">${ic('check',24)}</div>${C_EMPTY[st]}</div>`}
+      </div></div>`;
+  }).join("");
+}
+function carnTabsHtml(){
+  return CARN_TABS.map(([lbl,st],i)=>{ const n=state.orders.filter(o=>o.status===st).length;
+    return `<button class="ctab ${i===carnStation?'on':''}" onclick="carnGoStation(${i})" aria-label="${esc(lbl)}, ${n} comandas">
+      <span class="ctab-c ${n?'has':''}">${n}</span><span class="ctab-l">${lbl}</span></button>`;
+  }).join("")+`<span class="ctab-ind" id="ctabInd"></span>`;
+}
+function carnUpdateTabCounts(){ const tb=$("#carnTabs"); if(!tb) return; const cs=tb.querySelectorAll('.ctab-c');
+  CARN_TABS.forEach(([lbl,st],i)=>{ const c=cs[i]; if(c){ const n=state.orders.filter(o=>o.status===st).length; c.textContent=n; c.classList.toggle('has',!!n); } }); }
+function _carnSetActiveTab(idx){ const tb=$("#carnTabs"); if(tb) tb.querySelectorAll('.ctab').forEach((b,i)=>b.classList.toggle('on',i===idx)); }
+// Tocar una tab → deslizar suave a esa estación (respeta "reducir movimiento").
+function carnGoStation(i){ i=Math.max(0,Math.min(C_COLS.length-1,i)); carnStation=i;
+  const k=$("#carnKanban"); if(k){ const rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    k.scrollTo({left:i*k.clientWidth, behavior:rm?'auto':'smooth'}); }
+  _carnSetActiveTab(i); }
+// El indicador (subrayado rojo) sigue el swipe 1:1; la tab activa cambia al pasar el medio.
+function _carnIndicator(){ const k=$("#carnKanban"), ind=$("#ctabInd"), tb=$("#carnTabs");
+  if(!k||!ind||!tb) return; const w=k.clientWidth||1;
+  const frac=Math.max(0,Math.min(C_COLS.length-1,k.scrollLeft/w));
+  ind.style.transform=`translateX(${frac*(tb.clientWidth/C_COLS.length)}px)`;
+  const active=Math.round(frac); carnStation=active; _carnSetActiveTab(active); }
+let _carnRAF=0;
+function _carnWirePager(){ const k=$("#carnKanban"); if(!k||k._paged) return; k._paged=1;
+  k.addEventListener('scroll',()=>{ if(_carnRAF) return; _carnRAF=requestAnimationFrame(()=>{ _carnRAF=0; _carnIndicator(); }); },{passive:true});
+  requestAnimationFrame(()=>{ k.scrollLeft=carnStation*k.clientWidth; _carnIndicator(); }); }
 function renderCarnicero(){
   // aviso de comanda nueva: si crecen las "por cotizar", suena + pulso en la columna
   const cotizarCount = state.orders.filter(o=>o.status==='cotizar').length;
@@ -3355,7 +3413,11 @@ function renderCarnicero(){
   const sig=_carnSig();
   if(sig===_carnSigLast){ updateClock(); return; }
   _carnSigLast=sig;
-  const _kx=(($("#carnKanban")||{}).scrollLeft)||0; // preservar el scroll del tablero al re-dibujar
+  const _existK=$("#carnKanban");
+  if(_existK){ // REFRESCO EN EL LUGAR: no se destruye el contenedor del scroll → la estación se conserva
+    const x=_existK.scrollLeft; _existK.innerHTML=carnColsHtml(); _existK.scrollLeft=x;
+    carnUpdateTabCounts(); _carnIndicator(); updateClock(); return;
+  }
   $("#app").innerHTML =
    `<div class="ctop">
       <button class="ctop-out" onclick="logout()">${ic('left',18)} Salir</button>
@@ -3364,23 +3426,12 @@ function renderCarnicero(){
       <button class="ctop-push ${pushOn?'on':''}" onclick="togglePush()" aria-label="${pushOn?'Avisos activados':'Activar avisos'}">${ic(pushOn?'bell':'belloff',18)}<span class="cp-lbl">${pushOn?'Avisos ON':'Activar avisos'}</span></button>
       <button class="ctop-sync" id="syncBtn" onclick="manualSync()" aria-label="Actualizar tablero">${ic('sync',16)}<span id="syncClock">actualizado ahora</span></button>
    </div>
+   <div class="carn-tabs" id="carnTabs">${carnTabsHtml()}</div>
    <div class="kanban-wrap">
-     <div class="kanban" id="carnKanban">
-    ${C_COLS.map(([cls,label,st])=>{
-      const arr=state.orders.filter(o=>o.status===st);
-      // Cola FIFO en "Por cotizar": el pedido más VIEJO arriba (primero en llegar, primero en salir),
-      // para que ninguno se quede olvidado hasta abajo cuando se acumulan.
-      if(st==='cotizar') arr.sort((a,b)=>a.createdAt-b.createdAt);
-      const urge = (st==='cotizar'||st==='preparacion') && arr.length ? ' urge':'';
-      return `<div class="kcol ${cls}${urge} ${(st==='cotizar'&&alertC1)||(st==='preparacion'&&alertC3)?'alerted':''}" id="col${cls.toUpperCase()}">
-        <div class="kcol-head"><span class="kn">${label}</span><span class="kc">${arr.length}</span></div>
-        <div class="kcol-body">
-          ${arr.length?arr.map(o=>kcard(o,st)).join(""):`<div class="kempty"><div class="ke-ic">${ic('check',24)}</div>${C_EMPTY[st]}</div>`}
-        </div></div>`;
-    }).join("")}
-   </div></div>`;
+     <div class="kanban" id="carnKanban">${carnColsHtml()}</div>
+   </div>`;
+  _carnWirePager();
   updateClock();
-  if(_kx){ const k=$("#carnKanban"); if(k) k.scrollLeft=_kx; } // no regresar el tablero al salir de una comanda
 }
 // Lista compacta de productos para las tarjetas del tablero (qty · nombre · importe). Máx 6 + "N más".
 function cardItemsHtml(o){ const its=o.items||[]; if(!its.length) return '';
