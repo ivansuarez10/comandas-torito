@@ -324,8 +324,17 @@ input,select{font-family:inherit;font-size:16px}
   .ctab-ind{position:absolute;left:0;bottom:0;width:25%;height:3px;border-radius:3px 3px 0 0;background:var(--rojo);transform:translateX(0);pointer-events:none;will-change:transform}
   /* cada estación llena la pantalla; el swipe hace snap a pantalla completa */
   #carnKanban{gap:0;padding:0;scroll-padding:0}
-  #carnKanban > .kcol{flex:0 0 100%;max-width:none;border-radius:0;scroll-snap-align:center}
+  #carnKanban > .kcol{flex:0 0 100%;max-width:none;border-radius:0;scroll-snap-align:center;height:100%;max-height:100%}
   #carnKanban > .kcol .kcol-head{padding-top:14px}
+  /* VISTA CARNICERO CLAVADA A LA PANTALLA: header + tabs + estación = 100dvh exacto.
+     Solo la lista de comandas (.kcol-body) scrollea; la página NO. Así se acaba el "más
+     allá" horizontal y el vacío scrolleable de abajo — se siente app, no web. */
+  body.carn-mode{overflow:hidden}
+  body.carn-mode #app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+  body.carn-mode .ctop{flex:none}
+  body.carn-mode .kanban-wrap{flex:1;min-height:0}
+  body.carn-mode .kanban{min-height:0}
+  body.carn-mode #carnKanban > .kcol .kcol-body{flex:1;min-height:0}
 }
 .kcol.c1{border-top-color:#A9741A} .kcol.c2{border-top-color:#5C6B79}
 .kcol.c3{border-top-color:#9F2629} .kcol.c4{border-top-color:#2F6B57}
@@ -1654,7 +1663,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='17 ago 2026 · v41';
+const APP_BUILD='1 sep 2026 · v42';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -1834,6 +1843,7 @@ async function enterApp(role){
   }
 }
 function logout(){ session.role=null; clearInterval(clockT); releaseWake(); prevCotizar=null; prevPreparacion=null;
+  document.body.classList.remove('carn-mode');
   if(USE_SUPA && supa){ try{ supa.auth.signOut(); }catch(e){} }
   $("#app").classList.add("hidden"); $("#overlayHost").innerHTML=""; $("#login").classList.remove("hidden");
   selRole=null; document.querySelectorAll(".role-btn").forEach(x=>x.classList.remove("sel"));
@@ -1897,6 +1907,7 @@ function topbar(extra=""){
 
 /* ================= ADMIN ================= */
 function renderAdmin(){
+  document.body.classList.remove('carn-mode'); // el admin scrollea normal; solo el carnicero va clavado
   // Preserva la posición del tablero (scroll horizontal de las columnas): al mover una comanda
   // se reconstruye todo el DOM y, sin esto, el tablero saltaba de vuelta a la primera columna.
   const _kx = (($("#abKanban")||{}).scrollLeft)||0;
@@ -3402,6 +3413,7 @@ function _carnWirePager(){ const k=$("#carnKanban"); if(!k||k._paged) return; k.
   k.addEventListener('scroll',()=>{ if(_carnRAF) return; _carnRAF=requestAnimationFrame(()=>{ _carnRAF=0; _carnIndicator(); }); },{passive:true});
   requestAnimationFrame(()=>{ k.scrollLeft=carnStation*k.clientWidth; _carnIndicator(); }); }
 function renderCarnicero(){
+  document.body.classList.add('carn-mode'); // clava la vista a 100dvh (solo aplica en móvil, ver CSS)
   // aviso de comanda nueva: si crecen las "por cotizar", suena + pulso en la columna
   const cotizarCount = state.orders.filter(o=>o.status==='cotizar').length;
   if(prevCotizar!==null && cotizarCount>prevCotizar){ playDing(); alertC1=true; setTimeout(()=>{alertC1=false; const c=$("#colC1"); if(c) c.classList.remove('alerted');},1800); }
