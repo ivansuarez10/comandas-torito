@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Prototipo · Ubicación de entrega — El Torito</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+  :root{
+    --bg:#000; --bg2:#0d0d0d; --card:#161616; --card2:#232323;
+    --cream:#f2f2f2; --muted:#8f8f8f; --muted2:#6a6a6a; --line:#242424; --line2:#1a1a1a;
+    --red:#E4232A; --red-d:#c11c22; --wa:#17853F; --ok:#3ecf7a;
+    --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
+    --disp:"Poppins",var(--sans);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%, #1a1a1a 0%, #000 60%);
+    color:var(--cream); font-family:var(--sans); line-height:1.45;
+    -webkit-font-smoothing:antialiased; display:flex; flex-direction:column; align-items:center;
+    min-height:100%; padding:0 0 40px;
+  }
+  .disp{font-family:var(--disp);letter-spacing:-.01em}
+
+  /* Cinta de contexto (solo del prototipo) */
+  .ribbon{width:100%;text-align:center;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);background:#0a0a0a;border-bottom:1px solid var(--line2);padding:9px 12px;font-weight:700}
+  .ribbon b{color:var(--red)}
+
+  .sheet{width:100%;max-width:452px;padding:0 16px 140px}
+
+  /* Cabecera */
+  .head{display:flex;align-items:center;gap:12px;padding:22px 2px 14px}
+  .brand-badge{width:40px;height:40px;border-radius:11px;background:#111;border:1px solid var(--line);
+    display:grid;place-items:center;flex:none}
+  .brand-badge svg{width:26px;height:26px}
+  .head h1{font-family:var(--disp);font-weight:800;font-size:20px;line-height:1.05}
+  .head .step{font-size:12.5px;color:var(--muted);margin-top:2px;font-weight:600}
+  .head .close{margin-left:auto;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);
+    background:#111;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+
+  /* Segmentado retiro/domicilio */
+  .seg{display:flex;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:5px;margin:6px 0 18px}
+  .seg button{flex:1;border:none;background:none;color:var(--muted);font-family:var(--sans);font-weight:700;
+    font-size:14.5px;padding:12px 10px;border-radius:10px;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;gap:8px;transition:color .18s,background .18s,box-shadow .18s;-webkit-tap-highlight-color:transparent}
+  .seg button svg{width:18px;height:18px}
+  .seg button.on{background:var(--red);color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.45)}
+
+  .sec-t{font-family:var(--disp);font-weight:700;font-size:16.5px;margin:0 2px 4px}
+  .sec-s{font-size:13px;color:var(--muted);margin:0 2px 13px;line-height:1.5}
+
+  /* Botón "usar mi ubicación" */
+  .gps{width:100%;display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);
+    color:var(--cream);font-family:var(--sans);font-weight:700;font-size:14.5px;padding:14px 15px;border-radius:13px;
+    cursor:pointer;transition:border-color .18s,background .18s;margin-bottom:11px}
+  .gps:active{background:#1c1c1c}
+  .gps .ic{width:34px;height:34px;border-radius:9px;background:rgba(228,35,42,.12);display:grid;place-items:center;flex:none}
+  .gps .ic svg{width:19px;height:19px;color:var(--red)}
+  .gps .tx{flex:1;text-align:left;line-height:1.2}
+  .gps .tx small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:2px}
+  .gps .ch{color:var(--muted2);flex:none}
+
+  /* Buscador */
+  .search{position:relative;margin-bottom:12px}
+  .search input{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:13px;color:var(--cream);
+    font-family:var(--sans);font-size:15px;padding:14px 15px 14px 44px;outline:none;transition:border-color .18s}
+  .search input:focus{border-color:#3a3a3a}
+  .search .mag{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--muted)}
+  .sug{position:absolute;left:0;right:0;top:calc(100% + 6px);background:#141414;border:1px solid var(--line);
+    border-radius:13px;overflow:hidden;z-index:20;box-shadow:0 22px 50px rgba(0,0,0,.6)}
+  .sug[hidden]{display:none}
+  .sug button{display:flex;gap:11px;align-items:flex-start;width:100%;text-align:left;background:none;border:none;
+    border-bottom:1px solid var(--line2);color:var(--cream);font-family:var(--sans);font-size:14px;padding:12px 14px;cursor:pointer}
+  .sug button:last-child{border-bottom:none}
+  .sug button:hover,.sug button.on{background:#1d1d1d}
+  .sug .pin{width:16px;height:16px;color:var(--red);flex:none;margin-top:2px}
+  .sug .s2{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+  .sug .empty{padding:13px 14px;color:var(--muted);font-size:13px}
+
+  /* Mapa */
+  .mapcard{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#101010}
+  #map{height:248px;width:100%;background:#0c0c0c;z-index:1}
+  .leaflet-container{background:#0c0c0c;font-family:var(--sans)}
+  .leaflet-control-attribution{font-size:9px;background:rgba(0,0,0,.5);color:#888}
+  .leaflet-control-attribution a{color:#aaa}
+  /* Pin fijo al centro (el mapa se mueve debajo) */
+  .cpin{position:absolute;left:50%;top:50%;z-index:5;pointer-events:none;transform:translate(-50%,-100%);
+    transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+  .cpin.lift{transform:translate(-50%,-100%) translateY(-9px)}
+  .cpin svg{width:42px;height:52px;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
+  .cpin .dot{position:absolute;left:50%;bottom:-3px;width:11px;height:5px;border-radius:50%;
+    background:rgba(0,0,0,.42);transform:translateX(-50%);transition:transform .22s,opacity .22s}
+  .cpin.lift .dot{transform:translateX(-50%) scaleX(1.6);opacity:.55}
+  .maphint{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;background:rgba(10,10,10,.82);
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:#eaeaea;font-size:12px;font-weight:600;
+    padding:7px 13px;border-radius:100px;white-space:nowrap;pointer-events:none;transition:opacity .3s;border:1px solid rgba(255,255,255,.08)}
+  /* Botón recentrar GPS sobre el mapa */
+  .recenter{position:absolute;right:12px;bottom:12px;z-index:6;width:42px;height:42px;border-radius:12px;
+    background:rgba(16,16,16,.9);border:1px solid var(--line);color:var(--cream);display:grid;place-items:center;cursor:pointer;
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  .recenter svg{width:20px;height:20px}
+  /* Switch satélite / calle */
+  .mapview{position:absolute;left:12px;bottom:12px;z-index:6;display:flex;background:rgba(16,16,16,.9);
+    border:1px solid var(--line);border-radius:11px;overflow:hidden;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  .mapview button{border:none;background:none;color:var(--muted);font-family:var(--sans);font-weight:700;font-size:12px;
+    padding:8px 12px;cursor:pointer}
+  .mapview button.on{background:var(--card2);color:var(--cream)}
+
+  /* Lectura del envío */
+  .readout{display:flex;align-items:center;gap:12px;margin-top:12px;background:var(--card);border:1px solid var(--line);
+    border-radius:13px;padding:13px 15px;transition:border-color .2s,background .2s}
+  .readout.err{border-color:#5a2325;background:#1c1112}
+  .readout.confd{border-color:#245c37;background:#0f1a13}
+  .readout .rl{flex:1;min-width:0}
+  .readout .rl b{display:block;font-size:14.5px;font-weight:700}
+  .readout .rl small{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+  .readout .rc{font-family:var(--disp);font-weight:800;font-size:22px;letter-spacing:-.02em;flex:none}
+  .readout.err .rc{color:var(--red);font-size:16px}
+  .readout .tick{width:20px;height:20px;color:var(--ok);flex:none}
+
+  /* Botón confirmar ubicación */
+  .confirm{width:100%;margin-top:11px;background:var(--red);color:#fff;border:none;font-family:var(--disp);
+    font-weight:800;font-size:15px;padding:15px;border-radius:13px;cursor:pointer;transition:transform .12s,background .18s,opacity .2s}
+  .confirm:disabled{background:#2a2a2a;color:#6a6a6a;cursor:not-allowed}
+  .confirm:not(:disabled):active{transform:scale(.985)}
+
+  /* Resumen tras confirmar */
+  .locsum{display:none;align-items:center;gap:12px;margin-top:11px;background:#0f1a13;border:1px solid #245c37;
+    border-radius:13px;padding:13px 15px}
+  .locsum.on{display:flex}
+  .locsum .ic{width:34px;height:34px;border-radius:9px;background:rgba(62,207,122,.14);display:grid;place-items:center;flex:none}
+  .locsum .ic svg{width:19px;height:19px;color:var(--ok)}
+  .locsum .tx{flex:1;min-width:0}
+  .locsum .tx b{font-size:14px;font-weight:700}
+  .locsum .tx small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .locsum .edit{flex:none;background:none;border:1px solid #2f6b44;color:#8fe0ab;font-family:var(--sans);font-weight:700;
+    font-size:12.5px;padding:8px 12px;border-radius:9px;cursor:pointer}
+
+  /* Referencias */
+  .field{margin-top:16px}
+  .field label{display:block;font-size:13.5px;font-weight:700;margin:0 2px 7px}
+  .field label span{color:var(--muted);font-weight:500}
+  .field textarea{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:13px;color:var(--cream);
+    font-family:var(--sans);font-size:15px;padding:13px 15px;outline:none;resize:none;min-height:74px;transition:border-color .18s}
+  .field textarea:focus{border-color:#3a3a3a}
+
+  /* Retiro */
+  .pickup{display:none}
+  .pickup.on{display:block}
+  .pickbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .pickbox .pk-t{font-family:var(--disp);font-weight:700;font-size:15px;margin-bottom:5px}
+  .pickbox .pk-s{font-size:13px;color:var(--muted);line-height:1.5}
+
+  /* Footer CTA */
+  .foot{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:452px;
+    padding:16px 16px calc(14px + env(safe-area-inset-bottom));z-index:40;
+    background:linear-gradient(to top,#000 66%,rgba(0,0,0,.92) 86%,rgba(0,0,0,0))}
+  .cta{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--red);color:#fff;
+    border:none;font-family:var(--disp);font-weight:800;font-size:16px;padding:17px;border-radius:15px;cursor:pointer;
+    transition:transform .12s,background .2s,opacity .2s;box-shadow:0 8px 22px rgba(0,0,0,.5)}
+  .cta .tot{margin-left:6px;opacity:.9;font-weight:700}
+  .cta:not(:disabled):active{transform:scale(.99)}
+  .cta:disabled{background:#1e1e1e;color:#5c5c5c;box-shadow:none;cursor:not-allowed}
+  .cta-hint{text-align:center;font-size:12.5px;color:var(--muted);margin-top:9px;transition:opacity .2s;height:16px}
+  .cta-hint.warn{color:#e6a23a}
+
+  /* Toast */
+  .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);background:#1c1c1c;border:1px solid var(--line);
+    color:var(--cream);font-size:13.5px;font-weight:600;padding:12px 18px;border-radius:12px;opacity:0;pointer-events:none;
+    transition:opacity .22s,transform .22s;z-index:60;box-shadow:0 18px 40px rgba(0,0,0,.5);max-width:88%;text-align:center}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+  <div class="ribbon">Prototipo · nuevo paso de ubicación · <b>El Torito</b></div>
+
+  <div class="sheet">
+    <div class="head">
+      <div class="brand-badge" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none"><path d="M6 11c-1.5-3 0-6 0-6s2.5 1 3.5 3M26 11c1.5-3 0-6 0-6s-2.5 1-3.5 3" stroke="#E4232A" stroke-width="2" stroke-linecap="round"/><path d="M16 8c5 0 9 3.5 9 8 0 4.5-4 8-9 8s-9-3.5-9-8c0-4.5 4-8 9-8Z" stroke="#E4232A" stroke-width="2"/><circle cx="12.5" cy="16" r="1.4" fill="#E4232A"/><circle cx="19.5" cy="16" r="1.4" fill="#E4232A"/></svg>
+      </div>
+      <div>
+        <h1>Finalizar pedido</h1>
+        <div class="step">Paso 2 de 2 · Entrega</div>
+      </div>
+      <button class="close" aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+
+    <div class="seg" role="tablist">
+      <button id="segRet" role="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M5 9V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3M5 9l1 11h12l1-11"/></svg>Retiro en local</button>
+      <button id="segDom" class="on" role="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h11V7H3zM14 10h3.5l2.5 3v3H14M6.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg>A domicilio</button>
+    </div>
+
+    <!-- DOMICILIO -->
+    <section id="domi">
+      <div class="sec-t disp">¿A dónde te lo llevamos?</div>
+      <div class="sec-s">Marcá tu casa en el mapa para calcular el envío al instante.</div>
+
+      <button class="gps" id="gpsBtn">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="4"/></svg></span>
+        <span class="tx">Usar mi ubicación actual<small>Lo más rápido y preciso</small></span>
+        <svg class="ch" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+
+      <div class="search">
+        <svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input id="q" type="text" placeholder="Buscá tu colonia o dirección…" autocomplete="off" />
+        <div class="sug" id="sug" hidden></div>
+      </div>
+
+      <div class="mapcard">
+        <div id="map"></div>
+        <div class="maphint" id="maphint">Arrastrá el mapa hasta tu casa</div>
+        <div class="cpin" id="cpin" aria-hidden="true">
+          <svg viewBox="0 0 42 52" fill="none"><path d="M21 2C11.6 2 4 9.4 4 18.6 4 31 21 50 21 50s17-19 17-31.4C38 9.4 30.4 2 21 2Z" fill="#E4232A" stroke="#fff" stroke-width="2.5"/><circle cx="21" cy="18.5" r="6" fill="#fff"/></svg>
+          <span class="dot"></span>
+        </div>
+        <div class="mapview" id="mapview">
+          <button data-view="sat" class="on">Satélite</button>
+          <button data-view="road">Calle</button>
+        </div>
+        <button class="recenter" id="recenterBtn" aria-label="Usar mi ubicación">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        </button>
+      </div>
+
+      <div class="readout" id="readout">
+        <div class="rl"><b id="rlTitle">Movés el mapa para ubicarte</b><small id="rlSub">El costo aparece según la distancia por calle</small></div>
+        <div class="rc" id="rlCost">—</div>
+      </div>
+
+      <button class="confirm" id="confirmBtn" disabled>Confirmá tu ubicación</button>
+
+      <div class="locsum" id="locsum">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div class="tx"><b>Ubicación confirmada</b><small id="sumSub">~0 km · L 0</small></div>
+        <button class="edit" id="editBtn">Cambiar</button>
+      </div>
+
+      <div class="field">
+        <label for="ref">Referencias para el repartidor <span>(opcional)</span></label>
+        <textarea id="ref" placeholder="Color del portón, apartamento, punto conocido cerca…"></textarea>
+      </div>
+    </section>
+
+    <!-- RETIRO -->
+    <section id="pickup" class="pickup">
+      <div class="pickbox">
+        <div class="pk-t disp">Retiro en el local</div>
+        <div class="pk-s">Pasás a la carnicería y te atendemos en el mostrador. Sin costo de envío. Días hábiles, 6am–2pm.</div>
+      </div>
+    </section>
+
+    <div class="foot">
+      <button class="cta" id="cta" disabled>
+        Enviar pedido <span class="tot" id="ctaTot"></span>
+      </button>
+      <div class="cta-hint" id="ctaHint">Confirmá tu ubicación para continuar</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  // ---- Parámetros idénticos a la tienda ----
+  var ORIGIN={lat:14.1091381,lng:-87.1916749}; // Mercado San Pablo
+  var BASE=50, PER_KM=9, STREET=1.3, MAX_KM=25, PROD=350; // PROD = subtotal de ejemplo
+  var money=function(n){return "L "+Math.round(n).toLocaleString("es-HN");};
+  function haversine(a,b){var R=6371,r=Math.PI/180,dLat=(b.lat-a.lat)*r,dLng=(b.lng-a.lng)*r,
+    la1=a.lat*r,la2=b.lat*r,x=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;
+    return 2*R*Math.asin(Math.sqrt(x));}
+  function costoDe(ll){var km=haversine(ORIGIN,ll); if(km>MAX_KM) return {ok:false,km:km,cost:0,kmC:km*STREET};
+    var kmC=km*STREET; return {ok:true,km:km,kmC:kmC,cost:Math.max(BASE,Math.round((BASE+PER_KM*kmC)/5)*5)};}
+
+  var $=function(id){return document.getElementById(id);};
+  var state={mode:"domicilio", located:false, confirmed:false, pin:null, calc:null};
+
+  // ---- Toast ----
+  var toastT; function toast(msg){var t=$("toast");t.textContent=msg;t.classList.add("on");
+    clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("on");},2600);}
+
+  // ---- Mapa ----
+  var MAP,LYR_SAT,LYR_ROAD,LYR_LBL,mapReady=false, moveRAF=0;
+  var START={lat:14.0736,lng:-87.1665}; // Col. Kennedy aprox — dentro de zona
+  function initMap(){
+    if(typeof L==="undefined"){ setTimeout(initMap,120); return; }
+    MAP=L.map("map",{zoomControl:false,attributionControl:true}).setView([START.lat,START.lng],16);
+    LYR_SAT=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"© Esri"});
+    LYR_LBL=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19});
+    LYR_ROAD=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"});
+    applyView("sat");
+    mapReady=true;
+    MAP.on("movestart",function(){ $("cpin").classList.add("lift"); $("maphint").style.opacity="0"; });
+    MAP.on("move",function(){ if(moveRAF)return; moveRAF=requestAnimationFrame(function(){moveRAF=0; liveReadout(MAP.getCenter());}); });
+    MAP.on("moveend",function(){ $("cpin").classList.remove("lift"); settle(MAP.getCenter()); });
+    setTimeout(function(){ MAP.invalidateSize(); settle(MAP.getCenter()); },220);
+  }
+  function applyView(v){
+    if(!MAP)return;
+    if(v==="sat"){ MAP.addLayer(LYR_SAT); MAP.addLayer(LYR_LBL); if(MAP.hasLayer(LYR_ROAD))MAP.removeLayer(LYR_ROAD); }
+    else { MAP.addLayer(LYR_ROAD); if(MAP.hasLayer(LYR_SAT))MAP.removeLayer(LYR_SAT); if(MAP.hasLayer(LYR_LBL))MAP.removeLayer(LYR_LBL); }
+    var bs=$("mapview").querySelectorAll("button"); bs.forEach(function(b){b.classList.toggle("on",b.dataset.view===v);});
+  }
+  $("mapview").addEventListener("click",function(e){var b=e.target.closest("[data-view]"); if(b)applyView(b.dataset.view);});
+
+  // Lectura en vivo mientras se arrastra (no confirma)
+  function liveReadout(c){
+    var r=costoDe({lat:c.lat,lng:c.lng}); var ro=$("readout");
+    ro.classList.remove("confd");
+    if(!r.ok){ ro.classList.add("err"); $("rlTitle").textContent="Fuera de zona"; $("rlSub").textContent="Por ahora solo entregamos en Tegucigalpa"; $("rlCost").textContent="—"; }
+    else { ro.classList.remove("err"); $("rlTitle").textContent="Envío estimado"; $("rlSub").textContent="~"+r.kmC.toFixed(1)+" km por calle"; $("rlCost").textContent=money(r.cost); }
+  }
+  // Al soltar: fija el candidato y habilita/inhabilita "Confirmar"
+  function settle(c){
+    state.pin={lat:c.lat,lng:c.lng}; state.calc=costoDe(state.pin); state.located=true; state.confirmed=false;
+    $("readout").style.display="";
+    liveReadout(c);
+    var cf=$("confirmBtn");
+    cf.style.display=""; $("locsum").classList.remove("on");
+    if(state.calc.ok){ cf.disabled=false; cf.textContent="Confirmar esta ubicación · "+money(state.calc.cost); }
+    else { cf.disabled=true; cf.textContent="Movés el mapa dentro de Tegucigalpa"; }
+    syncCTA();
+  }
+
+  // Confirmar
+  $("confirmBtn").addEventListener("click",function(){
+    if(!state.calc||!state.calc.ok)return;
+    state.confirmed=true;
+    $("readout").style.display="none"; $("maphint").style.display="none";
+    $("confirmBtn").style.display="none";
+    $("sumSub").textContent="~"+state.calc.kmC.toFixed(1)+" km · envío "+money(state.calc.cost);
+    $("locsum").classList.add("on");
+    toast("Ubicación confirmada");
+    syncCTA();
+  });
+  $("editBtn").addEventListener("click",function(){
+    state.confirmed=false; $("locsum").classList.remove("on"); settle(MAP.getCenter());
+    $("map").scrollIntoView({behavior:"smooth",block:"center"});
+  });
+
+  // GPS (o ejemplo si el navegador no comparte)
+  function useGPS(){
+    var SAMPLE={lat:14.0669,lng:-87.1721}; // Lomas / residencial de ejemplo
+    if(!navigator.geolocation){ MAP.flyTo([SAMPLE.lat,SAMPLE.lng],16,{duration:.8}); toast("Ubicación de ejemplo (sin GPS del navegador)"); return; }
+    toast("Buscando tu ubicación…");
+    navigator.geolocation.getCurrentPosition(function(p){
+      MAP.flyTo([p.coords.latitude,p.coords.longitude],16,{duration:.9});
+    },function(){ MAP.flyTo([SAMPLE.lat,SAMPLE.lng],16,{duration:.8}); toast("El navegador no compartió el GPS · usá el mapa"); },{enableHighAccuracy:true,timeout:8000});
+  }
+  $("gpsBtn").addEventListener("click",useGPS);
+  $("recenterBtn").addEventListener("click",useGPS);
+
+  // ---- Buscador Photon (acotado a Tegucigalpa) ----
+  var sugTimer, sugSeq=0, sugItems=[];
+  function hideSug(){ $("sug").hidden=true; $("sug").innerHTML=""; sugItems=[]; }
+  function photon(q){
+    var url="https://photon.komoot.io/api/?lang=es&limit=6&lat=14.09&lon=-87.20&q="+encodeURIComponent(q+" Tegucigalpa");
+    return fetch(url).then(function(r){return r.json();}).then(function(j){return (j&&j.features)||[];});
+  }
+  function renderSug(feats){
+    var s=$("sug");
+    feats=feats.filter(function(f){var c=f.geometry&&f.geometry.coordinates; if(!c)return false; return Math.abs(c[1]-14.09)<0.4 && Math.abs(c[0]+87.20)<0.4;});
+    if(!feats.length){ s.innerHTML='<div class="empty">No encontré eso · arrastrá el pin a mano</div>'; s.hidden=false; return; }
+    sugItems=feats;
+    s.innerHTML=feats.map(function(f,i){var p=f.properties||{};
+      var t=p.name||p.street||"Ubicación"; var s2=[p.district,p.city||"Tegucigalpa"].filter(Boolean).join(", ");
+      return '<button data-i="'+i+'"><svg class="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.7 7-12a7 7 0 1 0-14 0c0 5.3 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg><span>'+t.replace(/</g,"&lt;")+'<span class="s2">'+s2.replace(/</g,"&lt;")+'</span></span></button>';
+    }).join("");
+    s.hidden=false;
+  }
+  $("sug").addEventListener("click",function(e){var b=e.target.closest("button[data-i]"); if(!b)return;
+    var f=sugItems[+b.dataset.i]; var c=f.geometry.coordinates; hideSug(); $("q").value="";
+    MAP.flyTo([c[1],c[0]],16,{duration:.8});
+  });
+  $("q").addEventListener("input",function(){
+    var q=$("q").value.trim(); if(q.length<3){ hideSug(); return; }
+    clearTimeout(sugTimer); sugTimer=setTimeout(function(){ var my=++sugSeq;
+      photon(q).then(function(f){ if(my===sugSeq) renderSug(f); }).catch(function(){ hideSug(); }); },320);
+  });
+  document.addEventListener("click",function(e){ if(!e.target.closest(".search")) hideSug(); });
+
+  // ---- CTA ----
+  function syncCTA(){
+    var cta=$("cta"), hint=$("ctaHint"), tot=$("ctaTot");
+    if(state.mode==="retiro"){ cta.disabled=false; tot.textContent="· "+money(PROD); hint.textContent="Sin costo de envío"; hint.classList.remove("warn"); return; }
+    if(state.confirmed && state.calc && state.calc.ok){
+      cta.disabled=false; tot.textContent="· "+money(PROD+state.calc.cost);
+      hint.textContent="Productos "+money(PROD)+"  ·  Envío "+money(state.calc.cost); hint.classList.remove("warn");
+    } else {
+      cta.disabled=true; tot.textContent="";
+      hint.textContent = state.located ? "Confirmá tu ubicación para continuar" : "Marcá tu ubicación en el mapa";
+      hint.classList.add("warn");
+    }
+  }
+  $("cta").addEventListener("click",function(){ if($("cta").disabled)return; toast("✓ Pedido enviado a la carnicería (demo)"); });
+
+  // ---- Toggle retiro / domicilio ----
+  function setMode(m){
+    state.mode=m;
+    $("segDom").classList.toggle("on",m==="domicilio");
+    $("segRet").classList.toggle("on",m==="retiro");
+    $("domi").style.display=m==="domicilio"?"block":"none";
+    $("pickup").classList.toggle("on",m==="retiro");
+    if(m==="domicilio" && mapReady) setTimeout(function(){MAP.invalidateSize();},60);
+    syncCTA();
+  }
+  $("segDom").addEventListener("click",function(){setMode("domicilio");});
+  $("segRet").addEventListener("click",function(){setMode("retiro");});
+
+  // init
+  window.addEventListener("load",function(){ initMap(); syncCTA(); });
+  initMap();
+})();
+</script>
+</body>
+</html>
