@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Prototipo v2 · Ubicación por GPS — El Torito</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+  :root{
+    --bg:#000; --bg2:#0d0d0d; --card:#161616; --card2:#232323;
+    --cream:#f2f2f2; --muted:#8f8f8f; --muted2:#6a6a6a; --line:#242424; --line2:#1a1a1a;
+    --red:#E4232A; --red-d:#c11c22; --ok:#3ecf7a;
+    --sans:"Helvetica Neue",Helvetica,Arial,sans-serif; --disp:"Poppins",var(--sans);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:radial-gradient(1200px 600px at 50% -10%, #1a1a1a 0%, #000 60%);color:var(--cream);
+    font-family:var(--sans);line-height:1.45;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;
+    align-items:center;min-height:100%;}
+  .disp{font-family:var(--disp);letter-spacing:-.01em}
+  .ribbon{width:100%;text-align:center;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    background:#0a0a0a;border-bottom:1px solid var(--line2);padding:9px 12px;font-weight:700}
+  .ribbon b{color:var(--red)}
+  .sheet{width:100%;max-width:452px;padding:0 16px 140px}
+
+  .head{display:flex;align-items:center;gap:12px;padding:22px 2px 14px}
+  .brand-badge{width:40px;height:40px;border-radius:11px;background:#111;border:1px solid var(--line);display:grid;place-items:center;flex:none}
+  .brand-badge svg{width:26px;height:26px}
+  .head h1{font-family:var(--disp);font-weight:800;font-size:20px;line-height:1.05}
+  .head .step{font-size:12.5px;color:var(--muted);margin-top:2px;font-weight:600}
+  .head .close{margin-left:auto;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:#111;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+
+  .seg{display:flex;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:5px;margin:6px 0 18px}
+  .seg button{flex:1;border:none;background:none;color:var(--muted);font-family:var(--sans);font-weight:700;font-size:14.5px;
+    padding:12px 10px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+    transition:color .18s,background .18s;-webkit-tap-highlight-color:transparent}
+  .seg button svg{width:18px;height:18px}
+  .seg button.on{background:var(--red);color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.45)}
+
+  .sec-t{font-family:var(--disp);font-weight:700;font-size:16.5px;margin:0 2px 4px}
+  .sec-s{font-size:13px;color:var(--muted);margin:0 2px 15px;line-height:1.5}
+
+  /* Tarjeta inicial: pedir ubicación */
+  .locate{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 18px;text-align:center}
+  .locate .halo{width:64px;height:64px;border-radius:50%;background:rgba(228,35,42,.12);display:grid;place-items:center;margin:0 auto 15px}
+  .locate .halo svg{width:30px;height:30px;color:var(--red)}
+  .locate h3{font-family:var(--disp);font-weight:700;font-size:17px;margin-bottom:6px}
+  .locate p{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:17px;max-width:290px;margin-left:auto;margin-right:auto}
+  .btn-primary{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--red);color:#fff;
+    border:none;font-family:var(--disp);font-weight:800;font-size:15.5px;padding:16px;border-radius:13px;cursor:pointer;
+    transition:transform .12s,background .18s}
+  .btn-primary:active{transform:scale(.985)}
+  .btn-primary svg{width:19px;height:19px}
+  .locate .hint{font-size:12px;color:var(--muted2);margin-top:12px}
+
+  /* Cargando */
+  .locating{display:none;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 18px;text-align:center}
+  .locating.on{display:block}
+  .spin{width:34px;height:34px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--red);border-radius:50%;
+    margin:0 auto 14px;animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .locating p{font-size:14px;color:var(--cream);font-weight:600}
+
+  /* Ubicado OK */
+  .located{display:none}
+  .located.on{display:block}
+  .mapcard{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#101010}
+  #map{height:186px;width:100%;background:#0c0c0c;z-index:1}
+  .leaflet-container{background:#0c0c0c;font-family:var(--sans)}
+  .leaflet-control-attribution{font-size:9px;background:rgba(0,0,0,.5);color:#888}
+  .leaflet-control-attribution a{color:#aaa}
+  .cpin{position:absolute;left:50%;top:50%;z-index:5;pointer-events:none;transform:translate(-50%,-100%);transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+  .cpin.lift{transform:translate(-50%,-100%) translateY(-9px)}
+  .cpin svg{width:40px;height:50px;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
+  .cpin .dot{position:absolute;left:50%;bottom:-3px;width:11px;height:5px;border-radius:50%;background:rgba(0,0,0,.42);transform:translateX(-50%);transition:width .22s,opacity .22s}
+  .cpin.lift .dot{width:18px;opacity:.55}
+  .adjhint{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;background:rgba(10,10,10,.82);
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:#eaeaea;font-size:12px;font-weight:600;padding:7px 13px;
+    border-radius:100px;white-space:nowrap;pointer-events:none;border:1px solid rgba(255,255,255,.08);display:none}
+  .adjhint.on{display:block}
+  .lockbadge{position:absolute;right:10px;top:10px;z-index:6;background:rgba(10,10,10,.72);color:#cfcfcf;font-size:11px;font-weight:600;
+    padding:6px 11px;border-radius:100px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.08);
+    display:flex;align-items:center;gap:6px}
+  .lockbadge svg{width:12px;height:12px}
+  .lockbadge.off{display:none}
+
+  .okbar{display:flex;align-items:center;gap:12px;margin-top:12px;background:#0f1a13;border:1px solid #245c37;border-radius:13px;padding:13px 15px}
+  .okbar .ic{width:34px;height:34px;border-radius:9px;background:rgba(62,207,122,.14);display:grid;place-items:center;flex:none}
+  .okbar .ic svg{width:19px;height:19px;color:var(--ok)}
+  .okbar .tx{flex:1;min-width:0}
+  .okbar .tx b{font-size:14.5px;font-weight:700}
+  .okbar .tx small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}
+  .okbar .rc{font-family:var(--disp);font-weight:800;font-size:20px;letter-spacing:-.02em;flex:none}
+  .okbar.err{background:#1c1112;border-color:#5a2325}
+  .okbar.err .ic{background:rgba(228,35,42,.14)} .okbar.err .ic svg{color:var(--red)}
+  .okbar.err .rc{color:var(--red);font-size:15px}
+
+  .adjust-link{display:block;width:100%;text-align:center;background:none;border:none;color:var(--muted);font-family:var(--sans);
+    font-size:13px;font-weight:600;padding:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+  .adjust-actions{display:none;gap:8px;margin-top:10px}
+  .adjust-actions.on{display:flex}
+  .btn-ghost{flex:1;background:var(--card);border:1px solid var(--line);color:var(--cream);font-family:var(--sans);font-weight:700;
+    font-size:13.5px;padding:12px;border-radius:11px;cursor:pointer}
+  .btn-ghost.red{background:var(--red);border-color:var(--red);color:#fff}
+
+  /* Falla / permiso negado */
+  .denied{display:none;background:#1c1112;border:1px solid #5a2325;border-radius:16px;padding:20px 18px;text-align:center}
+  .denied.on{display:block}
+  .denied .ic{width:52px;height:52px;border-radius:50%;background:rgba(228,35,42,.14);display:grid;place-items:center;margin:0 auto 13px}
+  .denied .ic svg{width:26px;height:26px;color:var(--red)}
+  .denied h3{font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:6px}
+  .denied p{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:16px}
+  .denied .row{display:flex;gap:8px}
+
+  /* Referencias */
+  .field{margin-top:18px}
+  .field label{display:block;font-size:14px;font-weight:700;margin:0 2px 7px}
+  .field label span{color:var(--muted);font-weight:500}
+  .field textarea{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:13px;color:var(--cream);
+    font-family:var(--sans);font-size:15px;padding:13px 15px;outline:none;resize:none;min-height:76px;transition:border-color .18s}
+  .field textarea:focus{border-color:#3a3a3a}
+  .field .fhint{font-size:12px;color:var(--muted2);margin:7px 2px 0}
+
+  .pickup{display:none}.pickup.on{display:block}
+  .pickbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .pickbox .pk-t{font-family:var(--disp);font-weight:700;font-size:15px;margin-bottom:5px}
+  .pickbox .pk-s{font-size:13px;color:var(--muted);line-height:1.5}
+
+  .foot{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:452px;
+    padding:16px 16px calc(14px + env(safe-area-inset-bottom));z-index:40;
+    background:linear-gradient(to top,#000 66%,rgba(0,0,0,.92) 86%,rgba(0,0,0,0))}
+  .cta{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--red);color:#fff;border:none;
+    font-family:var(--disp);font-weight:800;font-size:16px;padding:17px;border-radius:15px;cursor:pointer;
+    transition:transform .12s,background .2s,opacity .2s;box-shadow:0 8px 22px rgba(0,0,0,.5)}
+  .cta .tot{margin-left:6px;opacity:.9;font-weight:700}
+  .cta:not(:disabled):active{transform:scale(.99)}
+  .cta:disabled{background:#1e1e1e;color:#5c5c5c;box-shadow:none;cursor:not-allowed}
+  .cta-hint{text-align:center;font-size:12.5px;color:var(--muted);margin-top:9px;height:16px}
+  .cta-hint.warn{color:#e6a23a}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);background:#1c1c1c;border:1px solid var(--line);
+    color:var(--cream);font-size:13.5px;font-weight:600;padding:12px 18px;border-radius:12px;opacity:0;pointer-events:none;
+    transition:opacity .22s,transform .22s;z-index:60;box-shadow:0 18px 40px rgba(0,0,0,.5);max-width:88%;text-align:center}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+  <div class="ribbon">Prototipo v2 · ubicación por GPS · <b>El Torito</b></div>
+  <div class="sheet">
+    <div class="head">
+      <div class="brand-badge" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none"><path d="M6 11c-1.5-3 0-6 0-6s2.5 1 3.5 3M26 11c1.5-3 0-6 0-6s-2.5 1-3.5 3" stroke="#E4232A" stroke-width="2" stroke-linecap="round"/><path d="M16 8c5 0 9 3.5 9 8 0 4.5-4 8-9 8s-9-3.5-9-8c0-4.5 4-8 9-8Z" stroke="#E4232A" stroke-width="2"/><circle cx="12.5" cy="16" r="1.4" fill="#E4232A"/><circle cx="19.5" cy="16" r="1.4" fill="#E4232A"/></svg>
+      </div>
+      <div><h1>Finalizar pedido</h1><div class="step">Paso 2 de 2 · Entrega</div></div>
+      <button class="close" aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+
+    <div class="seg" role="tablist">
+      <button id="segRet" role="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M5 9V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3M5 9l1 11h12l1-11"/></svg>Retiro en local</button>
+      <button id="segDom" class="on" role="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h11V7H3zM14 10h3.5l2.5 3v3H14M6.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg>A domicilio</button>
+    </div>
+
+    <section id="domi">
+      <div class="sec-t disp">¿A dónde te lo llevamos?</div>
+      <div class="sec-s">Tomamos tu ubicación actual para calcular el envío exacto. Un toque y listo.</div>
+
+      <!-- Estado 1: pedir ubicación -->
+      <div class="locate" id="locateCard">
+        <div class="halo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.7 7-12a7 7 0 1 0-14 0c0 5.3 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg></div>
+        <h3>Compartí tu ubicación</h3>
+        <p>Así sabemos exactamente a dónde llega el repartidor y cuánto cuesta el envío.</p>
+        <button class="btn-primary" id="gpsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="4"/></svg>Usar mi ubicación actual</button>
+        <div class="hint">Tu teléfono te va a pedir permiso — tocá <b>Permitir</b>.</div>
+      </div>
+
+      <!-- Estado 2: cargando -->
+      <div class="locating" id="locatingCard"><div class="spin"></div><p>Obteniendo tu ubicación…</p></div>
+
+      <!-- Estado 4: falla / negado -->
+      <div class="denied" id="deniedCard">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></div>
+        <h3>No pudimos leer tu ubicación</h3>
+        <p>Puede ser que el permiso esté apagado. Reintentá, o buscá tu dirección en el mapa.</p>
+        <div class="row"><button class="btn-ghost red" id="retryBtn">Reintentar</button><button class="btn-ghost" id="manualBtn">Buscar en el mapa</button></div>
+      </div>
+
+      <!-- Estado 3: ubicado -->
+      <div class="located" id="locatedCard">
+        <div class="mapcard">
+          <div id="map"></div>
+          <div class="cpin" id="cpin" aria-hidden="true"><svg viewBox="0 0 40 50" fill="none"><path d="M20 2C11 2 4 9 4 17.7 4 29.5 20 48 20 48s16-18.5 16-30.3C36 9 29 2 20 2Z" fill="#E4232A" stroke="#fff" stroke-width="2.5"/><circle cx="20" cy="17.5" r="5.6" fill="#fff"/></svg><span class="dot"></span></div>
+          <div class="adjhint" id="adjhint">Arrastrá el mapa para ajustar</div>
+          <div class="lockbadge" id="lockbadge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Tu ubicación</div>
+        </div>
+
+        <div class="okbar" id="okbar">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+          <div class="tx"><b id="okTitle">Estás aquí</b><small id="okSub">~0 km por calle</small></div>
+          <div class="rc" id="okCost">—</div>
+        </div>
+
+        <button class="adjust-link" id="adjustLink">¿No es exactamente aquí? Ajustar en el mapa</button>
+        <div class="adjust-actions" id="adjustActions">
+          <button class="btn-ghost" id="adjCancel">Cancelar</button>
+          <button class="btn-ghost red" id="adjSave">Guardar esta ubicación</button>
+        </div>
+
+        <div class="field">
+          <label for="ref">¿Cómo es tu casa? <span>(para que el repartidor la encuentre)</span></label>
+          <textarea id="ref" placeholder="Color del portón, apartamento, punto conocido cerca…"></textarea>
+          <div class="fhint">Ej: "Portón negro, casa de dos pisos, frente a la pulpería La Bendición".</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pickup" class="pickup">
+      <div class="pickbox"><div class="pk-t disp">Retiro en el local</div><div class="pk-s">Pasás a la carnicería y te atendemos en el mostrador. Sin costo de envío. Días hábiles, 6am–2pm.</div></div>
+    </section>
+
+    <div class="foot">
+      <button class="cta" id="cta" disabled>Enviar pedido <span class="tot" id="ctaTot"></span></button>
+      <div class="cta-hint" id="ctaHint">Compartí tu ubicación para continuar</div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var ORIGIN={lat:14.1091381,lng:-87.1916749}, BASE=50, PER_KM=9, STREET=1.3, MAX_KM=25, PROD=350;
+  var money=function(n){return "L "+Math.round(n).toLocaleString("es-HN");};
+  function haversine(a,b){var R=6371,r=Math.PI/180,dLat=(b.lat-a.lat)*r,dLng=(b.lng-a.lng)*r,la1=a.lat*r,la2=b.lat*r,
+    x=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
+  function costoDe(ll){var km=haversine(ORIGIN,ll);if(km>MAX_KM)return{ok:false,km:km,kmC:km*STREET,cost:0};
+    var kmC=km*STREET;return{ok:true,km:km,kmC:kmC,cost:Math.max(BASE,Math.round((BASE+PER_KM*kmC)/5)*5)};}
+  var $=function(id){return document.getElementById(id);};
+  var state={mode:"domicilio",located:false,adjusting:false,pin:null,calc:null};
+  var toastT;function toast(m){var t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("on");},2600);}
+
+  // ---- Mapa (bloqueado por defecto: solo confirma, no se arrastra) ----
+  var MAP,LYR_SAT,LYR_LBL,mapReady=false,moveRAF=0;
+  function ensureMap(center){
+    if(typeof L==="undefined"){ setTimeout(function(){ensureMap(center);},120); return; }
+    if(!MAP){
+      MAP=L.map("map",{zoomControl:false,attributionControl:true,dragging:false,tap:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false}).setView([center.lat,center.lng],17);
+      LYR_SAT=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"© Esri"}).addTo(MAP);
+      LYR_LBL=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19}).addTo(MAP);
+      MAP.on("movestart",function(){ if(state.adjusting){ $("cpin").classList.add("lift"); } });
+      MAP.on("move",function(){ if(!state.adjusting)return; if(moveRAF)return; moveRAF=requestAnimationFrame(function(){moveRAF=0; live(MAP.getCenter());}); });
+      MAP.on("moveend",function(){ if(!state.adjusting)return; $("cpin").classList.remove("lift"); live(MAP.getCenter()); });
+      mapReady=true;
+    } else { MAP.setView([center.lat,center.lng],17); }
+    setTimeout(function(){ MAP.invalidateSize(); },180);
+  }
+
+  function showState(s){
+    $("locateCard").style.display = s==="ask"?"block":"none";
+    $("locatingCard").classList.toggle("on",s==="loading");
+    $("deniedCard").classList.toggle("on",s==="denied");
+    $("locatedCard").classList.toggle("on",s==="ok");
+  }
+
+  // Fija ubicación (GPS o ajustada) y pinta el envío
+  function setLocated(ll){
+    state.pin={lat:ll.lat,lng:ll.lng}; state.calc=costoDe(state.pin); state.located=true;
+    showState("ok"); ensureMap(state.pin);
+    if(MAP){ MAP.setView([ll.lat,ll.lng],17); setTimeout(function(){MAP.invalidateSize();},150); }
+    paintOk(); syncCTA();
+  }
+  function paintOk(){
+    var ob=$("okbar"), r=state.calc;
+    if(!r.ok){ ob.classList.add("err"); $("okTitle").textContent="Fuera de zona"; $("okSub").textContent="Por ahora solo entregamos en Tegucigalpa"; $("okCost").textContent="—"; }
+    else { ob.classList.remove("err"); $("okTitle").textContent=state.adjusting?"Nueva ubicación":"Estás aquí"; $("okSub").textContent="~"+r.kmC.toFixed(1)+" km por calle · envío"; $("okCost").textContent=money(r.cost); }
+  }
+  function live(c){ state.pin={lat:c.lat,lng:c.lng}; state.calc=costoDe(state.pin); paintOk(); }
+
+  // ---- GPS ----
+  function locate(){
+    showState("loading");
+    var SAMPLE={lat:14.0699,lng:-87.1699}; // ejemplo residencial dentro de zona
+    if(!navigator.geolocation){ setTimeout(function(){ setLocated(SAMPLE); toast("Ejemplo: el navegador no da GPS"); },700); return; }
+    navigator.geolocation.getCurrentPosition(
+      function(p){ setLocated({lat:p.coords.latitude,lng:p.coords.longitude}); },
+      function(){ /* denegado o falló → mostrar ejemplo para el demo, y la salida real */ setLocated(SAMPLE); toast("Ejemplo (sin GPS del navegador). En tu teléfono usará el real."); },
+      {enableHighAccuracy:true,timeout:9000,maximumAge:0}
+    );
+  }
+  $("gpsBtn").addEventListener("click",locate);
+  $("retryBtn").addEventListener("click",locate);
+  $("manualBtn").addEventListener("click",function(){ setLocated({lat:14.0699,lng:-87.1699}); enterAdjust(); });
+
+  // ---- Ajustar (salida secundaria) ----
+  function enterAdjust(){
+    state.adjusting=true; $("adjustLink").style.display="none"; $("adjustActions").classList.add("on");
+    $("adjhint").classList.add("on"); $("lockbadge").classList.add("off");
+    if(MAP){ MAP.dragging.enable(); MAP.touchZoom.enable(); MAP.doubleClickZoom.enable(); }
+    paintOk();
+  }
+  function exitAdjust(save){
+    state.adjusting=false; $("adjustLink").style.display="block"; $("adjustActions").classList.remove("on");
+    $("adjhint").classList.remove("on"); $("lockbadge").classList.remove("off");
+    if(MAP){ MAP.dragging.disable(); MAP.touchZoom.disable(); MAP.doubleClickZoom.disable(); }
+    if(save && MAP){ setLocated(MAP.getCenter()); toast("Ubicación actualizada"); }
+    paintOk(); syncCTA();
+  }
+  $("adjustLink").addEventListener("click",enterAdjust);
+  $("adjSave").addEventListener("click",function(){ exitAdjust(true); });
+  $("adjCancel").addEventListener("click",function(){ if(MAP&&state.pin){MAP.setView([state.pin.lat,state.pin.lng],17);} exitAdjust(false); });
+
+  // ---- CTA ----
+  function syncCTA(){
+    var cta=$("cta"),hint=$("ctaHint"),tot=$("ctaTot");
+    if(state.mode==="retiro"){ cta.disabled=false; tot.textContent="· "+money(PROD); hint.textContent="Sin costo de envío"; hint.classList.remove("warn"); return; }
+    if(state.located && state.calc && state.calc.ok && !state.adjusting){
+      cta.disabled=false; tot.textContent="· "+money(PROD+state.calc.cost);
+      hint.textContent="Productos "+money(PROD)+"  ·  Envío "+money(state.calc.cost); hint.classList.remove("warn");
+    } else {
+      cta.disabled=true; tot.textContent="";
+      hint.textContent = state.adjusting ? "Guardá tu ubicación para continuar" : (state.located && state.calc && !state.calc.ok ? "Tu ubicación está fuera de zona" : "Compartí tu ubicación para continuar");
+      hint.classList.add("warn");
+    }
+  }
+  $("cta").addEventListener("click",function(){ if($("cta").disabled)return; toast("✓ Pedido enviado a la carnicería (demo)"); });
+
+  // ---- Toggle ----
+  function setMode(m){
+    state.mode=m;
+    $("segDom").classList.toggle("on",m==="domicilio"); $("segRet").classList.toggle("on",m==="retiro");
+    $("domi").style.display=m==="domicilio"?"block":"none"; $("pickup").classList.toggle("on",m==="retiro");
+    if(m==="domicilio" && !state.located) showState("ask");
+    if(m==="domicilio" && mapReady) setTimeout(function(){MAP.invalidateSize();},60);
+    syncCTA();
+  }
+  $("segDom").addEventListener("click",function(){setMode("domicilio");});
+  $("segRet").addEventListener("click",function(){setMode("retiro");});
+
+  showState("ask"); syncCTA();
+})();
+</script>
+</body>
+</html>
