@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Esta dirección no existe · Pedidos El Torito</title>
+<meta name="robots" content="noindex">
+
+<!-- Pedidos es una HERRAMIENTA, no una página de venta: acá no se persuade a
+     nadie, se le dice qué pasó y se le devuelve al tablero en un toque.
+
+     Sin fuente web a propósito. La app carga Inter, pero usa el mismo stack de
+     sistema como primera opción y el personal entra desde sus teléfonos: pedir
+     una fuente para una pantalla de error sería gastar una red que puede estar
+     mala dentro del mercado.
+
+     El service worker es network-first para navegaciones, así que un 404 real
+     de red se muestra tal cual; sin señal cae al tablero cacheado, que es lo
+     correcto. -->
+
+<link rel="icon" type="image/png" href="/assets/torito-icon.png">
+<style>
+  :root{
+    --rojo:#9F2629; --rojo-d:#7E1E21;
+    --bg:#F5F5F7; --card:#FFFFFF; --line:#E6E6EB;
+    --ink:#1D1D1F; --muted:#6E6E73;
+    --r:16px; --r-s:12px;
+    --sh-card:0 1px 3px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--font);
+    -webkit-font-smoothing:antialiased;
+    min-height:100svh; display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .tarjeta{
+    background:var(--card); border-radius:var(--r); box-shadow:var(--sh-card);
+    padding:36px 30px 32px; max-width:26rem; width:100%;
+    animation:entra 320ms cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes entra{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+  @media (prefers-reduced-motion:reduce){ .tarjeta{animation:none} }
+
+  .marca{
+    display:flex; align-items:center; gap:9px;
+    font-size:11px; font-weight:700; letter-spacing:.12em;
+    color:var(--muted); text-transform:uppercase; margin:0 0 22px;
+  }
+  .marca .punto{width:8px; height:8px; border-radius:50%; background:var(--rojo); flex:none}
+
+  h1{font-size:24px; font-weight:700; line-height:1.28; letter-spacing:-.01em; margin:0}
+  p{font-size:15px; line-height:1.6; color:var(--muted); margin:10px 0 0}
+
+  /* La ruta que se intentó abrir. Mono porque ES una ruta, no decoración:
+     sirve para que quien lo reporte pueda leerla tal cual por WhatsApp. */
+  .ruta{
+    display:block; margin-top:16px; padding:11px 13px;
+    background:var(--bg); border:1px solid var(--line); border-radius:var(--r-s);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:13px; color:var(--ink); word-break:break-all;
+  }
+
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    margin-top:24px; min-height:48px; padding:0 20px;
+    background:var(--rojo); color:#fff; text-decoration:none;
+    border-radius:var(--r-s); font-size:15px; font-weight:600;
+    transition:background .18s; touch-action:manipulation;
+  }
+  .btn:hover{background:var(--rojo-d)}
+  .btn:active{transform:scale(.985)}
+  .btn svg{width:16px; height:16px; stroke:#fff; fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
+  a:focus-visible{outline:2px solid var(--rojo); outline-offset:3px}
+</style>
+</head>
+
+<body>
+<main class="tarjeta">
+  <p class="marca"><span class="punto"></span>Pedidos · El Torito</p>
+
+  <h1>Esta dirección no existe.</h1>
+  <p>El enlace que abriste no corresponde a ninguna pantalla de Pedidos. Puede estar viejo o mal escrito.</p>
+
+  <code class="ruta" id="ruta">—</code>
+
+  <a class="btn" href="/">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    Volver a los pedidos
+  </a>
+</main>
+
+<script>
+  /* Se escribe por JS y no en el HTML porque la ruta solo existe en el navegador. */
+  document.getElementById('ruta').textContent = location.pathname + location.search;
+</script>
+</body>
+</html>
