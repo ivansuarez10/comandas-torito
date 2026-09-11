@@ -419,6 +419,10 @@ html.bigtext .kcard2 .kli{font-size:15px}
 .osum .sr .sl{color:var(--muted);font-weight:500}
 .osum .sr .sv{font-weight:600;font-family:var(--font);font-size:19px}
 .osum .sr.ship .sv{color:var(--rojo);text-decoration:underline dotted;cursor:pointer}
+/* Envío a domicilio pendiente de precio ("a convenir"): fila resaltada, pide ponerle monto */
+.osum .sr.ship-alert{background:#FDECEC;border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px}
+.osum .sr.ship-alert .sv{text-decoration:none;text-align:right;line-height:1.15;font-weight:800}
+.osum .sr.ship-alert .ship-todo{display:block;font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--rojo);opacity:.9}
 .osum .sr.grand{padding:14px 0}
 .osum .sr.grand .sl{color:var(--ink);font-weight:800;font-size:18px}
 .osum .sr.grand .sv{font-size:26px;font-weight:700;color:var(--rojo)}
@@ -1663,7 +1667,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='1 sep 2026 · v42';
+const APP_BUILD='11 sep 2026 · v43';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -3590,10 +3594,14 @@ function removeEditItem(i){
   persistEdits(); rerenderOitems(); updateSummary();
   toast('Quitado: '+removed.name, ()=>{ editItems.splice(at,0,removed); persistEdits(); rerenderOitems(); updateSummary(); });
 }
+// ¿Falta ponerle precio al envío? Solo aplica a DOMICILIO con envío en 0 (típico de los
+// pedidos web "a convenir" que entraron sin ubicación marcada). En retiro nunca aplica.
+function needShip(){ const o=orderById(currentSheetId); return !!o && !isRetiro(o) && !(editShipping>0); }
+function shipCellInner(){ return needShip() ? 'A convenir <b class="ship-todo">ponle precio</b>' : money(editShipping||0); }
 function osumHtml(vo){
   return `<div class="osum">
     <div class="sr"><span class="sl">Subtotal productos</span><span class="sv" id="sumSub">${money(editSubtotal())}</span></div>
-    <div class="sr ship"><span class="sl">${ic('truck',16)} Envío</span><span class="sv" id="sumShip" ${vo?'':`onclick="startEdit(-1,'ship')"`}>${money(editShipping||0)}</span></div>
+    <div class="sr ship${needShip()?' ship-alert':''}" id="srShip"><span class="sl">${ic('truck',16)} Envío</span><span class="sv" id="sumShip" ${vo?'':`onclick="startEdit(-1,'ship')"`}>${shipCellInner()}</span></div>
     <div class="sr grand"><span class="sl">TOTAL</span><span class="sv" id="sumGrand">${money(editGrand())}</span></div>
   </div>`;
 }
@@ -3677,7 +3685,8 @@ function updatePrepProgress(){ const el=$("#prepProg"); if(el) el.innerHTML=prep
 function toggleDone(i){ if(!editItems[i]) return; editItems[i].done=!editItems[i].done; persistEdits(); rerenderOitems(); updatePrepProgress(); }
 function togItem(i){ editItems[i].available=!editItems[i].available; if(activeEdit&&activeEdit.i===i){activeEdit=null;} persistEdits(); rerenderOitems(); updateSummary(); renderNumpadPop(); }
 function updateSummary(){ const a=$("#sumSub"); if(a)a.textContent=money(editSubtotal());
-  const sh=$("#sumShip"); if(sh)sh.textContent=money(editShipping||0);
+  const sh=$("#sumShip"); if(sh)sh.innerHTML=shipCellInner();
+  const srs=$("#srShip"); if(srs)srs.classList.toggle('ship-alert',needShip());
   const g=$("#sumGrand"); if(g)g.textContent=money(editGrand()); }
 function startEdit(i,field){
   const cur = field==='weight'?editItems[i].weight : field==='qty'?editItems[i].qty : field==='price'?editItems[i].price : editShipping;
@@ -3760,6 +3769,9 @@ function confirmCotizarV2(){ const o=orderById(currentSheetId); if(!o) return;
   // Ni sin confirmar de un toque lo que no se pesa.
   const faltanConf=editItems.filter(it=>it.available && !it.weigh && !it._confirmed);
   if(faltanConf.length){ toast('Confirma lo que no se pesa: '+faltanConf.map(f=>f.name).join(', ')); rerenderOitems(); return; }
+  // Envío obligatorio en domicilio: no pasa a pago con envío en 0 ("a convenir" de un pedido
+  // web sin ubicación). Se le pone el precio a mano antes de cotizar.
+  if(!isRetiro(o) && !(editShipping>0)){ toast('Ponle el precio del envío antes de cotizar'); startEdit(-1,'ship'); return; }
   const id=o.id; persistEdits(true); setStatus(o,'espera_pago'); save(o);
   notifyAdmin('💵 Por cobrar #'+o.folio, o.clientName+' · '+money(fullTotal(o))); // avisa al admin
   closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
