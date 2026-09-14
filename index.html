@@ -1667,7 +1667,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='11 sep 2026 · v43';
+const APP_BUILD='14 sep 2026 · v44';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2360,8 +2360,26 @@ const shipKm=p=>{const R=6371,a=SHIP_CFG.origin,dLat=(p.lat-a.lat)*Math.PI/180,d
   x=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;
   return 2*R*Math.asin(Math.sqrt(x));};
 const shipCost=km=>Math.max(SHIP_CFG.base, Math.round((SHIP_CFG.base+SHIP_CFG.per_km*km)/5)*5);
-// Distancia por CALLE estimada (la que se cobra) = línea recta × factor de calle.
+// Distancia por CALLE estimada = línea recta × factor. Es el RESPALDO: se cobra sobre la
+// RUTA real (OSRM) cuando se puede medir; el factor fijo se queda corto en Tegucigalpa.
 const shipKmStreet=p=>shipKm(p)*(SHIP_CFG.street_factor||1.3);
+const _shipRoute={}; // "lat,lng" -> km (number) o null (OSRM falló); undefined = no consultado aún
+const _shipKey=p=>p.lat.toFixed(5)+','+p.lng.toFixed(5);
+// Distancia REAL por ruta (OSRM, gratis), cacheada por punto. Promise<number|null>.
+function shipRouteKm(pin){
+  const k=_shipKey(pin);
+  if(_shipRoute[k]!==undefined) return Promise.resolve(_shipRoute[k]);
+  try{
+    const ctrl=new AbortController(), tm=setTimeout(()=>ctrl.abort(),6000), o=SHIP_CFG.origin;
+    const u='https://router.project-osrm.org/route/v1/driving/'+o.lng+','+o.lat+';'+pin.lng+','+pin.lat+'?overview=false';
+    return fetch(u,{signal:ctrl.signal}).then(r=>{clearTimeout(tm);return r.ok?r.json():null;})
+      .then(j=>{const m=j&&j.routes&&j.routes[0]&&j.routes[0].distance; const km=(typeof m==='number'&&isFinite(m)&&m>0)?m/1000:null; _shipRoute[k]=km; return km;})
+      .catch(()=>{ _shipRoute[k]=null; return null; });
+  }catch(e){ _shipRoute[k]=null; return Promise.resolve(null); }
+}
+// km que se COBRA: la ruta real si ya la medimos, si no el estimado ×factor.
+function shipChargedKm(pin){ const r=_shipRoute[_shipKey(pin)];
+  return (typeof r==='number') ? {km:r,source:'ruta'} : {km:shipKm(pin)*(SHIP_CFG.street_factor||1.3),source:'estimado'}; }
 
 /* Coordenadas dentro de un texto: link de Google Maps (?q= · @ · !3d!4d) o "14.09,-87.19" pegado a mano.
    Los pedidos de la web ya traen "📍 Ubicación: https://maps.google.com/?q=lat,lng" dentro de la dirección. */
@@ -2486,12 +2504,15 @@ function shipRender(){
     if(ct) ct.innerHTML='La tienda no acepta pedidos a domicilio a esta distancia. Si lo vas a llevar igual, el precio se acuerda a mano.';
     return;
   }
-  const kmCalle=km*(SHIP_CFG.street_factor||1.3); // distancia por calle (la que se cobra)
+  const _k=_shipKey(shipPin), _routed=_shipRoute[_k];
+  const ruta=(typeof _routed==='number'), measuring=(_routed===undefined);
+  const kmCalle = ruta ? _routed : km*(SHIP_CFG.street_factor||1.3); // se cobra sobre la ruta real (o el estimado)
   const c=shipCost(kmCalle);
   rd.className='ship-read';
-  rd.innerHTML=`<div><span class="rl">${here?'En el local':'~'+kmCalle.toFixed(1)+' km por calle'}</span>
+  rd.innerHTML=`<div><span class="rl">${here?'En el local':'~'+kmCalle.toFixed(1)+' km '+(ruta?'por ruta':'por calle')}</span>
       <span class="rn">${esc(shipPlace||'Punto en el mapa')}</span></div><span class="rc">${money(c)}</span>`;
-  if(ct) ct.innerHTML=here?'' :`Cuenta: ${money(SHIP_CFG.base)} + ${money(SHIP_CFG.per_km)} × ${kmCalle.toFixed(1)} km = ${money(Math.round(SHIP_CFG.base+SHIP_CFG.per_km*kmCalle))} → redondeado <b>${money(c)}</b>.<br><span style="color:var(--muted-2)">Distancia por calle estimada (${km.toFixed(1)} km en línea recta × ${(SHIP_CFG.street_factor||1.3)}).</span>`;
+  if(ct) ct.innerHTML=here?'' :`Cuenta: ${money(SHIP_CFG.base)} + ${money(SHIP_CFG.per_km)} × ${kmCalle.toFixed(1)} km = ${money(Math.round(SHIP_CFG.base+SHIP_CFG.per_km*kmCalle))} → redondeado <b>${money(c)}</b>.<br><span style="color:var(--muted-2)">${ruta?'Distancia real por carretera (OSRM).':(measuring?'Estimado; midiendo la ruta real…':'Estimado (no se pudo medir la ruta; ajústalo si hace falta).')}</span>`;
+  if(measuring){ const _p=shipPin; shipRouteKm(_p).then(()=>{ if(shipPin&&_shipKey(shipPin)===_shipKey(_p)) shipRender(); }); }
 }
 function shipReset(){
   shipPin=null; shipPlace='';
@@ -2505,8 +2526,8 @@ function shipCopy(){
   if(!shipPin){ toast('Primero ubicá el punto'); return; }
   const km=shipKm(shipPin);
   if(km>SHIP_CFG.max_km){ toast('Fuera de zona'); return; }
-  const kmCalle=km*(SHIP_CFG.street_factor||1.3);
-  copy('Envío a domicilio: '+money(shipCost(kmCalle))+' (~'+kmCalle.toFixed(1)+' km por calle)');
+  const cg=shipChargedKm(shipPin), kmCalle=cg.km;
+  copy('Envío a domicilio: '+money(shipCost(kmCalle))+' (~'+kmCalle.toFixed(1)+' km '+(cg.source==='ruta'?'por ruta':'por calle')+')');
   toast('Cotización copiada');
 }
 /* --- buscador con sugerencias --- */
@@ -2603,11 +2624,19 @@ async function shipAutoRun(){
       if(!fs.length){ draft.shipCalc={err:'No encontré esa dirección · ponelo a mano'}; shipHintPaint(); return; }
       pin=shipFeatPin(fs[0]); place=shipFeatName(fs[0]);
     }
-    const kmLine=shipKm(pin), out=kmLine>SHIP_CFG.max_km, kmCalle=kmLine*(SHIP_CFG.street_factor||1.3);
-    draft.shipCalc={km:kmCalle,cost:out?0:shipCost(kmCalle),place,out,pin}; // se cobra por distancia de calle
+    const kmLine=shipKm(pin), out=kmLine>SHIP_CFG.max_km, cg=shipChargedKm(pin), kmCalle=cg.km;
+    draft.shipCalc={km:kmCalle,cost:out?0:shipCost(kmCalle),place,out,pin,source:cg.source}; // se cobra por ruta real (o estimado)
     // No pisa lo que el admin haya escrito a mano: solo autollena mientras el costo siga siendo automático.
     if(!out && draft.shipAuto!==false) shipApplySuggested(true);
     shipHintPaint();
+    // Si el costo salió del estimado, medí la ruta real y refiná (sin pisar edición manual).
+    if(!out && cg.source!=='ruta'){ shipRouteKm(pin).then(()=>{
+      if(!draft.shipCalc||!draft.shipCalc.pin||_shipKey(draft.shipCalc.pin)!==_shipKey(pin)) return; // el pin cambió
+      const kc=shipChargedKm(pin);
+      draft.shipCalc={km:kc.km,cost:shipCost(kc.km),place,out:false,pin,source:kc.source};
+      if(draft.shipAuto!==false) shipApplySuggested(true);
+      shipHintPaint();
+    }); }
   }catch(e){ draft.shipCalc={err:'Sin internet para calcular el envío'}; shipHintPaint(); }
 }
 function shipApplySuggested(silent){
@@ -2623,7 +2652,7 @@ function shipHintHtml(){
   if(c.err) return `${esc(c.err)}<button class="lnk" onclick="openShipMap()">buscar en el mapa</button>`;
   if(c.out) return `<b>${c.km.toFixed(1)} km</b> · fuera de zona (más de ${SHIP_CFG.max_km} km) · el precio se acuerda a mano
       <button class="lnk" onclick="openShipMap()">ver en el mapa</button>`;
-  return `<b>~${c.km.toFixed(1)} km por calle</b>${c.place?' · '+esc(c.place):''} · sugerido <b>${money(c.cost)}</b>
+  return `<b>~${c.km.toFixed(1)} km ${c.source==='ruta'?'por ruta':'por calle'}</b>${c.place?' · '+esc(c.place):''} · sugerido <b>${money(c.cost)}</b>
       ${draft.shipAuto===false?`<button class="lnk" onclick="shipApplySuggested()">usar ${money(c.cost)}</button>`:''}
       <button class="lnk" onclick="openShipMap()">ajustar en el mapa</button>`;
 }
@@ -2650,8 +2679,8 @@ function shipUseInDraft(){
   if(!shipPin){ toast('Primero ubicá el punto'); return; }
   const km=shipKm(shipPin);
   if(km>SHIP_CFG.max_km){ toast('Fuera de zona · el precio se pone a mano'); return; }
-  const kmCalle=km*(SHIP_CFG.street_factor||1.3);
-  draft.shipCalc={km:kmCalle,cost:shipCost(kmCalle),place:shipPlace,out:false,pin:shipPin};
+  const cg=shipChargedKm(shipPin), kmCalle=cg.km;
+  draft.shipCalc={km:kmCalle,cost:shipCost(kmCalle),place:shipPlace,out:false,pin:shipPin,source:cg.source};
   draft.shipping=draft.shipCalc.cost; draft.shipAuto=true;
   _shipAutoLast='@'+shipPin.lat.toFixed(5)+','+shipPin.lng.toFixed(5); // no re-calcular encima de lo que acaba de elegir
   closeShipMap(); toast('Envío '+money(draft.shipping));
