@@ -180,10 +180,13 @@ input,select{font-family:inherit;font-size:16px}
 .sheet{background:var(--bg);width:100%;max-width:560px;max-height:94vh;border-radius:20px 20px 0 0;overflow-y:auto;
   box-shadow:var(--sh-l);animation:up .22s ease}
 @keyframes up{from{transform:translateY(20px);opacity:.6}to{transform:none;opacity:1}}
-.sheet-head{position:sticky;top:0;background:var(--negro);color:#fff;padding:15px 18px;display:flex;align-items:center;gap:12px;z-index:2}
+.sheet-head{position:sticky;top:0;background:var(--negro);color:#fff;padding:19px 18px 15px;display:flex;align-items:center;gap:12px;z-index:2;user-select:none;-webkit-user-select:none;touch-action:none;cursor:grab}
+.sheet-head:active{cursor:grabbing}
+/* Grabber: barrita que avisa que la hoja se arrastra para cerrar (manos grasosas) */
+.sheet-head::before{content:"";position:absolute;top:7px;left:50%;transform:translateX(-50%);width:38px;height:5px;border-radius:3px;background:rgba(255,255,255,.3);pointer-events:none}
 .sheet-head .sh-folio{font-family:var(--font);font-weight:700;color:#fff;font-size:18px}
 .sheet-head .sh-name{font-weight:600;font-size:14px;color:#e9e2d6}
-.sheet-head .x{margin-left:auto;font-size:15px;color:#cfc7bd;width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.1)}
+.sheet-head .x{margin-left:auto;font-size:15px;color:#cfc7bd;width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.1);flex:none}
 .sheet-body{padding:16px 18px 26px}
 
 .line{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:10px}
@@ -513,9 +516,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);letter-spacin
 .total-bar .tv{color:var(--ink)}
 /* sheets (iOS modal) */
 .sheet{background:var(--bg);border-radius:24px 24px 0 0}
-.sheet-head{background:rgba(255,255,255,.82);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);color:var(--ink);border-bottom:.5px solid var(--line)}
-.sheet-head .sh-name{color:var(--muted)}
-.sheet-head .x{background:#EAEAEF;color:var(--muted)}
+.sheet-head{background:rgba(255,255,255,.72);-webkit-backdrop-filter:saturate(200%) blur(24px);backdrop-filter:saturate(200%) blur(24px);color:var(--ink);border-bottom:.5px solid var(--line)}
+/* Vibrancy web: sobre el vidrio el texto va más contrastado y con peso, no gris plano */
+.sheet-head::before{background:rgba(60,60,67,.32)}
+.sheet-head .sh-folio{color:var(--ink);letter-spacing:-.01em}
+.sheet-head .sh-name{color:var(--ink);opacity:.72;font-weight:600;letter-spacing:.004em}
+.sheet-head .x{background:rgba(120,120,128,.16);color:var(--ink)}
 .note-banner{background:#fff;border:.5px solid var(--line);box-shadow:var(--sh);border-radius:14px}
 /* buttons apple */
 .btn{border-radius:13px;box-shadow:var(--sh);font-weight:600}
@@ -1580,6 +1586,50 @@ function toast(m, undo){
   toastT=setTimeout(()=>{ t.classList.remove("show"); toastUndo=null; }, undo?4500:2200);
 }
 function doUndo(){ if(toastUndo){ const fn=toastUndo; toastUndo=null; $("#toast").classList.remove("show"); fn(); } }
+// ---- Haptics: vibra en Android (el Samsung del carnicero); en iPhone Safari no existe y no pasa nada ----
+function haptic(kind){ try{ if(!navigator.vibrate) return;
+  navigator.vibrate(kind==='success'?[14,55,22]:kind==='warn'?[28,45,28]:kind==='error'?[45,40,45,40,45]:10);
+}catch(e){} }
+// ---- Arrastrar la hoja hacia abajo para cerrarla (el grabber) ----
+// Sigue el dedo 1:1, resiste hacia arriba (rubber band) y cierra por distancia o velocidad al
+// soltar. Solo arranca desde el encabezado (.sheet-head): el cuerpo de la hoja scrollea normal.
+(function sheetSwipeDismiss(){
+  var d=null;
+  function closeFnOf(ov){ var s=(ov&&ov.getAttribute('onclick'))||''; var m=s.match(/([a-zA-Z_$][\w$]*)\s*\(\s*\)/);
+    return (m&&typeof window[m[1]]==='function')?window[m[1]]:null; }
+  document.addEventListener('pointerdown',function(e){
+    if(e.button) return;
+    var head=e.target.closest('.sheet-head'); if(!head) return;
+    if(e.target.closest('button,a,input,select,textarea,.x')) return; // no robarle el tap a la X ni a botones del head
+    var sheet=head.closest('.sheet'), ov=sheet&&sheet.closest('.overlay'), close=closeFnOf(ov);
+    if(!sheet||!close) return;
+    d={sheet:sheet,ov:ov,close:close,y0:e.clientY,last:e.clientY,lastT:performance.now(),v:0,id:e.pointerId,h:sheet.offsetHeight||600};
+    sheet.style.transition='none'; try{ head.setPointerCapture(e.pointerId); }catch(_){}
+  },true);
+  document.addEventListener('pointermove',function(e){
+    if(!d||e.pointerId!==d.id) return;
+    var dy=e.clientY-d.y0, now=performance.now();
+    d.v=(e.clientY-d.last)/Math.max(1,now-d.lastT); d.last=e.clientY; d.lastT=now;
+    var y=dy>=0?dy:-Math.pow(-dy,0.72); // resistencia elástica hacia arriba
+    d.sheet.style.transform='translateY('+y+'px)';
+    if(d.ov) d.ov.style.background='rgba(20,16,14,'+(0.5*Math.max(0,1-Math.max(0,dy)/d.h)).toFixed(3)+')';
+  },true);
+  function end(){ if(!d) return; var x=d; d=null;
+    // Cierra si se arrastró bastante (mín. 90px y >28% de la hoja) o si fue un tirón claro hacia abajo.
+    var dy=x.last-x.y0, dismiss=dy>Math.max(90,x.h*0.28)||(x.v>0.6&&dy>40);
+    x.sheet.style.transition='transform .3s cubic-bezier(.2,.8,.2,1)'; if(x.ov) x.ov.style.transition='background .3s';
+    if(dismiss){ haptic('selection');
+      x.sheet.style.transform='translateY('+(x.h+60)+'px)'; if(x.ov) x.ov.style.background='rgba(20,16,14,0)';
+      setTimeout(function(){ x.sheet.style.transform=''; x.sheet.style.transition='';
+        if(x.ov){x.ov.style.background='';x.ov.style.transition='';} x.close(); },250);
+    }else{
+      x.sheet.style.transform='translateY(0px)'; if(x.ov) x.ov.style.background='';
+      setTimeout(function(){ x.sheet.style.transition=''; if(x.ov) x.ov.style.transition=''; },320);
+    }
+  }
+  document.addEventListener('pointerup',end,true);
+  document.addEventListener('pointercancel',end,true);
+})();
 // revierte el último cambio de estado (pop del historial) + reversión extra opcional
 function revertStatus(id, extra){ const o=orderById(id); if(!o) return; if(o.hist&&o.hist.length>1){ o.hist.pop(); o.status=o.hist[o.hist.length-1].s; } if(extra) extra(o); save(o); rerender(); }
 // timbre de aviso + control de mute y TONO (persistidos)
@@ -1667,7 +1717,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='14 sep 2026 · v44';
+const APP_BUILD='14 sep 2026 · v45';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -3800,12 +3850,12 @@ function confirmCotizarV2(){ const o=orderById(currentSheetId); if(!o) return;
   if(faltanConf.length){ toast('Confirma lo que no se pesa: '+faltanConf.map(f=>f.name).join(', ')); rerenderOitems(); return; }
   // Envío obligatorio en domicilio: no pasa a pago con envío en 0 ("a convenir" de un pedido
   // web sin ubicación). Se le pone el precio a mano antes de cotizar.
-  if(!isRetiro(o) && !(editShipping>0)){ toast('Ponle el precio del envío antes de cotizar'); startEdit(-1,'ship'); return; }
-  const id=o.id; persistEdits(true); setStatus(o,'espera_pago'); save(o);
+  if(!isRetiro(o) && !(editShipping>0)){ haptic('warn'); toast('Ponle el precio del envío antes de cotizar'); startEdit(-1,'ship'); return; }
+  const id=o.id; persistEdits(true); setStatus(o,'espera_pago'); save(o); haptic('success');
   notifyAdmin('💵 Por cobrar #'+o.folio, o.clientName+' · '+money(fullTotal(o))); // avisa al admin
   closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
 function guardarV2(){ persistEdits(); closeCarn(); toast('Cambios guardados'); }
-function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(o);
+function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(o); haptic('success');
   notifyAdmin('📦 Por entregar #'+o.folio, o.clientName+' · '+(isRetiro(o)?'Retiro':'Domicilio'+(o.zone?' · '+o.zone:''))); // avisa al admin
   closeCarn(); toast('Listo para entrega', ()=>revertStatus(id, x=>{x.listaAt=prevLista;})); }
 function closeCarn(){ $("#overlayHost").innerHTML=''; const h=$("#numpadHost"); if(h) h.innerHTML=''; activeEdit=null; editItems=null; currentSheetId=null; adminEditMode=false; _openOrderId=null; _coEditTrack(); rerender(); }
