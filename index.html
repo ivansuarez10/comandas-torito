@@ -224,6 +224,17 @@ input,select{font-family:inherit;font-size:16px}
 
 /* ---------- NUEVA COMANDA ---------- */
 .field{margin-bottom:13px}
+/* Autocompletar cliente por nombre en Nueva comanda */
+.cli-field{position:relative}
+.cli-sug{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--card);border:1px solid var(--line);border-radius:12px;overflow-y:auto;z-index:50;box-shadow:0 14px 34px rgba(0,0,0,.14);max-height:262px}
+.cli-sug[hidden]{display:none}
+.cli-sug button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line-2);padding:12px 13px;cursor:pointer;font-family:inherit}
+.cli-sug button:last-child{border-bottom:none}
+.cli-sug button:active{background:var(--line-2)}
+.cli-sug .cs-nm{font-weight:600;font-size:14.5px;color:var(--ink)}
+.cli-sug .cs-sub{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.cli-sug .cs-ic{flex:none;color:var(--muted-2)}
+.cli-sug .cs-t{min-width:0;flex:1}
 .field label{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.03em;display:block;margin-bottom:6px}
 .inp{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-size:16px} /* ≥16px: evita el auto-zoom al enfocar en móvil */
 .inp:focus{outline:none;border-color:var(--rojo)}
@@ -1717,7 +1728,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='14 sep 2026 · v45';
+const APP_BUILD='23 sep 2026 · v46';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2145,7 +2156,7 @@ function adminNueva(){
       <button class="cam-btn btn-ic" id="camBtn" onclick="document.getElementById('camInput').click()">${ic('camera',16)} Tomar foto del pedido (papelito)</button>
       ${parsePreviewHtml()}
     </div>
-    <div class="field"><label for="dName">Cliente</label><input class="inp" id="dName" placeholder="Nombre del cliente" value="${esc(draft.clientName)}"></div>
+    <div class="field cli-field"><label for="dName">Cliente</label><input class="inp" id="dName" placeholder="Nombre del cliente" autocomplete="off" value="${esc(draft.clientName)}"><div class="cli-sug" id="cliSug" hidden></div></div>
     <div class="field" style="display:flex;gap:10px">
       <div style="flex:1"><label for="dPhone">Teléfono (WhatsApp)</label><input class="inp" id="dPhone" inputmode="tel" placeholder="+504 ..." value="${esc(draft.phone)}"></div>
       <div style="flex:1"><label for="dZone">Zona</label><input class="inp" id="dZone" placeholder="Colonia / barrio" value="${esc(draft.zone)}"></div>
@@ -2190,6 +2201,36 @@ function syncDraft(){
   draft.zone=g("dZone")||draft.zone; draft.addr=g("dAddr")||draft.addr; draft.note=g("dNote")||draft.note;
   const sh=$("#dShip"); if(sh) draft.shipping=parseFloat(sh.value)||0;
 }
+// ---- Autocompletar cliente por NOMBRE al escribir en "Cliente" ----
+// Evita ir a WhatsApp a copiar el nombre: se escribe, se elige de la lista y llena
+// teléfono, zona y dirección del cliente ya guardado.
+let _cliSug=[];
+function cliSugRender(q){
+  const box=$("#cliSug"); if(!box) return;
+  const nq=_norm(q||'');
+  if(nq.length<1){ box.hidden=true; box.innerHTML=''; _cliSug=[]; return; }
+  const seen={}, out=[];
+  (state.clients||[]).forEach(c=>{ if(!c||!c.name||isPhoneName(c.name)) return;
+    if(_norm(c.name).indexOf(nq)<0) return;
+    const k=_phoneKey(c.phone)||_norm(c.name); if(seen[k]) return; seen[k]=1; out.push(c); });
+  out.sort((a,b)=> _norm(a.name).indexOf(nq)-_norm(b.name).indexOf(nq) || a.name.localeCompare(b.name));
+  _cliSug=out.slice(0,6);
+  if(!_cliSug.length){ box.hidden=true; box.innerHTML=''; return; }
+  box.innerHTML=_cliSug.map((c,i)=>`<button type="button" data-i="${i}"><span class="cs-ic">${ic('user',16)}</span><span class="cs-t"><span class="cs-nm">${esc(c.name)}</span><span class="cs-sub">${esc(c.phone||'sin teléfono')}${c.zone?' · '+esc(c.zone):''}</span></span></button>`).join('');
+  box.hidden=false;
+  box.querySelectorAll('button').forEach(b=>b.addEventListener('mousedown',e=>{ e.preventDefault(); cliSugPick(+b.dataset.i); }));
+}
+function cliSugPick(i){
+  const c=_cliSug[i]; if(!c) return;
+  syncDraft();
+  draft.clientName=c.name; draft.phone=c.phone||draft.phone; draft.zone=c.zone||draft.zone;
+  if(c.addr){ draft.addr=c.addr; if(draft.delivery!=='envio'){ draft.delivery='envio'; } }
+  const box=$("#cliSug"); if(box){ box.hidden=true; box.innerHTML=''; } _cliSug=[];
+  initNueva(); if(draft.delivery==='envio') shipAutoQueue();
+  try{ haptic('selection'); }catch(e){}
+  toast('Cliente: '+c.name);
+}
+function cliSugHide(){ const box=$("#cliSug"); if(box) box.hidden=true; }
 function initNueva(){
   // re-render only dynamic parts by re-rendering view (keeps simple)
   const v=$(".view"); if(v) v.innerHTML=adminNueva();
@@ -2202,6 +2243,11 @@ function initNueva(){
   const pt=$("#dPaste"); if(pt) pt.oninput=()=>{ draft.pasteText=pt.value; }; // no se borra al re-renderizar
   const pp=$("#dPastePhone"); if(pp) pp.oninput=()=>{ draft.pastePhone=pp.value; };
   const ph=$("#dPhone"); if(ph) ph.onblur=()=>{ syncDraft(); const c=clientByPhone(ph.value); if(c&&c.name&&!($("#dName")||{}).value){ draft.phone=ph.value; draft.clientName=c.name; draft.zone=c.zone||draft.zone; draft.addr=c.addr||draft.addr; initNueva(); shipAutoQueue(); toast('Cliente identificado: '+c.name); } };
+  const nm=$("#dName"); if(nm){
+    nm.addEventListener('input',()=>cliSugRender(nm.value));
+    nm.addEventListener('focus',()=>cliSugRender(nm.value));
+    nm.addEventListener('blur',()=>setTimeout(cliSugHide,150));
+  }
 }
 function renderCart(){
   const c=$("#cart"); if(!c) return;
