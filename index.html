@@ -1327,8 +1327,11 @@ function archiveStaleListas(){
   if(changed){ state.orders=keep; save(); }
 }
 const allOrders=()=> state.orders.concat(state.history||[]);
-// Modo de entrega normalizado: la WEB manda delivery=true(domicilio)/false(retiro); la captura MANUAL usa 'envio'/'retiro'.
-function isRetiro(o){ return !!o && (o.delivery===false || o.delivery==='retiro' || o.delivery==='pickup'); }
+// Modo de entrega normalizado. La WEB manda delivery=true(domicilio)/false(retiro), pero la columna es TEXT,
+// así que vuelve como 'true'/'false' (string). La captura MANUAL guarda 'envio'/'recoge' (botón "Recoge").
+// Antes no se reconocían 'recoge' ni el string 'false' → los retiros salían "A convenir · ponle precio".
+const RETIRO_VALORES = ['false','retiro','pickup','recoge'];
+function isRetiro(o){ return !!o && RETIRO_VALORES.includes(String(o.delivery).trim().toLowerCase()); }
 // Hora de retiro: la web la guarda dentro de la nota como "Retiro: 3:00 PM · ...". Devuelve la hora o ''.
 function retiroHora(o){ const m=/Retiro:\s*([^·\n]+)/i.exec((o&&o.note)||''); return m?m[1].trim():''; }
 // Cierre del mensaje según el modo (variable {entrega}).
