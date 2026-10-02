@@ -990,6 +990,101 @@ html.lite .kcard2,html.lite .ocard,html.lite .card,html.lite .oitem,html.lite .k
 .st-tbl{margin-top:8px;font-size:13px} .st-tbl summary{color:var(--muted);cursor:pointer;padding:6px 0;font-weight:600}
 .st-tbl table{width:100%;border-collapse:collapse;margin-top:4px} .st-tbl td{padding:5px 0;border-bottom:1px solid var(--line-2)} .st-tbl td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
 .st-link{display:flex}
+/* =====================================================================
+   v2 · manos sucias y prisa (carnicero ≥56 px, admin ≥44 px)
+   Todo lo de abajo SOBREESCRIBE lo anterior; va al final a propósito.
+   ===================================================================== */
+/* ---- Deshacer: tocable y grande (el toast tenía pointer-events:none) ---- */
+.toast{min-height:56px;padding:6px 8px 6px 20px;border-radius:18px;font-size:16px;gap:14px;max-width:min(92vw,520px);overflow:hidden;line-height:1.25}
+.toast.show{pointer-events:auto;bottom:calc(92px + env(safe-area-inset-bottom))}
+html.ov-open .toast.show{bottom:calc(124px + env(safe-area-inset-bottom))}
+.t-undo{min-height:56px;min-width:108px;padding:0 20px;border-radius:13px;background:rgba(255,255,255,.14);color:#fff;font-size:16px;font-weight:800;justify-content:center}
+.t-undo:active{background:rgba(255,255,255,.32)}
+.t-fuse{display:none;position:absolute;left:0;bottom:0;height:4px;width:100%;background:#FF7A7A;transform-origin:left center}
+.toast.fuse .t-fuse{display:block;animation:fuse var(--fuse,7000ms) linear forwards}
+@keyframes fuse{to{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){.toast.fuse .t-fuse{animation:none;transform:none;opacity:.5}}
+
+/* ---- Toques ---- */
+html .tb-out{min-height:44px;padding:0 16px;font-size:14px;display:inline-flex;align-items:center}
+html .ce-icon{width:44px;height:44px}
+html .ab-clear{width:44px;height:44px}
+html .oitem-del{width:44px;height:44px}
+html .sheet-head .x{width:48px;height:48px}
+html .btn{min-height:44px}
+html .admin-board .kmv.anav{flex:0 0 48px;min-height:44px}
+html .confirm-box .btn{min-height:56px;font-size:16px}
+html.rol-carn .sheet-head .x{width:56px;height:56px}
+html.rol-carn .btn{min-height:56px}
+html.rol-carn .kmv{min-height:56px;font-size:16px}
+html.rol-carn .okbox,html.rol-carn .confirm-all,html.rol-carn .add-prod,html.rol-carn .cat-tg{min-height:56px}
+html.rol-carn .numbox{min-height:56px}
+html.rol-carn .oitem-check{width:56px;height:56px}
+html.rol-carn .ctop-snd{width:48px;height:48px}
+html.rol-carn .ctop-push,html.rol-carn .ctop-sync{min-height:48px}
+html.rol-carn .ctop-brand{align-items:flex-start}
+
+/* ---- Barra de acción fija al pie de la hoja ---- */
+.actbar{position:sticky;bottom:0;z-index:3;display:flex;align-items:center;gap:14px;margin:12px -18px -26px;padding:12px 18px calc(14px + env(safe-area-inset-bottom));background:rgba(255,255,255,.88);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-top:.5px solid var(--line)}
+.actbar .btn{flex:1;width:auto;min-height:64px;font-size:17px}
+.actbar .ab-tot{display:flex;flex-direction:column;line-height:1.1;min-width:92px}
+.actbar .ab-tot span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.actbar .ab-tot b{font-size:22px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.btn.soft{background:#fff;color:var(--ink);border:2px solid var(--ink);box-shadow:none}
+.btn.busy{filter:brightness(.82);pointer-events:none}
+.kmv.outline{background:#fff;color:var(--ink);border:2px solid var(--ink);box-shadow:none}
+
+/* ---- "No hay" (rastro para el admin) ---- */
+.nohay{flex:none;min-height:56px;min-width:84px;padding:0 14px;border-radius:14px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-family:inherit;font-weight:800;font-size:15px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--sh)}
+.nohay:active{background:#E4E4EA;transform:scale(.97)}
+.nohay.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.r2-end{margin-left:auto}
+.tag-nohay{display:inline-block;margin-left:8px;vertical-align:2px;padding:3px 8px;border-radius:7px;background:var(--ink);color:#fff;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.oitem.unavail{background:#F5F5F7;border:1.5px dashed #A1A1A6}
+.oitem.unavail .oitem-name{text-decoration:line-through;text-decoration-thickness:2px}
+.oitem-check.ghost{border-style:dashed;background:#F5F5F7;color:#8E8E93;pointer-events:none}
+.kfalto{display:flex;gap:7px;align-items:flex-start;margin-top:9px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--ink);font-size:13.5px;line-height:1.3}
+.kfalto svg{flex:none;margin-top:2px}
+.falto-block{margin:0 0 12px;padding:12px 14px;border:1.5px solid var(--ink);border-left-width:6px;border-radius:14px;background:#fff}
+.falto-block .fb-t{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px}
+.falto-block .fb-r{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font-size:14px}
+.falto-block .fb-r span{color:var(--muted);text-align:right}
+.falto-block .fb-s{margin-top:8px;font-size:12.5px;color:var(--muted)}
+
+/* ---- Errores de campo: borde + texto fijo + sacudida ---- */
+.numbox.bad,.okbox.bad{border-color:var(--rojo);background:#FBF1F1}
+.fmsg{display:flex;align-items:center;gap:6px;margin-top:9px;color:var(--rojo);font-weight:800;font-size:14px}
+.shake{animation:shake .42s cubic-bezier(.36,.07,.19,.97) 1}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+/* ---- Estado legible a 2 m (forma + texto, no solo color) ---- */
+html.rol-carn .kcol-head .kn{font-size:20px;letter-spacing:.02em;display:inline-flex;align-items:center;gap:8px;color:var(--ink)}
+html.rol-carn .kcol-head .kc{font-size:16px;padding:2px 12px}
+@media(max-width:899px){ .ctab-l{font-size:15px} .ctab-c{font-size:15px;min-width:26px;height:24px} }
+.kcard2.urgent{box-shadow:inset 6px 0 0 var(--rojo),0 10px 26px rgba(159,38,41,.14)}
+.ktime.urg{font-size:15px;font-weight:800;color:var(--rojo)}
+.kcard2.held{opacity:1;background:#F5F5F7;outline:2.5px dashed #6E6E73;outline-offset:-3px;box-shadow:none}
+.khold{font-size:16px;font-weight:800;color:var(--ink);background:#E4E4EA;padding:9px 11px;border-radius:10px;letter-spacing:.02em}
+.kli-list.big{border-top:1px dashed var(--line);margin-top:10px;padding-top:8px}
+.kli-list.big .kli{font-size:19px;padding:4px 0;align-items:flex-start;line-height:1.2}
+.kli-list.big .kli-q{min-width:62px;font-weight:800;color:var(--ink)}
+.kli-list.big .kli-n{white-space:normal;overflow:visible;font-weight:600}
+
+/* ---- Admin: zona delicada y confirmaciones ---- */
+.danger-zone{margin-top:56px;padding-top:14px;border-top:1px dashed var(--line)}
+.danger-zone .dz-l{font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2);margin-bottom:10px}
+.danger-zone .dz-btn{color:#B03A3A}
+.nbadge{margin-left:auto;min-width:22px;height:22px;padding:0 7px;border-radius:11px;background:var(--rojo);color:#fff;font-size:13px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.botnav button{position:relative}
+.botnav .nbadge{position:absolute;top:3px;left:calc(50% + 6px);margin:0}
+
+/* ---- Motion mínimo (se apaga con Reducir movimiento; nunca agrega espera) ---- */
+.roll{animation:roll .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes roll{from{transform:translateY(55%);opacity:.2}to{transform:none;opacity:1}}
+.kcard2.kin{animation:kin .3s cubic-bezier(.2,.8,.2,1) both}
+@keyframes kin{from{opacity:.35;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.roll,.shake,.kcard2.kin{animation:none!important}}
+
 </style>
 </head>
 <body>
@@ -1023,9 +1118,29 @@ html.lite .kcard2,html.lite .ocard,html.lite .card,html.lite .oitem,html.lite .k
 <div class="app hidden" id="app"></div>
 <div id="overlayHost"></div>
 <div id="numpadHost"></div>
-<div class="toast" id="toast"><span id="toastMsg"></span><button id="toastUndo" class="t-undo" onclick="doUndo()">Deshacer</button></div>
+<div class="toast" id="toast"><span id="toastMsg"></span><button id="toastUndo" class="t-undo" onclick="doUndo()">Deshacer</button><i class="t-fuse"></i></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script id="motion">
+/* Motion v2 (vanilla, ~1.2 KB): fuse = mecha del Deshacer · num/roll = cifra que rueda · shake = el "no" · háptico al tocar.
+   Origen: SwipeToast + Counter (React Bits, portados) y Sacudida (propio del estudio). Sin esperas: todo corre sobre lo que ya está en pantalla. */
+window.Mo=(function(){
+  var rm=matchMedia('(prefers-reduced-motion: reduce)');
+  function re(el,c){ el.classList.remove(c); void el.offsetWidth; el.classList.add(c); }
+  function fuse(t,ms,btn){ t.classList.remove('fuse'); t.style.setProperty('--fuse',ms+'ms'); void t.offsetWidth;
+    if(btn) btn.textContent=rm.matches?'Deshacer · '+Math.round(ms/1000)+' s':'Deshacer'; t.classList.add('fuse'); }
+  function roll(el){ if(el&&!rm.matches) re(el,'roll'); }
+  function num(el,n){ n=String(n); if(!el||el.textContent===n) return; el.textContent=n; roll(el); }
+  function shake(el){ if(el&&!rm.matches) re(el,'shake'); }
+  document.addEventListener('click',function(e){ var t=e.target; if(!t||!t.closest) return;
+    if(t.closest('.btn.lg,.kmv,.np-key,.okbox,.nohay,.oitem-check,.ctab')&&window.haptic) try{ haptic('tap'); }catch(_){}
+    var b=t.closest('.actbar .btn'); if(!b) return;
+    if(b._busy){ e.stopPropagation(); e.preventDefault(); return; }
+    b._busy=1; b.classList.add('busy'); setTimeout(function(){ b._busy=0; b.classList.remove('busy'); },700); },true);
+  return {fuse:fuse,roll:roll,num:num,shake:shake};
+})();
+
+</script>
 <script>
 "use strict";
 /* ============ CONFIG ============ */
@@ -1439,7 +1554,8 @@ function upsertClient(c){
 // Aviso visible cuando un guardado a la nube falla (antes moría en silencio en la consola).
 function syncFailed(msg){ console.warn('Supabase:',msg); toast('No se guardó en la nube — revisa el internet y vuelve a intentar'); }
 // Sube UNA comanda (la que cambió). Reintenta 1 vez antes de avisar.
-function dbDeleteOrder(id){ if(USE_SUPA) supa.from('orders').delete().eq('id',id).then(({error})=>{ if(error) console.warn('order delete:',error.message); }); }
+/* v2: sin borrado real de comandas. Se conserva el nombre por si algo lo llama, pero no hace nada: archivar es un estado. */
+function dbDeleteOrder(id){ console.warn('v2: borrado de comandas deshabilitado (se archiva)'); }
 function dbSyncOrder(o){ const row=toRow(o);
   supa.from('orders').upsert(row).then(({error})=>{
     if(!error) return;
@@ -1639,9 +1755,10 @@ function toast(m, undo){
   toastUndo = undo||null;
   $("#toastUndo").style.display = undo? 'inline-flex':'none';
   t.classList.add("show"); clearTimeout(toastT);
-  toastT=setTimeout(()=>{ t.classList.remove("show"); toastUndo=null; }, undo?4500:2200);
+  if(undo) Mo.fuse(t,7000,$("#toastUndo")); else t.classList.remove('fuse');
+  toastT=setTimeout(()=>{ t.classList.remove("show"); t.classList.remove('fuse'); toastUndo=null; }, undo?7000:2200);
 }
-function doUndo(){ if(toastUndo){ const fn=toastUndo; toastUndo=null; $("#toast").classList.remove("show"); fn(); } }
+function doUndo(){ if(toastUndo){ const fn=toastUndo; toastUndo=null; $("#toast").classList.remove("show","fuse"); fn(); } }
 // ---- Haptics: vibra en Android (el Samsung del carnicero); en iPhone Safari no existe y no pasa nada ----
 function haptic(kind){ try{ if(!navigator.vibrate) return;
   navigator.vibrate(kind==='success'?[14,55,22]:kind==='warn'?[28,45,28]:kind==='error'?[45,40,45,40,45]:10);
@@ -1810,6 +1927,8 @@ function openSoundSheet(){
      <div class="sect-label">Actualizar app</div>
      <button class="cat-tg" style="width:100%" onclick="forceUpdate()">${ic('sync',16)} Buscar actualización</button>
      <div class="pp-note" style="margin-top:10px">Trae los últimos cambios <b>sin desinstalar</b> la app. Versión instalada: <b>${APP_BUILD}</b>.</div>
+     ${session.role==='carnicero'?`<div class="sect-label" style="margin-top:34px">Sesión</div>
+     <button class="btn ghost lg block btn-ic" onclick="askLogout()">${ic('left',18)} Salir de la sesión</button>`:''}
    </div></div></div>`;
 }
 function pickTone(k){ if(!(k in TONES)) return; bellTone=k; localStorage.setItem('ct_v2_tone',k); openSoundSheet(); playDing(true); }
@@ -1939,6 +2058,9 @@ async function doLogin(){
 }
 async function enterApp(role){
   session.role=role; _carnSigLast=''; // forzar pintado completo al entrar
+  document.documentElement.classList.toggle('rol-carn', role==='carnicero'); _seenReady=false; _seenCards.clear(); _prevBadge=null;
+  // El carnicero lee a distancia: "Texto grande" arranca encendido la primera vez (después manda su elección).
+  if(role==='carnicero' && localStorage.getItem('ct_v2_bigtext')==null){ bigText=true; localStorage.setItem('ct_v2_bigtext','on'); applyBigText(); }
   // Periodo de gracia del timbre: al entrar NO suena de una (el insistente esperaba con reloj
   // vencido y timbraba al instante — el "bug de la alarma al volver a entrar").
   lastDingAt=Date.now(); prevCotizar=null; prevPreparacion=null;
@@ -1954,7 +2076,15 @@ async function enterApp(role){
     refreshPushState().then(()=>{ if(session.role==='admin') renderAdmin(); }); // estado del botón "Activar avisos" del admin
   }
 }
-function logout(){ session.role=null; clearInterval(clockT); releaseWake(); prevCotizar=null; prevPreparacion=null;
+function askLogout(){
+  $("#overlayHost").innerHTML=`<div class="overlay"><div class="confirm-box">
+    <div class="cb-t">¿Salir de la sesión?</div>
+    <div class="cb-s">Para volver a entrar vas a necesitar la contraseña.</div>
+    <div class="cb-row"><button class="btn ghost block" onclick="closeSheet()">Quedarme</button>
+      <button class="btn red block" onclick="logout()">Sí, salir</button></div>
+  </div></div>`;
+}
+function logout(){ session.role=null; document.documentElement.classList.remove('rol-carn'); clearInterval(clockT); releaseWake(); prevCotizar=null; prevPreparacion=null;
   document.body.classList.remove('carn-mode');
   if(USE_SUPA && supa){ try{ supa.auth.signOut(); }catch(e){} }
   $("#app").classList.add("hidden"); $("#overlayHost").innerHTML=""; $("#login").classList.remove("hidden");
@@ -1963,7 +2093,8 @@ function logout(){ session.role=null; clearInterval(clockT); releaseWake(); prev
 }
 
 /* ============ ROUTER / RENDER ============ */
-let adminView="nueva";
+let adminView="resumen"; // v2: el admin aterriza en Resumen (cobrar/entregar), no en Nueva comanda
+let _prevBadge=null;
 let clock=0, clockT;
 function startClock(){ clockT=setInterval(()=>{ if(session.role==="carnicero") updateClock(); },1000); }
 function updateClock(){ const el=$("#syncClock"); if(el) el.textContent="actualizado "+timeAgo(lastSync).replace("hace ","hace ").replace("instantes","ahora");
@@ -2013,7 +2144,7 @@ function topbar(extra=""){
     <img src="assets/torito-badge.png" class="badge" alt="">
     <div class="tb-brand tb-brand-h"><img src="assets/torito-wordmark.svg" class="tb-logo" alt="El Torito Carnicería"><span class="tb-role">${session.role==="admin"?"ADMIN":"PRODUCCIÓN"}</span></div>
     <div class="tb-spacer"></div>${extra}
-    <button class="tb-out" onclick="logout()">Salir</button>
+    <button class="tb-out" onclick="askLogout()">Salir</button>
   </div>`;
 }
 
@@ -2030,6 +2161,8 @@ function renderAdmin(){
     ruta: state.orders.filter(o=>o.status==="en_ruta"),
     hoy: state.orders.filter(o=>o.status==="entregada"),
   };
+  const nPend=groups.cobrar.length+groups.entregar.length;
+  const navBadge=k=>(k==='bandeja'&&nPend)?`<span class="nbadge" aria-label="${nPend} por atender">${nPend}</span>`:'';
   const nav=[["resumen","Resumen","home"],["bandeja","Bandeja","inbox"],["clientes","Clientes","user"],["catalogo","Catálogo","tag"],["envios","Envíos","pin"]];
   let content="";
   if(adminView==="resumen") content=adminResumen(groups);
@@ -2051,16 +2184,18 @@ function renderAdmin(){
   ) + `<div class="layout">
       <aside class="sidebar">
         <button class="snav snew btn-ic" onclick="go('nueva')">${ic('plus',18)} Nueva comanda</button>
-        ${nav.map(([k,l,i])=>`<button class="snav ${adminView===k?'act':''}" onclick="go('${k}')"><span class="si">${ic(i,19)}</span>${l}</button>`).join("")}
+        ${nav.map(([k,l,i])=>`<button class="snav ${adminView===k?'act':''}" onclick="go('${k}')"><span class="si">${ic(i,19)}</span>${l}${navBadge(k)}</button>`).join("")}
         <button class="snav ${adminView==='stats'?'act':''}" onclick="go('stats')"><span class="si">${ic('chart',19)}</span>Estadísticas</button>
       </aside>
       <div class="main"><div class="view">${content}</div></div>
     </div>
     <nav class="botnav">
-      ${nav.slice(0,2).map(([k,l,i])=>`<button class="${adminView===k?'act':''}" onclick="go('${k}')"><span class="bi">${ic(i,22)}</span>${l}</button>`).join("")}
+      ${nav.slice(0,2).map(([k,l,i])=>`<button class="${adminView===k?'act':''}" onclick="go('${k}')"><span class="bi">${ic(i,22)}</span>${l}${navBadge(k)}</button>`).join("")}
       <button class="fab" onclick="go('nueva')" aria-label="Nueva comanda"><span class="bi">${ic('plus',26)}</span></button>
-      ${nav.slice(2).map(([k,l,i])=>`<button class="${adminView===k?'act':''}" onclick="go('${k}')"><span class="bi">${ic(i,22)}</span>${l}</button>`).join("")}
+      ${nav.slice(2).map(([k,l,i])=>`<button class="${adminView===k?'act':''}" onclick="go('${k}')"><span class="bi">${ic(i,22)}</span>${l}${navBadge(k)}</button>`).join("")}
     </nav>`;
+  if(_prevBadge!==null && _prevBadge!==nPend) document.querySelectorAll('.nbadge').forEach(b=>Mo.roll(b));
+  _prevBadge=nPend;
   if(adminView==="nueva") initNueva();
   if(adminView==="ajustes") bizPreview();
   if(adminView==="envios"){ shipMountMap(); shipWireSearch(); }
@@ -2120,11 +2255,23 @@ function adminMove(id,dir){
   const o=orderById(id); if(!o) return;
   const i=A_ORDER.indexOf(o.status); if(i<0) return;
   const ni=i+dir; if(ni<0||ni>=A_ORDER.length) return;
+  // v2: de "Por cobrar" a "En preparación" sin marcar pagado → preguntar antes (el carnicero empezaría a cortar sin cobro).
+  if(o.status==='espera_pago' && A_ORDER[ni]==='preparacion' && !o.paid && !o.held){ askCobrado(id); return; }
   setStatus(o,A_ORDER[ni]);
   if(A_ORDER[ni]==='lista' && !o.listaAt) o.listaAt=Date.now();
   save(o); rerender();
   toast('#'+o.folio+' → '+STATUS[A_ORDER[ni]], ()=>revertStatus(id));
 }
+function askCobrado(id){ const o=orderById(id); if(!o) return;
+  $("#overlayHost").innerHTML=`<div class="overlay"><div class="confirm-box">
+    <div class="cb-ic">${ic('cash',38)}</div><div class="cb-t">¿Ya cobraste?</div>
+    <div class="cb-s">#${o.folio} · ${esc(o.clientName)} · <b>${money(fullTotal(o))}</b>${isRetiro(o)?'<br>Si paga al retirar, usá «Poner en espera de retiro» desde la comanda.':''}</div>
+    <div class="cb-row"><button class="btn ghost block" onclick="closeSheet()">Todavía no</button>
+      <button class="btn red block" onclick="markPaid('${o.id}')">Sí, ya cobré</button></div>
+  </div></div>`;
+}
+function faltoBanner(o){ const f=(o.items||[]).filter(it=>!it.available); if(!f.length) return '';
+  return `<div class="kfalto">${ic('x',14)} <span><b>No hay:</b> ${f.map(it=>esc(it.name)).join(' · ')}</span></div>`; }
 function akcard(o,st){
   let footer='', tag='';
   if(st==='espera_pago') footer=`<button class="kmv go" onclick="event.stopPropagation();markPaid('${o.id}')">${ic('cash',16)} Marcar pagado</button>`;
@@ -2143,6 +2290,7 @@ function akcard(o,st){
     <div class="kdtag">${deliveryTag(o)}</div>
     ${carnLive?`<div class="klive"><span class="live-dot"></span> Un carnicero la está viendo ahora</div>`:''}
     ${o.note?`<div class="knote">${ic('note',14)} ${esc(o.note)}</div>`:""}
+    ${faltoBanner(o)}
     ${cardItemsHtml(o)}
     ${cardTotalHtml(o)}
     <div style="margin-top:8px">${cardPayChip(o)}${o.paid?` <span class="kpaychip" style="background:#e6efe9;color:#1f7a48">${ic('check',12)} Pagado</span>`:""}</div>
@@ -2835,6 +2983,11 @@ function shipUseInDraft(){
 // Agrupa por TELÉFONO (últimos 8 dígitos); sin teléfono, por nombre. Los datos editados
 // en la ficha del cliente (state.clients) mandan sobre lo derivado de las comandas.
 let _cliMap={};
+const BAJA_TAG='[BAJA] ';
+const _isBaja=n=>String(n||'').startsWith(BAJA_TAG);
+const _noteClean=n=>_isBaja(n)?String(n).slice(BAJA_TAG.length):(n||'');
+let showBaja=false;
+function toggleBaja(){ showBaja=!showBaja; renderAdmin(); window.scrollTo(0,0); }
 function adminClientes(){
   const map={};
   // Índice nombre→teléfono: para fusionar pedidos viejos SIN teléfono con el cliente que sí lo tiene.
@@ -2854,12 +3007,15 @@ function adminClientes(){
     if(!map[k]) map[k]={key:k,name:c.name,phone:c.phone,zone:c.zone,addr:c.addr,note:c.note||'',orders:[],total:0,prods:{}};
     else { map[k].name=c.name||map[k].name; map[k].phone=c.phone||map[k].phone;
       map[k].zone=c.zone||map[k].zone; map[k].addr=c.addr||map[k].addr; map[k].note=c.note||''; } });
+  Object.values(map).forEach(c=>{ c.baja=_isBaja(c.note); c.note=_noteClean(c.note); });
   _cliMap=map;
   // Los clientes web sin nombre van PRIMERO (para nombrarlos fácil); luego por total gastado.
-  const cls=Object.values(map).sort((a,b)=>(isPhoneName(b.name)-isPhoneName(a.name))||(b.total-a.total));
+  const allCls=Object.values(map).sort((a,b)=>(isPhoneName(b.name)-isPhoneName(a.name))||(b.total-a.total));
+  const nBaja=allCls.filter(c=>c.baja).length;
+  const cls=allCls.filter(c=>!!c.baja===showBaja); // v2: los dados de baja salen de la lista, no se borran
   const nSin=cls.filter(c=>isPhoneName(c.name)).length;
   const nWeb=cls.filter(c=>cuentaWeb(c.phone)).length;
-  return `<div class="view-head"><div><h2>Clientes</h2><div class="vh-sub">${cls.length} clientes${nWeb?` · <b>${nWeb}</b> con cuenta en la web`:''} · toca uno para ver su perfil</div></div></div>
+  return `<div class="view-head"><div><h2>Clientes</h2><div class="vh-sub">${cls.length} clientes${showBaja?' dados de baja':''}${nWeb?` · <b>${nWeb}</b> con cuenta en la web`:''} · toca uno para ver su perfil</div></div></div>
     ${nSin?`<button class="carn-info namebanner" onclick="go('clientes')" style="cursor:default">${ic('user',15)} <span><b>${nSin}</b> cliente${nSin>1?'s':''} de la web sin nombre · tócalos abajo para nombrarlos</span></button>`:''}
     ${cls.length? `<div class="olist">${cls.map(c=>{
       const top=Object.entries(c.prods).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join(", ");
@@ -2880,7 +3036,8 @@ function adminClientes(){
           ? `<div class="cli-name-cta">${ic('user',14)} Ponerle nombre ${ic('right',13)}</div>`
           : `<div style="margin-top:9px;display:flex;align-items:center;gap:6px;color:var(--rojo);font-size:12.5px;font-weight:600">${ic('eye',14)} Ver perfil e historial ${ic('right',13)}</div>`}
       </div>`;}).join("")}</div>`
-    : `<div class="empty-state"><div class="es-ic">${ic('user',40)}</div><p>Aún no hay clientes.<br>Se crean solos al capturar comandas con teléfono.</p></div>`}`;
+    : `<div class="empty-state"><div class="es-ic">${ic('user',40)}</div><p>${showBaja?'No hay clientes dados de baja.':'Aún no hay clientes.<br>Se crean solos al capturar comandas con teléfono.'}</p></div>`}
+    ${(nBaja||showBaja)?`<button class="btn ghost block" style="margin-top:18px" onclick="toggleBaja()">${showBaja?'Volver a los clientes activos':'Ver clientes dados de baja ('+nBaja+')'}</button>`:''}`;
 }
 /* Perfil del cliente: datos + historial COMPLETO de pedidos (cada uno abre su detalle) */
 function openClientProfile(key){
@@ -2929,49 +3086,34 @@ function openClientEdit(key){
       <div class="field"><label for="clAddr">Dirección</label><input class="inp" id="clAddr" value="${esc(c.addr||'')}" placeholder="Dirección + referencia"></div>
       <div class="field"><label for="clNote">Nota (ej: cliente frecuente, cobra factura…)</label><input class="inp" id="clNote" value="${esc(c.note||'')}"></div>
       <button class="btn red lg block btn-ic" style="margin-top:6px" onclick="saveClientEdit()">${ic('check',17)} Guardar cliente</button>
-      <button class="btn ghost block sm btn-ic" style="margin-top:10px;color:#b03a3a" onclick="askDeleteClient('${c.key}')">${ic('trash',15)} Eliminar cliente</button>
+      <button class="btn ghost block btn-ic" style="margin-top:12px" onclick="askBajaClient('${c.key}')">${ic('user',16)} ${c.baja?'Reactivar cliente':'Dar de baja al cliente'}</button>
       <div class="pp-note" style="margin-top:10px">Los cambios aplican al autollenado y a esta lista. Las comandas ya creadas conservan sus datos originales.</div>
     </div></div></div>`;
 }
-// Eliminar cliente. Si tiene pedidos, se avisa y (con confirmación) también se retiran del tablero/histórico.
-function askDeleteClient(key){
-  const c=_cliMap[key]; if(!c) return;
-  const n=c.orders.length;
-  const msg = n>0
-    ? `${esc(c.name)} tiene <b>${n} pedido${n>1?'s':''}</b> en el historial.<br>Al eliminar el cliente, esos pedidos se marcan como cancelados y salen de la lista. Podrás deshacer.`
-    : `Se eliminará a <b>${esc(c.name)}</b> de la lista de clientes.`;
+// Dar de baja (v2): el cliente deja de aparecer en la lista, pero NADA se borra: sus pedidos y su ficha quedan.
+// La baja es un estado: se marca con "[BAJA] " al inicio de la nota del cliente (sin tocar la base) y se puede reactivar.
+function askBajaClient(key){
+  const c=_cliMap[key]; if(!c) return; const n=c.orders.length;
   $("#overlayHost").innerHTML=`<div class="overlay"><div class="confirm-box">
-    <div class="cb-ic">${ic('trash',38)}</div><div class="cb-t">¿Eliminar cliente?</div>
-    <div class="cb-s">${msg}</div>
-    <div class="cb-row"><button class="btn ghost block" onclick="closeSheet()">Cancelar</button>
-      <button class="btn red block" onclick="doDeleteClient('${key}')">Sí, eliminar</button></div>
+    <div class="cb-t">${c.baja?'¿Reactivar cliente?':'¿Dar de baja al cliente?'}</div>
+    <div class="cb-s">${c.baja?`<b>${esc(c.name)}</b> vuelve a la lista de clientes.`:`<b>${esc(c.name)}</b> deja de aparecer en la lista. Sus ${n} pedido${n===1?'':'s'} y su historial se conservan, y lo podés reactivar cuando quieras.`}</div>
+    <div class="cb-row"><button class="btn ghost block" onclick="closeSheet()">Volver</button>
+      <button class="btn red block" onclick="setBajaClient('${key}',${c.baja?'false':'true'})">${c.baja?'Sí, reactivar':'Sí, dar de baja'}</button></div>
   </div></div>`;
 }
-function doDeleteClient(key){
+function setBajaClient(key,baja){
   const c=_cliMap[key]; if(!c){ closeSheet(); return; }
-  const removedClientRec = (state.clients||[]).filter(x=>_phoneKey(x.phone)===key.slice(1) || _norm(x.name)===_norm(c.name));
-  const removedOrders = c.orders.slice();
-  // 1) quitar el registro editable del cliente (local + nube)
-  if(state.clients){ state.clients=state.clients.filter(x=>!(_phoneKey(x.phone)===key.slice(1) || _norm(x.name)===_norm(c.name))); saveClientsLocal(); }
-  if(USE_SUPA) removedClientRec.forEach(rec=>{ supa.from('clients').delete().eq('phone',_digits(rec.phone)).then(({error})=>{ if(error) console.warn('client del:',error.message); }); });
-  // 2) sus pedidos → cancelados + archivados (salen de la lista; no cuentan como venta)
-  removedOrders.forEach(o=>{ if(o.archived && o.status==='cancelada') return;
-    o._prevStatus=o.status; o._prevHist=o.hist.slice(); o._prevArch=o.archived;
-    setStatus(o,'cancelada'); o.archived=true; o.archivedAt=Date.now();
-    state.orders=state.orders.filter(x=>x.id!==o.id);
-    if(!(state.history||[]).some(x=>x.id===o.id)){ if(!state.history) state.history=[]; state.history.push(o); }
-    save(o); });
-  closeSheet();
-  toast('Cliente eliminado', ()=>{ // deshacer
-    removedOrders.forEach(o=>{ if(o._prevStatus===undefined) return;
-      o.status=o._prevStatus; o.hist=o._prevHist||o.hist; o.archived=o._prevArch; o.archivedAt=o._prevArch?o.archivedAt:null;
-      state.history=(state.history||[]).filter(x=>x.id!==o.id);
-      if(!o.archived) state.orders.unshift(o); else if(!state.history.some(x=>x.id===o.id)) state.history.push(o);
-      delete o._prevStatus; delete o._prevHist; delete o._prevArch; save(o); });
-    if(removedClientRec.length){ if(!state.clients) state.clients=[]; removedClientRec.forEach(rec=>state.clients.push(rec)); saveClientsLocal();
-      if(USE_SUPA) removedClientRec.forEach(rec=>supa.from('clients').upsert(toRowC(rec))); }
-    rerender();
-  });
+  const ph=_digits(c.phone);
+  if(ph.length<4||!c.name){ closeSheet(); toast('Este cliente no tiene teléfono guardado: ponele uno en Editar para poder darlo de baja'); return; }
+  if(!state.clients) state.clients=[];
+  const i=state.clients.findIndex(x=>_phoneKey(x.phone)===_phoneKey(ph));
+  const base=i>=0?state.clients[i]:{phone:ph,name:c.name,zone:c.zone||'',addr:c.addr||'',note:'',createdAt:Date.now()};
+  const rec=Object.assign({},base,{note:(baja?BAJA_TAG:'')+_noteClean(base.note)});
+  if(i>=0) state.clients[i]=rec; else state.clients.push(rec);
+  saveClientsLocal();
+  if(USE_SUPA) supa.from('clients').upsert(toRowC(rec)).then(({error})=>{ if(error) console.warn('client baja:',error.message); }); else save();
+  c.baja=!!baja; closeSheet();
+  toast(baja?'Cliente dado de baja':'Cliente reactivado', ()=>setBajaClient(key,!baja));
 }
 function saveClientEdit(){
   const g=id=>(($("#"+id)||{}).value||'').trim();
@@ -2988,7 +3130,8 @@ function saveClientEdit(){
     if(USE_SUPA && old) supa.from('clients').delete().eq('phone',_digits(old.phone)).then(({error})=>{ if(error) console.warn('client delete:',error.message); });
   }
   const i=state.clients.findIndex(x=>_phoneKey(x.phone)===newPk);
-  const rec={phone:np, name, zone, addr, note, createdAt:(i>=0?state.clients[i].createdAt:Date.now())};
+  const wasBaja=!!(_cliMap[oldKey]&&_cliMap[oldKey].baja);
+  const rec={phone:np, name, zone, addr, note:(wasBaja?BAJA_TAG:'')+note, createdAt:(i>=0?state.clients[i].createdAt:Date.now())};
   if(i>=0) state.clients[i]=rec; else state.clients.push(rec);
   saveClientsLocal();
   if(USE_SUPA) supa.from('clients').upsert(toRowC(rec)).then(({error})=>{ if(error) console.warn('client upsert:',error.message); });
@@ -3176,7 +3319,6 @@ function adminHistorico(){
       return `<div class="hist-day-head">
           <div class="hdh-txt"><div class="hdh-day">${esc(_dayLabel(g.day))}</div>
             <div class="hdh-meta">${g.orders.length} comanda${g.orders.length>1?'s':''} · ${money(ventas)}${dayLb?' · '+_lb(dayLb):''}</div></div>
-          <button class="hdh-del btn-ic" onclick="askDeleteDay('${g.day}')">${ic('trash',14)} Borrar día</button>
         </div>
         <div class="olist">${g.orders.map(o=>`<div class="ocard hist-row">
           <button class="hist-open" onclick="openAdminOrder('${o.id}')">
@@ -3185,51 +3327,29 @@ function adminHistorico(){
               <span class="ometa">${new Date(_refVenta(o)).toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'})} · ${o.items.length} prod</span></span>
             <span class="oright"><span class="ototal">${money(fullTotal(o))}</span><span class="otime">${STATUS[o.status]}</span></span>
           </button>
-          <button class="hist-del" onclick="deleteArchivedOrder('${o.id}')" aria-label="Eliminar del histórico">${ic('trash',17)}</button>
         </div>`).join("")}</div>`;
     }).join("")
      :`<div class="empty-state"><div class="es-ic">${ic('history',40)}</div><p>Aún no hay comandas archivadas.</p></div>`}
     <div style="height:24px"></div>`;
 }
-// Eliminar PERMANENTE una comanda TERMINADA (entregada/cancelada), esté en el tablero o archivada.
-// Con Deshacer. Sirve para limpiar comandas de prueba/error desde el detalle (vista Por día).
-function deleteOrderForever(id){
-  let arr=state.orders, at=arr.findIndex(o=>o.id===id);
-  if(at<0){ arr=state.history||[]; at=arr.findIndex(o=>o.id===id); }
-  if(at<0) return;
-  const o=arr[at]; arr.splice(at,1);
-  dbDeleteOrder(id); if(!USE_SUPA) save();
-  closeSheet(); rerender();
-  toast('Comanda #'+o.folio+' eliminada', ()=>{ arr.splice(at,0,o); save(o); rerender(); });
+// v2: el borrado real de comandas (una, del histórico o por día) ya no se expone. Se ARCHIVA (estado), nunca se borra.
+function archiveOrder(id){
+  const o=orderById(id); if(!o||o.archived) return;
+  o.archived=true; o.archivedAt=Date.now();
+  state.orders=state.orders.filter(x=>x.id!==id);
+  if(!state.history) state.history=[]; state.history.push(o);
+  save(o); closeSheet();
+  toast('Comanda #'+o.folio+' archivada · sigue en el histórico', ()=>{
+    o.archived=false; o.archivedAt=null; state.history=state.history.filter(x=>x.id!==id);
+    if(!state.orders.some(x=>x.id===id)) state.orders.unshift(o); save(o); rerender(); });
 }
-// Borrar UNA comanda del histórico (real, con Deshacer). Úsalo para limpiar las de prueba.
-function deleteArchivedOrder(id){
-  const o=(state.history||[]).find(x=>x.id===id); if(!o) return;
-  const at=state.history.indexOf(o);
-  state.history.splice(at,1);
-  dbDeleteOrder(id); if(!USE_SUPA) save();
-  rerender();
-  toast('Comanda #'+o.folio+' eliminada', ()=>{ state.history.splice(at,0,o); save(o); rerender(); });
-}
-// Borrar TODAS las archivadas de un día (con confirmación + Deshacer).
-function askDeleteDay(dayTs){
-  const day=+dayTs;
-  const removed=(state.history||[]).filter(o=>dayStart(_refVenta(o))===day);
-  if(!removed.length) return;
+function askCancelOrder(id){ const o=orderById(id); if(!o) return;
   $("#overlayHost").innerHTML=`<div class="overlay"><div class="confirm-box">
-    <div class="cb-ic">${ic('trash',38)}</div><div class="cb-t">¿Borrar ${removed.length} comanda${removed.length>1?'s':''}?</div>
-    <div class="cb-s">Se eliminan del histórico las comandas archivadas de <b>${esc(_dayLabel(day))}</b>. Podrás deshacer.</div>
-    <div class="cb-row"><button class="btn ghost block" onclick="closeSheet()">Cancelar</button>
-      <button class="btn red block" onclick="doDeleteDay('${dayTs}')">Sí, borrar</button></div>
+    <div class="cb-t">¿Cancelar la comanda #${o.folio}?</div>
+    <div class="cb-s">${esc(o.clientName)} · <b>${money(fullTotal(o))}</b>${o.paid?'<br><b>Ya está pagada.</b> Cancelarla no devuelve el dinero.':''}<br>Sale del tablero y queda en el histórico.</div>
+    <div class="cb-row"><button class="btn ghost block" onclick="closeSheet()">No, volver</button>
+      <button class="btn red block" onclick="cancelOrder('${o.id}')">Sí, cancelar</button></div>
   </div></div>`;
-}
-function doDeleteDay(dayTs){
-  const day=+dayTs;
-  const removed=(state.history||[]).filter(o=>dayStart(_refVenta(o))===day);
-  state.history=(state.history||[]).filter(o=>dayStart(_refVenta(o))!==day);
-  removed.forEach(o=>dbDeleteOrder(o.id)); if(!USE_SUPA) save();
-  closeSheet();
-  toast(removed.length+' comandas eliminadas', ()=>{ removed.forEach(o=>{ state.history.push(o); save(o); }); rerender(); });
 }
 // Una VENTA = entregada o pagada, nunca cancelada (una cancelada pagada no debe sumar).
 const _esVenta=o=>(o.status==="entregada"||o.paid) && o.status!=="cancelada";
@@ -3567,6 +3687,10 @@ function adminCatalogo(){
 }
 
 /* ----- ADMIN ORDER DETAIL ----- */
+function faltoBlock(o){ const f=(o.items||[]).filter(it=>!it.available); if(!f.length) return '';
+  return `<div class="falto-block"><div class="fb-t">${ic('x',16)} No había ${f.length===1?'este producto':'estos productos'}</div>
+    ${f.map(it=>`<div class="fb-r"><b>${esc(it.name)}</b><span>${it.noHay&&it.noHay.by==='carnicero'?'lo marcó el carnicero':it.noHay&&it.noHay.by==='admin'?'lo marcaste vos':'no disponible'}${it.noHay&&it.noHay.at?' · '+new Date(it.noHay.at).toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'}):''}</span></div>`).join('')}
+    <div class="fb-s">El total ya no los cuenta.</div></div>`; }
 function openAdminOrder(id){
   const o=orderById(id); if(!o) return;
   const cotizado=["espera_pago","preparacion","lista","en_ruta","entregada"].includes(o.status);
@@ -3595,7 +3719,7 @@ function openAdminOrder(id){
     actions=`<div class="kempty">${ic('clock',16)} El carnicero está cotizando peso y precio.</div>`;
   } else if(o.status==="preparacion"){
     actions = o.held
-      ? `<button class="btn green lg block btn-ic" onclick="arriveForPickup('${o.id}')">${ic('store',18)} Cliente llegó → preparar</button>
+      ? `<button class="btn green lg block btn-ic" onclick="arriveForPickup('${o.id}')">${ic('store',18)} Llegó el cliente · preparar</button>
          <div class="kempty" style="margin-top:8px">En espera del cliente${retiroHora(o)?' (~'+esc(retiroHora(o))+')':''}.</div>`
       : `<div class="kempty">${ic('knife',16)} En preparación.</div>`;
   }
@@ -3612,6 +3736,7 @@ function openAdminOrder(id){
   sheet(o, `
     <div id="adminLiveHost">${adminLiveHtml(o.id)}</div>
     ${nameBar}
+    ${faltoBlock(o)}
     ${info}
     <div class="sect-label" style="margin-top:8px">Productos</div>
     ${lines}
@@ -3627,8 +3752,8 @@ function openAdminOrder(id){
     <div style="margin-top:14px">${actions}</div>
     <div class="admin-foot">
       ${!["entregada","cancelada"].includes(o.status)?`<button class="btn ghost block btn-ic" onclick="openAdminEdit('${o.id}')">${ic('edit',16)} Editar comanda</button>`:""}
-      ${!["entregada","cancelada"].includes(o.status)?`<button class="btn ghost block sm" style="margin-top:10px;color:#b03a3a" onclick="cancelOrder('${o.id}')">Cancelar comanda</button>`:""}
-      ${["entregada","cancelada"].includes(o.status)?`<button class="btn ghost block sm btn-ic" style="color:#b03a3a" onclick="deleteOrderForever('${o.id}')">${ic('trash',16)} Eliminar comanda</button>`:""}
+      ${(["entregada","cancelada"].includes(o.status)&&!o.archived)?`<button class="btn ghost block btn-ic" onclick="archiveOrder('${o.id}')">${ic('inbox',16)} Archivar comanda</button>`:""}
+      ${!["entregada","cancelada"].includes(o.status)?`<div class="danger-zone"><div class="dz-l">Zona delicada</div><button class="btn ghost block btn-ic dz-btn" onclick="askCancelOrder('${o.id}')">${ic('x',16)} Cancelar comanda…</button></div>`:""}
     </div>
   `);
 }
@@ -3710,6 +3835,8 @@ function cancelOrder(id){ const o=orderById(id); if(!o) return; setStatus(o,"can
 
 /* ================= CARNICERO v2 ================= */
 const C_COLS=[["c1","Por cotizar","cotizar"],["c2","Espera pago","espera_pago"],["c3","En preparación","preparacion"],["c4","Lista p/ entrega","lista"]];
+const C_ICON={cotizar:'edit',espera_pago:'clock',preparacion:'knife',lista:'check'}; // el estado se lee por forma, no solo por color
+const _seenCards=new Set(); let _seenReady=false, _freshIds=new Set();
 const C_ORDER=["cotizar","espera_pago","preparacion","lista"];
 const C_EMPTY={cotizar:"Nada por cotizar",espera_pago:"Nada en espera",preparacion:"Nada en preparación",lista:"Nada listo aún"};
 // Firma ligera del tablero: si nada visible cambió, NO se reconstruye el DOM (menos trabajo
@@ -3717,23 +3844,26 @@ const C_EMPTY={cotizar:"Nada por cotizar",espera_pago:"Nada en espera",preparaci
 // Incluye el minuto actual para que los "hace X min" se refresquen solos.
 let _carnSigLast='';
 function _carnSig(){ return Math.floor(Date.now()/60000)+'~'+soundOn+'~'+pushOn+'~'+
-  state.orders.filter(o=>C_ORDER.includes(o.status)).map(o=>[o.id,o.status,o.paid?1:0,o.clientName,o.note||'',o.items.length,fullTotal(o),o.createdAt].join('|')).join(';'); }
+  state.orders.filter(o=>C_ORDER.includes(o.status)).map(o=>[o.id,o.status,o.paid?1:0,o.held?1:0,o.items.filter(i=>!i.available).length,o.clientName,o.note||'',o.items.length,fullTotal(o),o.createdAt].join('|')).join(';'); }
 /* ===== PAGER DE ESTACIONES (carnicero, móvil): cada estación = pantalla completa,
    se cambia con swipe (snap nativo) o tocando la tab. La "estación actual" se guarda como
    ESTADO (carnStation), así el refresco de cada minuto no te patea de vuelta a la primera. ===== */
 let carnStation=0; // 0..3 — estación visible en el pager
 const CARN_TABS=[["Cotizar","cotizar"],["Pago","espera_pago"],["Preparar","preparacion"],["Listas","lista"]];
 function carnColsHtml(){
-  return C_COLS.map(([cls,label,st])=>{
+  _freshIds=new Set(); if(_seenReady) state.orders.forEach(o=>{ if(C_ORDER.includes(o.status)&&!_seenCards.has(o.id)) _freshIds.add(o.id); }); // comandas que acaban de entrar
+  const html=C_COLS.map(([cls,label,st])=>{
     const arr=state.orders.filter(o=>o.status===st);
     if(st==='cotizar') arr.sort((a,b)=>a.createdAt-b.createdAt); // FIFO: el más viejo arriba
     const urge=(st==='cotizar'||st==='preparacion')&&arr.length?' urge':'';
     return `<div class="kcol ${cls}${urge} ${(st==='cotizar'&&alertC1)||(st==='preparacion'&&alertC3)?'alerted':''}" id="col${cls.toUpperCase()}">
-      <div class="kcol-head"><span class="kn">${label}</span><span class="kc">${arr.length}</span></div>
+      <div class="kcol-head"><span class="kn">${ic(C_ICON[st],20)} ${label}</span><span class="kc">${arr.length}</span></div>
       <div class="kcol-body">
         ${arr.length?arr.map(o=>kcard(o,st)).join(""):`<div class="kempty"><div class="ke-ic">${ic('check',24)}</div>${C_EMPTY[st]}</div>`}
       </div></div>`;
   }).join("");
+  state.orders.forEach(o=>_seenCards.add(o.id)); _seenReady=true;
+  return html;
 }
 function carnTabsHtml(){
   return CARN_TABS.map(([lbl,st],i)=>{ const n=state.orders.filter(o=>o.status===st).length;
@@ -3742,7 +3872,7 @@ function carnTabsHtml(){
   }).join("")+`<span class="ctab-ind" id="ctabInd"></span>`;
 }
 function carnUpdateTabCounts(){ const tb=$("#carnTabs"); if(!tb) return; const cs=tb.querySelectorAll('.ctab-c');
-  CARN_TABS.forEach(([lbl,st],i)=>{ const c=cs[i]; if(c){ const n=state.orders.filter(o=>o.status===st).length; c.textContent=n; c.classList.toggle('has',!!n); } }); }
+  CARN_TABS.forEach(([lbl,st],i)=>{ const c=cs[i]; if(c){ const n=state.orders.filter(o=>o.status===st).length; Mo.num(c,n); c.classList.toggle('has',!!n); } }); }
 function _carnSetActiveTab(idx){ const tb=$("#carnTabs"); if(tb) tb.querySelectorAll('.ctab').forEach((b,i)=>b.classList.toggle('on',i===idx)); }
 // Tocar una tab → deslizar suave a esa estación (respeta "reducir movimiento").
 function carnGoStation(i){ i=Math.max(0,Math.min(C_COLS.length-1,i)); carnStation=i;
@@ -3779,7 +3909,6 @@ function renderCarnicero(){
   }
   $("#app").innerHTML =
    `<div class="ctop">
-      <button class="ctop-out" onclick="logout()">${ic('left',18)} Salir</button>
       <div class="ctop-brand ctop-brand-h"><img src="assets/torito-badge.png" class="ctop-badge" alt=""><img src="assets/torito-wordmark.svg" class="ctop-logo" alt="El Torito Carnicería"><span class="ctop-role">PRODUCCIÓN</span></div>
       <button class="ctop-snd" onclick="openSoundSheet()" aria-label="Ajustes">${ic('gear',19)}</button>
       <button class="ctop-push ${pushOn?'on':''}" onclick="togglePush()" aria-label="${pushOn?'Avisos activados':'Activar avisos'}">${ic(pushOn?'bell':'belloff',18)}<span class="cp-lbl">${pushOn?'Avisos ON':'Activar avisos'}</span></button>
@@ -3793,12 +3922,14 @@ function renderCarnicero(){
   updateClock();
 }
 // Lista compacta de productos para las tarjetas del tablero (qty · nombre · importe). Máx 6 + "N más".
-function cardItemsHtml(o){ const its=o.items||[]; if(!its.length) return '';
+function cardItemsHtml(o,big){ const its=o.items||[]; if(!its.length) return '';
   const uab=u=>u==='Libra'?'lb':u==='Unidad'?'u':u==='Paquete'?'paq':(u||'');
   const row=it=>{ const q=((it.weigh&&it.weight!=null)?`${it.weight} lb`:`${it.qty} ${uab(it.unit)}`).trim();
-    const nm=esc(it.name)+(it.available?'':' <span style="color:#b03a3a">(no hay)</span>');
+    const nm=esc(it.name)+(it.available?'':' <span class="tag-nohay">No hay</span>');
     const amt=(it.available&&it.price!=null)?money(lineAmount(it)):'—'; // sin precio (por encargo) o no disponible → —
-    return `<div class="kli"><span class="kli-q">${q}</span><span class="kli-n">${nm}</span><span class="kli-a">${amt}</span></div>`; };
+    return `<div class="kli"><span class="kli-q">${q}</span><span class="kli-n">${nm}</span>${big?'':`<span class="kli-a">${amt}</span>`}</div>`; };
+  // Preparar / Listas (big): cantidad y nombre grandes, SIN importes y SIN cortar la lista (no esconder un producto a quien corta).
+  if(big) return `<div class="kli-list big">${its.map(row).join('')}</div>`;
   const MAX=6, shown=its.slice(0,MAX).map(row).join('');
   const n=its.length-MAX, more=n>0?`<div class="kli-more">+${n} producto${n>1?'s':''} más…</div>`:'';
   return `<div class="kli-list">${shown}${more}</div>`; }
@@ -3810,7 +3941,7 @@ function kcard(o,st){
   if(st==='cotizar') footer=`<button class="kmv fwd" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('edit',17)} Cotizar</button>`;
   else if(st==='espera_pago') footer=`<button class="kmv" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('edit',17)} Editar pedido</button>`;
   else if(st==='preparacion') footer = o.held
-    ? `<button class="kmv fwd" onclick="event.stopPropagation();arriveForPickup('${o.id}')">${ic('store',17)} Cliente llegó → preparar</button>`
+    ? `<button class="kmv outline" onclick="event.stopPropagation();arriveForPickup('${o.id}')">${ic('store',17)} Llegó el cliente</button>`
     : `<button class="kmv fwd" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('knife',17)} Preparar</button>`;
   // En "Lista para entrega" el carnicero NO tiene botón: eliminar comandas es solo del admin.
   // Estancada: cotizar >10min (desde que entró) o preparación >15min (desde que entró a preparar).
@@ -3818,15 +3949,16 @@ function kcard(o,st){
   const urgent = (st==='cotizar' && mins>STUCK.cotizar) || (st==='preparacion' && !o.held && mins>STUCK.preparacion);
   // Con urgencia, el reloj muestra el tiempo estancado en ESTA estación; si no, la antigüedad total.
   const badgeTs = (st==='preparacion' && !o.held) ? _enteredAt(o,'preparacion') : o.createdAt;
-  const timeHtml = urgent ? `<span class="ktime urg">${ic('clock',13)} ${timeAgo(badgeTs)}</span>` : `<span class="ktime">${timeAgo(o.createdAt)}</span>`;
-  return `<div class="kcard2 ${urgent?'urgent':''} ${o.held?'held':''}" onclick="openCarniceroOrder('${o.id}')">
+  const timeHtml = urgent ? `<span class="ktime urg">${ic('clock',15)} Atrasada · ${Math.max(1,Math.round((Date.now()-badgeTs)/60000))} min</span>` : `<span class="ktime">${timeAgo(o.createdAt)}</span>`;
+  const big=(st==='preparacion'||st==='lista'); // en Preparar/Listas se LEE, no se cobra
+  return `<div class="kcard2 ${urgent?'urgent':''} ${o.held?'held':''} ${_freshIds.has(o.id)?'kin':''}" onclick="openCarniceroOrder('${o.id}')">
     <div class="kf"><span class="kfolio">#${o.folio}</span>${timeHtml}</div>
     <div class="kname">${esc(o.clientName)}</div>
     <div class="kdtag">${deliveryTag(o)}</div>
-    ${o.held?`<div class="khold">${ic('clock',14)} EN ESPERA · recoge ${esc(retiroHora(o)||'—')} · no preparar aún</div>`:''}
+    ${o.held?`<div class="khold">${ic('clock',18)} NO PREPARAR · recoge ${esc(retiroHora(o)||'—')}</div>`:''}
     ${o.note?`<div class="knote">${ic('note',15)} ${esc(o.note)}</div>`:""}
-    ${cardItemsHtml(o)}
-    ${cardTotalHtml(o)}
+    ${cardItemsHtml(o,big)}
+    ${big?'':cardTotalHtml(o)}
     ${o.paid?`<div class="kpaid">${ic('check',15)} Pagado</div>`:(st==='espera_pago'?`<div class="kwait">${ic('clock',15)} Pendiente de pago (admin)</div>`:"")}
     ${footer?`<div class="kmove">${footer}</div>`:""}
   </div>`;
@@ -3836,30 +3968,7 @@ function moveCard(id,dir){
   if(ni<0||ni>=C_ORDER.length) return;
   setStatus(o,C_ORDER[ni]); save(o); toast('#'+o.folio+' → '+STATUS[C_ORDER[ni]]);
 }
-function askDelete(id){
-  const o=orderById(id);
-  $("#overlayHost").innerHTML=`<div class="overlay"><div class="confirm-box">
-    <div class="cb-ic">${ic('trash',38)}</div><div class="cb-t">¿Eliminar la comanda #${o.folio}?</div>
-    <div class="cb-s">${esc(o.clientName)} · ${money(fullTotal(o))}.<br>Se quita del tablero y queda como cancelada en el histórico.</div>
-    <div class="cb-row"><button class="btn ghost block" onclick="closeSheet()">Cancelar</button>
-      <button class="btn red block" onclick="doDelete('${o.id}')">Sí, eliminar</button></div>
-  </div></div>`;
-}
-// "Eliminar" ya NO borra de la nube: archiva como CANCELADA → desaparece del tablero pero
-// queda rastro en el Histórico (un dedazo ya no cuesta una comanda; no suma como venta).
-function doDelete(id){ const o=orderById(id); if(!o) return;
-  const prevHist=o.hist.slice(), prevStatus=o.status;
-  setStatus(o,'cancelada'); o.archived=true; o.archivedAt=Date.now();
-  state.orders=state.orders.filter(x=>x.id!==id);
-  if(!state.history) state.history=[];
-  state.history.push(o);
-  save(o); closeSheet();
-  toast('Comanda eliminada · queda en el histórico', ()=>{
-    o.status=prevStatus; o.hist=prevHist; o.archived=false; o.archivedAt=null;
-    state.history=state.history.filter(x=>x.id!==id);
-    state.orders.unshift(o); save(o); rerender();
-  });
-}
+/* v2: askDelete/doDelete ("Eliminar comanda") retirados; el flujo es archiveOrder / askCancelOrder. */
 
 /* ----- editable order sheet + numpad ----- */
 let editItems=null, editShipping=0, editComment='', activeEdit=null, adminEditMode=false;
@@ -3892,7 +4001,7 @@ function oitemRow(it,i,vo){
   if(it.available && !vo){
     if(it.weigh){
       r2=`<span class="lbl">Peso real</span>
-        <button class="numbox ${it._wtouched?'':'needw'} ${activeEdit&&activeEdit.i===i&&activeEdit.field==='weight'?'active':''}" id="nb${i}" onclick="startEdit(${i},'weight')">${it.weight!=null?it.weight:'—'}<span class="nbu">lb</span></button>`;
+        <button class="numbox ${it._wtouched?'':'needw'} ${it._bad&&it.weigh?'bad':''} ${activeEdit&&activeEdit.i===i&&activeEdit.field==='weight'?'active':''}" id="nb${i}" onclick="startEdit(${i},'weight')">${it.weight!=null?it.weight:'—'}<span class="nbu">lb</span></button>`;
     } else {
       r2=`<span class="lbl">Cantidad</span>
         <button class="numbox ${activeEdit&&activeEdit.i===i&&activeEdit.field==='qty'?'active':''}" id="nb${i}" onclick="startEdit(${i},'qty')">${it.qty}<span class="nbu">${unit}</span></button>`;
@@ -3902,35 +4011,39 @@ function oitemRow(it,i,vo){
     const cp=prodById(it.prodId);
     if(it.price==null || (cp&&cp.price==null)){
       r2+=`<span class="lbl">Precio/lb</span>
-        <button class="numbox ${activeEdit&&activeEdit.i===i&&activeEdit.field==='price'?'active':''}" id="pb${i}" onclick="startEdit(${i},'price')">${it.price!=null?'L'+it.price:'L'}<span class="nbu">${it.price!=null?'/lb':'encargo'}</span></button>`;
+        <button class="numbox ${it._bad&&it.price==null?'bad':''} ${activeEdit&&activeEdit.i===i&&activeEdit.field==='price'?'active':''}" id="pb${i}" onclick="startEdit(${i},'price')">${it.price!=null?'L'+it.price:'L'}<span class="nbu">${it.price!=null?'/lb':'encargo'}</span></button>`;
     }
     // COTIZAR: lo que no se pesa se confirma de un toque ("lo tengo"). Ámbar = pendiente, verde = confirmado.
     if(curCotizar && !it.weigh){
-      r2+=`<button class="okbox ${it._confirmed?'on':''}" onclick="toggleConfirm(${i})" aria-label="${it._confirmed?'Confirmado':'Confirmar que lo tengo'}">${ic('check',16)} ${it._confirmed?'Confirmado':'Lo tengo'}</button>`;
+      r2+=`<button class="okbox ${it._confirmed?'on':''} ${it._bad&&!it._confirmed?'bad':''}" onclick="toggleConfirm(${i})" aria-label="${it._confirmed?'Confirmado':'Confirmar que lo tengo'}">${ic('check',16)} ${it._confirmed?'Confirmado':'Lo tengo'}</button>`;
     }
   } else if(it.available && vo){
     r2=`<span class="lbl">${it.weigh?(it.weight!=null?it.weight+' lb':'—'):it.qty+' '+unit}</span>`;
   }
   const done=!!it.done;
+  const _o=orderById(currentSheetId), canNoHay = !vo || (_o && _o.status==='preparacion' && !_o.held);
+  const noHayBtn=`<button class="nohay ${it.available?'':'on'}" onclick="togItem(${i})" aria-label="${it.available?'Marcar que no hay '+esc(it.name):'Volver a marcar que sí hay '+esc(it.name)}">${it.available?'No hay':'Sí hay'}</button>`;
   // En preparación/lista (vo) el carnicero tacha con un CHECK lo que ya preparó (no toca el precio).
   const leftCtl = vo
-    ? `<button class="oitem-check ${done?'on':''}" onclick="toggleDone(${i})" aria-label="${done?'Preparado':'Marcar preparado'}">${ic('check',20)}</button>`
-    : `<button class="btoggle ${it.available?'':'off'}" onclick="togItem(${i})"></button>`;
+    ? (it.available?`<button class="oitem-check ${done?'on':''}" onclick="toggleDone(${i})" aria-label="${done?'Preparado':'Marcar preparado'}">${ic('check',20)}</button>`:`<span class="oitem-check ghost" aria-hidden="true">${ic('x',20)}</span>`)
+    : noHayBtn;
+  if(vo && canNoHay) r2 += `<span class="r2-end">${noHayBtn}</span>`;
   return `<div class="oitem ${it.available?'':'unavail'} ${done?'done':''}">
     <div class="oitem-r1">
       ${leftCtl}
-      <div class="oitem-main"><div class="oitem-name">${esc(it.name)}${it.weigh?'<span class="line-tag">Validar peso</span>':''}</div>
+      <div class="oitem-main"><div class="oitem-name">${esc(it.name)}${it.available?'':'<span class="tag-nohay">No hay</span>'}${it.weigh&&it.available?'<span class="line-tag">Validar peso</span>':''}</div>
         <div class="oitem-sub">Pedido: ${it.qty} ${it.unit==='Libra'?'lb':unit} · ${priceTxt}</div></div>
       <div class="oitem-amt" id="amt${i}">${it.available?money(itemAmt(it)):'—'}</div>
-      ${vo?'':`<button class="oitem-del" onclick="removeEditItem(${i})" aria-label="Quitar producto">${ic('trash',17)}</button>`}
+      ${(vo||session.role!=='admin')?'':`<button class="oitem-del" onclick="removeEditItem(${i})" aria-label="Quitar producto">${ic('trash',17)}</button>`}
     </div>
     ${r2?`<div class="oitem-r2">${r2}</div>`:''}
+    ${it._bad?`<div class="fmsg">${ic('x',15)} ${esc(it._bad)}</div>`:''}
   </div>`;
 }
 // Quitar un producto de la comanda (con Deshacer). No deja la comanda en cero productos.
 function removeEditItem(i){
   const it=editItems[i]; if(!it) return;
-  if(editItems.length<=1){ toast('La comanda debe tener al menos un producto. Para anularla, usa Cancelar comanda.'); return; }
+  if(editItems.length<=1){ toast('La comanda debe tener al menos un producto. Si no se puede surtir, marcá «No hay» y avisale al admin.'); return; }
   closeNumpad();
   const removed=editItems[i], at=i;
   editItems.splice(i,1);
@@ -3955,12 +4068,12 @@ function renderCarnOrder(o,vo){
   else if(o.status==='cotizar') action=`<button class="btn red lg block btn-ic" onclick="confirmCotizarV2()">${ic('check',18)} Guardar y pasar a pago</button>`;
   else if(o.status==='espera_pago') action=`<button class="btn red lg block btn-ic" onclick="guardarV2()">${ic('check',18)} Guardar cambios</button>`;
   else if(o.status==='preparacion') action = o.held
-    ? `<button class="btn green lg block btn-ic" onclick="arriveForPickup('${o.id}')">${ic('store',18)} Cliente llegó → preparar</button>`
-    : `<button class="btn green lg block btn-ic" onclick="markReady('${o.id}')">${ic('check',18)} Marcar listo para entrega</button>`;
+    ? `<button class="btn ghost lg block btn-ic" onclick="arriveForPickup('${o.id}')">${ic('store',18)} Llegó el cliente · preparar</button>`
+    : `<button id="readyBtn" class="btn green lg block btn-ic ${(editItems.filter(x=>x.available!==false).length&&editItems.filter(x=>x.available!==false).every(x=>x.done))?'':'soft'}" onclick="markReady('${o.id}')">${ic('check',18)} Marcar listo para entrega</button>`;
   curSheetVO=vo;
   curCotizar = (o.status==='cotizar' && !vo && !adminEditMode); // fase donde se confirma lo que no se pesa
-  const voNote = (o.status==='preparacion'&&o.held)?('⏸ En espera del cliente'+(retiroHora(o)?' · recoge ~'+retiroHora(o):'')+' · NO preparar aún'):o.status==='preparacion'?'Pagado · toca el círculo para tachar lo que ya preparaste':o.status==='lista'?'Lista para entrega · solo lectura':'Entregada · solo lectura';
-  $("#overlayHost").innerHTML=`<div class="overlay osheet" onclick="if(event.target===this)closeCarn()">
+  const voNote = (o.status==='preparacion'&&o.held)?('En espera del cliente'+(retiroHora(o)?' · recoge ~'+retiroHora(o):'')+' · NO preparar aún'):o.status==='preparacion'?'Pagado · toca el círculo para tachar lo que ya preparaste':o.status==='lista'?'Lista para entrega · solo lectura':'Entregada · solo lectura';
+  $("#overlayHost").innerHTML=`<div class="overlay osheet" onclick="if(event.target===this&&session.role!=='carnicero')closeCarn()">
     <div class="sheet"><div class="sheet-head">
       <span class="sh-folio">#${o.folio}</span><span class="sh-name">${esc(o.clientName)}</span>
       <span class="chip ${CHIP[o.status]}" style="margin-left:4px">${STATUS[o.status]}</span>
@@ -3977,7 +4090,7 @@ function renderCarnOrder(o,vo){
         <div id="confirmAllHost">${curCotizar?confirmAllBtnHtml():''}</div>
         ${vo?'':`<button class="add-prod btn-ic" onclick="openAddProduct()">${ic('plus',18)} Agregar producto</button>`}
         ${osumHtml(vo)}
-        ${action?`<div style="margin-top:6px">${action}</div>`:''}
+        ${action?`<div class="actbar">${vo?'':`<div class="ab-tot"><span>Total</span><b id="barTot">${money(editGrand())}</b></div>`}${action}</div>`:''}
       </div></div></div>`;
   _openOrderId=o.id; _coEditTrack(); setTimeout(_updateCoEditWarn,60); // co-edición: anunciar y revisar
 }
@@ -4009,7 +4122,7 @@ function oitemSeqHtml(vo){ return oitemSequence(vo).map(e=> e.header!==undefined
 function rerenderOitems(){ const el=$("#oitems"); if(el) el.innerHTML=oitemSeqHtml(curSheetVO);
   const ca=$("#confirmAllHost"); if(ca) ca.innerHTML=curCotizar?confirmAllBtnHtml():''; }
 // CONFIRMAR LO QUE NO SE PESA (fase cotizar): un toque por línea, o todas de golpe.
-function toggleConfirm(i){ if(!editItems||!editItems[i]) return; editItems[i]._confirmed=!editItems[i]._confirmed; persistEdits(); rerenderOitems(); }
+function toggleConfirm(i){ if(!editItems||!editItems[i]) return; editItems[i]._confirmed=!editItems[i]._confirmed; delete editItems[i]._bad; persistEdits(); rerenderOitems(); }
 function confirmAllNonWeigh(){ if(!editItems) return; let n=0;
   editItems.forEach(it=>{ if(it.available && !it.weigh && !it._confirmed){ it._confirmed=true; n++; } });
   if(n){ persistEdits(); rerenderOitems(); toast(n+' confirmado'+(n>1?'s':'')); } }
@@ -4019,21 +4132,36 @@ function confirmAllBtnHtml(){ if(!editItems) return '';
   if(nonW<2 || !pend) return '';
   return `<button class="confirm-all" onclick="confirmAllNonWeigh()">${ic('check',17)} Confirmar todo lo que no se pesa (${pend})</button>`; }
 // Contador de avance "X de Y preparados" (encabezado de la comanda en preparación).
-function prepProgInner(){ const total=(editItems||[]).length, done=(editItems||[]).filter(x=>x.done).length;
+function prepProgInner(){ const arr=(editItems||[]).filter(x=>x.available!==false), total=arr.length, done=arr.filter(x=>x.done).length;
   const all=total>0&&done===total;
   return `<div class="pp-bar"><i style="width:${total?Math.round(done/total*100):0}%"></i></div>
     <div class="pp-txt ${all?'all':''}">${all?ic('check',15)+' Todo preparado':done+' de '+total+' preparados'}</div>`; }
-function updatePrepProgress(){ const el=$("#prepProg"); if(el) el.innerHTML=prepProgInner(); }
+function updatePrepProgress(){ const el=$("#prepProg"); if(el) el.innerHTML=prepProgInner(); refreshPrepBtn(); }
+// El botón "Marcar listo" siempre se puede tocar; solo cambia de peso: contorno mientras falten, lleno cuando todo está preparado.
+function refreshPrepBtn(){ const b=$("#readyBtn"); if(!b||!editItems) return; const arr=editItems.filter(x=>x.available!==false); b.classList.toggle('soft', !(arr.length&&arr.every(x=>x.done))); }
 // Tachar/destachar un producto como "ya preparado" (solo visual, NO cambia precio ni total).
 function toggleDone(i){ if(!editItems[i]) return; editItems[i].done=!editItems[i].done; persistEdits(); rerenderOitems(); updatePrepProgress(); }
-function togItem(i){ editItems[i].available=!editItems[i].available; if(activeEdit&&activeEdit.i===i){activeEdit=null;} persistEdits(); rerenderOitems(); updateSummary(); renderNumpadPop(); }
+// "No hay": deja rastro en la línea (it.noHay = quién y cuándo) para que el admin vea qué faltó. Con Deshacer.
+function _flipNoHay(it){ it.available=!it.available; if(!it.available){ it.noHay={at:Date.now(),by:session.role}; it.done=false; } else delete it.noHay; }
+function togItem(i,quiet){ const it=editItems&&editItems[i]; if(!it) return;
+  _flipNoHay(it); if(activeEdit&&activeEdit.i===i){activeEdit=null;}
+  persistEdits(); rerenderOitems(); updateSummary(); renderNumpadPop(); updatePrepProgress(); refreshPrepBtn();
+  if(quiet) return;
+  const oid=currentSheetId, nm=it.name, pid=it.prodId;
+  haptic(it.available?'tap':'warn');
+  toast(it.available?(nm+': sí hay'):('No hay: '+nm), ()=>{
+    if(currentSheetId===oid && editItems){ const j=editItems.findIndex(x=>x.name===nm&&x.prodId===pid); if(j>=0) togItem(j,true); return; }
+    const o=orderById(oid); const x=o&&o.items.find(y=>y.name===nm&&y.prodId===pid); if(x){ _flipNoHay(x); save(o); rerender(); } });
+}
 function updateSummary(){ const a=$("#sumSub"); if(a)a.textContent=money(editSubtotal());
   const sh=$("#sumShip"); if(sh)sh.innerHTML=shipCellInner();
   const srs=$("#srShip"); if(srs)srs.classList.toggle('ship-alert',needShip());
-  const g=$("#sumGrand"); if(g)g.textContent=money(editGrand()); }
+  const g=$("#sumGrand"); if(g)g.textContent=money(editGrand());
+  const bt=$("#barTot"); if(bt) bt.textContent=money(editGrand()); }
 function startEdit(i,field){
   const cur = field==='weight'?editItems[i].weight : field==='qty'?editItems[i].qty : field==='price'?editItems[i].price : editShipping;
   if(field==='weight' && i>=0 && editItems[i]) editItems[i]._wtouched=true; // marca que sí validó el peso
+  if(i>=0 && editItems[i] && editItems[i]._bad) delete editItems[i]._bad;
   activeEdit={i,field,buffer:(cur!=null&&!isNaN(cur))?String(cur):'',fresh:true};
   // resaltar la caja activa SIN reconstruir toda la lista (el rebuild hacía sentir "pegado" el tap en móvil)
   document.querySelectorAll('#oitems .numbox.active').forEach(b=>b.classList.remove('active'));
@@ -4059,7 +4187,7 @@ function renderNumpadPop(){
       <button class="np-key" onclick="npTap('0')">0</button>
       <button class="np-key del" onclick="npTap('del')" aria-label="Borrar">${ic('back',26)}</button>
     </div>
-    <button class="np-key ok" onclick="npTap('ok')">${ic('check',20)} Listo</button>
+    <button class="np-key ok" onclick="npTap('ok')">${ic('check',20)} ${nextTarget()?'Listo · siguiente':'Listo'}</button>
    </div>`;
 }
 function npUnit(){ if(!activeEdit) return ''; if(activeEdit.field==='weight') return ' lb';
@@ -4083,6 +4211,7 @@ function applyEdit(){
   else if(activeEdit.field==='price') editItems[activeEdit.i].price=val;
   else editShipping=val;
   const nv=$("#npVal"); if(nv) nv.textContent=(activeEdit.buffer||'0')+npUnit();
+  if(!adminEditMode && !curSheetVO) persistEdits(true); // lo tecleado vive también en la comanda (en memoria): cerrar el teclado o la hoja ya no lo pierde
   if(activeEdit.i>=0){
     const it=editItems[activeEdit.i];
     const bx=$("#nb"+activeEdit.i); if(bx && activeEdit.field!=='price') bx.childNodes[0].textContent=(activeEdit.buffer||'—');
@@ -4092,29 +4221,47 @@ function applyEdit(){
   updateSummary();
   const nt=$("#npTotal"); if(nt) nt.textContent=money(editGrand());
 }
+// Siguiente línea de la fase COTIZAR que aún necesita peso o precio (en el orden en que se ve), y al final el envío.
+function nextTarget(){
+  if(!curCotizar||!activeEdit||!editItems) return null;
+  const pend=(it,skipW)=>it.available && ((it.weigh&&!it._wtouched&&!skipW)?'weight':(it.price==null?'price':null));
+  const order=oitemSequence(false).filter(e=>e.i!==undefined).map(e=>e.i);
+  const cur=activeEdit.i;
+  if(cur>=0){ const it=editItems[cur]; if(activeEdit.field==='weight'&&it.available&&it.price==null) return {i:cur,field:'price'};
+    const p=order.indexOf(cur);
+    for(let k=p+1;k<order.length;k++){ const f=pend(editItems[order[k]]); if(f) return {i:order[k],field:f}; } }
+  else { return null; }
+  if(needShip()) return {i:-1,field:'ship'};
+  return null;
+}
 function commitEdit(){
   persistEdits();
-  closeNumpad(); // al dar "Listo" se cierra el teclado; el carnicero elige manualmente la siguiente línea a actualizar
+  const nx=nextTarget();
+  if(nx){ activeEdit=null; rerenderOitems(); startEdit(nx.i,nx.field); return; } // "Listo · siguiente": salta a lo que falta
+  closeNumpad();
 }
-function closeNumpad(){ activeEdit=null; const h=$("#numpadHost"); if(h) h.innerHTML=''; rerenderOitems(); }
+function closeNumpad(){ if(activeEdit&&editItems&&!adminEditMode&&!curSheetVO) persistEdits(); activeEdit=null; const h=$("#numpadHost"); if(h) h.innerHTML=''; rerenderOitems(); }
 function persistEdits(noSave){ const o=orderById(currentSheetId); if(!o) return;
-  o.items=editItems.map(it=>({...it, weight: it.weigh?(it.weight!=null?it.weight:it.qty):null}));
+  o.items=editItems.map(it=>{ const {_bad,...r}=it; return {...r, weight: it.weigh?(it.weight!=null?it.weight:it.qty):null}; });
   o.shipping=editShipping; o.note=editComment; if(!noSave) save(o); }
 function confirmCotizarV2(){ const o=orderById(currentSheetId); if(!o) return;
   // No dejar avanzar sin haber validado el peso de los productos que lo requieren.
   const faltan=editItems.filter(it=>it.available && it.weigh && !it._wtouched);
-  if(faltan.length){ toast('Valida el peso de: '+faltan.map(f=>f.name).join(', '));
+  if(faltan.length){ haptic('warn'); toast('Valida el peso de: '+faltan.map(f=>f.name).join(', '));
+    faltan.forEach(f=>{ f._bad='Falta validar el peso'; }); rerenderOitems(); faltan.forEach(f=>Mo.shake($('#nb'+editItems.indexOf(f))));
     const idx=editItems.indexOf(faltan[0]); if(idx>=0) startEdit(idx,'weight'); return; }
   // Red de seguridad: un "por encargo" (sin precio) no puede pasar a pago en L0 — se le pone el precio negociado.
   const faltanPrecio=editItems.filter(it=>it.available && it.price==null);
-  if(faltanPrecio.length){ toast('Ponle precio a: '+faltanPrecio.map(f=>f.name).join(', '));
+  if(faltanPrecio.length){ haptic('warn'); toast('Ponle precio a: '+faltanPrecio.map(f=>f.name).join(', '));
+    faltanPrecio.forEach(f=>{ f._bad='Falta el precio'; }); rerenderOitems(); faltanPrecio.forEach(f=>Mo.shake($('#pb'+editItems.indexOf(f))));
     const idx=editItems.indexOf(faltanPrecio[0]); if(idx>=0) startEdit(idx,'price'); return; }
   // Ni sin confirmar de un toque lo que no se pesa.
   const faltanConf=editItems.filter(it=>it.available && !it.weigh && !it._confirmed);
-  if(faltanConf.length){ toast('Confirma lo que no se pesa: '+faltanConf.map(f=>f.name).join(', ')); rerenderOitems(); return; }
+  if(faltanConf.length){ haptic('warn'); toast('Confirma lo que no se pesa: '+faltanConf.map(f=>f.name).join(', '));
+    faltanConf.forEach(f=>{ f._bad='Falta confirmar que lo tenés'; }); rerenderOitems(); document.querySelectorAll('.okbox.bad').forEach(b=>Mo.shake(b)); return; }
   // Envío obligatorio en domicilio: no pasa a pago con envío en 0 ("a convenir" de un pedido
   // web sin ubicación). Se le pone el precio a mano antes de cotizar.
-  if(!isRetiro(o) && !(editShipping>0)){ haptic('warn'); toast('Ponle el precio del envío antes de cotizar'); startEdit(-1,'ship'); return; }
+  if(!isRetiro(o) && !(editShipping>0)){ haptic('warn'); toast('Ponle el precio del envío antes de cotizar'); Mo.shake($('#srShip')); startEdit(-1,'ship'); return; }
   const id=o.id; persistEdits(true); setStatus(o,'espera_pago'); save(o); haptic('success');
   notifyAdmin('💵 Por cobrar #'+o.folio, o.clientName+' · '+money(fullTotal(o))); // avisa al admin
   closeCarn(); toast('Pasó a confirmación de pago', ()=>revertStatus(id)); }
@@ -4122,7 +4269,8 @@ function guardarV2(){ persistEdits(); closeCarn(); toast('Cambios guardados'); }
 function markReady(id){ const o=orderById(id); if(!o) return; const prevLista=o.listaAt; o.listaAt=Date.now(); setStatus(o,'lista'); save(o); haptic('success');
   notifyAdmin('📦 Por entregar #'+o.folio, o.clientName+' · '+(isRetiro(o)?'Retiro':'Domicilio'+(o.zone?' · '+o.zone:''))); // avisa al admin
   closeCarn(); toast('Listo para entrega', ()=>revertStatus(id, x=>{x.listaAt=prevLista;})); }
-function closeCarn(){ $("#overlayHost").innerHTML=''; const h=$("#numpadHost"); if(h) h.innerHTML=''; activeEdit=null; editItems=null; currentSheetId=null; adminEditMode=false; _openOrderId=null; _coEditTrack(); rerender(); }
+function closeCarn(){ if(editItems&&!adminEditMode&&!curSheetVO&&currentSheetId) persistEdits(); // cerrar la hoja guarda el borrador (antes se perdía lo tecleado)
+  $("#overlayHost").innerHTML=''; const h=$("#numpadHost"); if(h) h.innerHTML=''; activeEdit=null; editItems=null; currentSheetId=null; adminEditMode=false; _openOrderId=null; _coEditTrack(); rerender(); }
 /* add product mid-process */
 let addCat="Res";
 function openAddProduct(){
