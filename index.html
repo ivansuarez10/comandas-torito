@@ -948,6 +948,48 @@ html.lite .kcard2,html.lite .ocard,html.lite .card,html.lite .oitem,html.lite .k
 .pin-input:focus-visible,.win:focus-visible,.inp:focus-visible,
 .qty input:focus-visible,.ce-inp:focus-visible,.ce-nameinp:focus-visible{
   outline:3px solid currentColor;outline-offset:2px}
+/* ===== Estadísticas ===== */
+.st-seg{display:flex;gap:4px;background:#E9E9EE;border-radius:13px;padding:4px;margin:0 0 12px}
+.st-seg button{flex:1;min-height:40px;border-radius:10px;font-weight:600;font-size:13.5px;color:var(--muted);white-space:nowrap;padding:0 6px}
+.st-seg button.act{background:#fff;color:var(--ink);box-shadow:var(--sh);font-weight:700}
+.st-per{font-size:12.5px;color:var(--muted);margin:0 2px 10px}
+.st-kpis .kpi .kvv{font-variant-numeric:tabular-nums;font-size:24px}
+.st-delta{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:12.5px;font-weight:700;color:var(--ink);flex-wrap:wrap}
+.st-delta small{font-weight:500;color:var(--muted);font-size:11.5px;text-transform:none;letter-spacing:0}
+.st-delta.dn{color:var(--rojo)}
+.st-delta svg{flex:none}
+.st-chart{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:6px}
+.st-chart.dense{gap:3px}
+.st-col{padding-top:16px;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:5px;position:relative}
+.st-bar{width:100%;max-width:34px;background:#CFCFD6;border-radius:6px 6px 2px 2px;min-height:0;margin-top:auto}
+.st-bar.hi{background:var(--rojo)}
+.st-l{font-size:10.5px;color:var(--muted);font-weight:600;height:13px;line-height:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.st-v{font-size:11px;font-weight:700;color:var(--ink);height:14px;line-height:14px;white-space:nowrap;font-variant-numeric:tabular-nums;position:absolute;top:0;left:50%;transform:translateX(-50%);display:none}
+.st-col:has(.st-bar.hi) .st-v{display:block}
+.st-note{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.4}
+.st-note b{color:var(--ink)}
+.st-sub{text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted-2);font-size:12px;margin-left:4px}
+.st-card{padding:16px}
+.st-split{display:flex;gap:2px;height:14px;border-radius:7px;overflow:hidden;margin-bottom:12px}
+.st-split i{display:block;min-width:3px}
+.st-lrow{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:14px;border-bottom:1px solid var(--line-2)}
+.st-lrow:last-child{border:none}
+.st-sw{flex:none;width:10px;height:10px;border-radius:3px}
+.st-ln{flex:1;min-width:0}
+.st-lv{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.st-lv small{font-weight:500;color:var(--muted)} .st-lv b{display:inline-block;min-width:38px;color:var(--muted);font-weight:600}
+.st-rank .rk-name{width:46%;max-width:210px;display:flex;flex-direction:column;line-height:1.25}
+.st-rank .rk-name small{color:var(--muted);font-size:11.5px}
+.st-rank .rbar i{background:#CFCFD6} .st-rank .rbar i.hi{background:var(--rojo)}
+.st-rank .rv{min-width:64px;text-align:right;font-variant-numeric:tabular-nums}
+.st-cycles{display:flex;flex-direction:column}
+.st-cyc{display:grid;grid-template-columns:1fr auto;column-gap:10px;padding:10px 0;border-bottom:1px solid var(--line-2)}
+.st-cyc .sc-l{font-size:14px} .st-cyc .sc-v{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;text-align:right}
+.st-cyc small{grid-column:1/-1;color:var(--muted);font-size:11.5px;margin-top:2px}
+.st-cyc.off .sc-v{color:var(--muted-2);font-weight:500}
+.st-tbl{margin-top:8px;font-size:13px} .st-tbl summary{color:var(--muted);cursor:pointer;padding:6px 0;font-weight:600}
+.st-tbl table{width:100%;border-collapse:collapse;margin-top:4px} .st-tbl td{padding:5px 0;border-bottom:1px solid var(--line-2)} .st-tbl td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.st-link{display:flex}
 </style>
 </head>
 <body>
@@ -1832,6 +1874,8 @@ function ic(n,s=20){const p={
   note:'<path d="M5.5 4h13v16h-13zM9 9h6M9 13h6M9 17h3.5"/>',
   left:'<path d="M14.5 6l-6 6 6 6"/>',
   right:'<path d="M9.5 6l6 6-6 6"/>',
+  up:'<path d="M12 19V5M6 11l6-6 6 6"/>',
+  down:'<path d="M12 5v14M6 13l6 6 6-6"/>',
   back:'<path d="M20 6.5H9.5l-5.5 5.5 5.5 5.5H20zM12.5 9.5l5 5M17.5 9.5l-5 5"/>',
   store:'<path d="M4 9.5l1.2-4.5h13.6L20 9.5M4.5 9.5v9.5h15V9.5M4 9.5h16"/>',
   edit:'<path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/>',
@@ -1993,6 +2037,7 @@ function renderAdmin(){
   else if(adminView==="nueva") content=adminNueva();
   else if(adminView==="clientes") content=adminClientes();
   else if(adminView==="reporte") content=adminReporte();
+  else if(adminView==="stats") content=adminStats();
   else if(adminView==="cierre") content=adminCierre();
   else if(adminView==="historico") content=adminHistorico();
   else if(adminView==="ajustes") content=adminAjustes();
@@ -2007,6 +2052,7 @@ function renderAdmin(){
       <aside class="sidebar">
         <button class="snav snew btn-ic" onclick="go('nueva')">${ic('plus',18)} Nueva comanda</button>
         ${nav.map(([k,l,i])=>`<button class="snav ${adminView===k?'act':''}" onclick="go('${k}')"><span class="si">${ic(i,19)}</span>${l}</button>`).join("")}
+        <button class="snav ${adminView==='stats'?'act':''}" onclick="go('stats')"><span class="si">${ic('chart',19)}</span>Estadísticas</button>
       </aside>
       <div class="main"><div class="view">${content}</div></div>
     </div>
@@ -3011,6 +3057,7 @@ function adminResumen(g){
     </div>
     <div class="carn-info" onclick="go('bandeja')">${ic('knife',15)} <span>Con el carnicero: <b>${g.proceso.length}</b> en proceso (cotizar / preparación)</span></div>
     ${(()=>{const n=unnamedWebCount();return n?`<div class="carn-info namebanner" onclick="go('clientes')">${ic('user',15)} <span><b>${n}</b> cliente${n>1?'s':''} de la web sin nombre · ponles nombre ${ic('right',13)}</span></div>`:'';})()}
+    <button class="hist-link card st-link" style="margin-bottom:14px" onclick="go('stats')"><span class="act-ic">${ic('chart',20)}</span><span class="hist-tx"><b>Estadísticas</b><small>Ventas, horas pico, clientes, tiempos y más</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div class="sect-label">Caja</div>
     <button class="hist-link card" onclick="go('cierre')"><span class="act-ic">${ic('cash',20)}</span><span class="hist-tx"><b>Cierre de caja del día</b><small>Efectivo vs transferencia · cuadre</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div class="sect-label">Ventas · últimos 7 días <button class="link-btn" onclick="go('reporte')">Reporte del mes ${ic('right',13)}</button></div>
@@ -3243,6 +3290,174 @@ function exportReporte(){
   document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
   toast('Reporte descargado · '+rows.length+' comandas');
+}
+/* ----- ESTADÍSTICAS (solo lectura sobre allOrders(); no escribe nada en la nube) -----
+   Una venta cuenta con _esVenta y se fecha con _refVenta (cuando entró el dinero). Las canceladas
+   solo entran a la tasa de cancelación. Todo se calcula en el teléfono, sin consultas nuevas. */
+let statsPeriod='30';
+const ST_PERIODS=[['7','7 días'],['30','30 días'],['mes','Este mes'],['todo','Todo']];
+const ST_DOW=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const ST_DOWS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const ST_MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function statsRange(p){
+  const now=Date.now(), today=dayStart(now), day=86400000, end=now+1;
+  if(p==='7'||p==='30'){ const n=+p, start=today-(n-1)*day; return {start,end,prev:{start:start-n*day,end:start},label:'Últimos '+n+' días'}; }
+  if(p==='mes'){ const d=new Date(now), start=new Date(d.getFullYear(),d.getMonth(),1).getTime(),
+      pStart=new Date(d.getFullYear(),d.getMonth()-1,1).getTime(), span=now-start;
+    return {start,end,prev:{start:pStart,end:Math.min(pStart+span+1,start)},label:ST_MESES[d.getMonth()]+' '+d.getFullYear()+' · se compara con el mismo tramo del mes anterior'}; }
+  const vs=allOrders().filter(_esVenta); const first=vs.length?Math.min(...vs.map(_refVenta)):today;
+  return {start:dayStart(first),end,prev:null,label:'Todo el historial'};
+}
+function statsFmtDur(min){ if(min==null||!isFinite(min)) return '—';
+  if(min<1) return '< 1 min'; if(min<60) return Math.round(min)+' min';
+  if(min<1440){ const h=Math.floor(min/60), m=Math.round(min%60); return h+' h'+(m?' '+m+' min':''); }
+  const d=Math.floor(min/1440), h=Math.round((min%1440)/60); return d+' d'+(h?' '+h+' h':''); }
+// Origen: la tienda web guarda delivery como 'true'/'false' (texto); la captura manual / WhatsApp guarda 'envio'/'recoge'.
+const statsEsWeb=o=>['true','false'].includes(String(o.delivery).trim().toLowerCase());
+function statsDelta(cur,prev){
+  if(prev==null) return '';
+  if(!prev) return cur?`<span class="st-delta">nuevo vs. período anterior</span>`:'';
+  const pc=(cur-prev)/prev*100, up=pc>=0;
+  return `<span class="st-delta ${up?'up':'dn'}">${ic(up?'up':'down',12)} ${up?'+':'−'}${Math.abs(pc).toFixed(Math.abs(pc)<10?1:0)}% <small>vs. anterior</small></span>`;
+}
+function statsBars(items,o={}){
+  const mx=Math.max(1,...items.map(i=>i.val)), peak=items.reduce((b,i,ix)=>i.val>items[b].val?ix:b,0), dense=items.length>14;
+  const step=o.every||1;
+  const cols=items.map((i,ix)=>{ const h=i.val?Math.max(3,Math.round(i.val/mx*100)):0;
+    const hi=i.val>0&&ix===peak;
+    return `<div class="st-col" title="${esc(i.title||i.label)}">
+      <span class="st-v">${hi?esc(o.fmt?o.fmt(i.val):money(i.val)):''}</span>
+      <div class="st-bar ${hi?'hi':''}" style="height:${h}%"></div>
+      <span class="st-l">${ix%step===0?esc(i.label):''}</span></div>`; }).join('');
+  const table=o.table?`<details class="st-tbl"><summary>Ver en tabla</summary><table><tbody>${items.map(i=>`<tr><td>${esc(i.title||i.label)}</td><td>${esc(o.fmt?o.fmt(i.val):money(i.val))}</td></tr>`).join('')}</tbody></table></details>`:'';
+  return `<div class="st-chart ${dense?'dense':''}" role="img" aria-label="${esc(o.aria||'Gráfico de barras')}">${cols}</div>${table}`;
+}
+function statsSplit(parts,o={}){
+  const tot=parts.reduce((s,p)=>s+p.val,0); if(!tot) return '<div class="kempty">Sin datos</div>';
+  const cl=['#1D1D1F','#B9B9C1','#8E8E93','#DCDCE1'];
+  return `<div class="st-split" role="img" aria-label="${esc(o.aria||'Reparto')}">${parts.filter(p=>p.val>0).map((p,i)=>`<i style="flex:${p.val};background:${cl[parts.indexOf(p)%4]}"></i>`).join('')}</div>
+    <div class="st-leg">${parts.map((p,i)=>`<div class="st-lrow"><span class="st-sw" style="background:${cl[i%4]}"></span><span class="st-ln">${esc(p.label)}</span><span class="st-lv">${esc(p.show!=null?p.show:money(p.val))}${p.n!=null?` <small>· ${p.n}</small>`:''} <b>${Math.round(p.val/tot*100)}%</b></span></div>`).join('')}</div>`;
+}
+function statsRank(rows,fmt){ if(!rows.length) return '<div class="kempty">Sin datos</div>';
+  const mx=rows[0][1]||1;
+  return `<div class="rank st-rank">${rows.map(([k,v,sub],i)=>`<div class="rrow"><span class="rk-name">${esc(k)}${sub?`<small>${esc(sub)}</small>`:''}</span><span class="rbar"><i class="${i===0?'hi':''}" style="width:${Math.max(5,v/mx*100)}%"></i></span><span class="rv">${esc(fmt(v))}</span></div>`).join('')}</div>`; }
+function statsCompute(p){
+  const R=statsRange(p), all=allOrders();
+  const inR=(ts,r)=>ts>=r.start&&ts<r.end;
+  const ventas=all.filter(o=>_esVenta(o)&&inR(_refVenta(o),R));
+  const prevV=R.prev?all.filter(o=>_esVenta(o)&&inR(_refVenta(o),R.prev)):null;
+  const sum=a=>a.reduce((s,o)=>s+fullTotal(o),0);
+  const total=sum(ventas), n=ventas.length, ticket=n?total/n:0;
+  const pTotal=prevV?sum(prevV):null, pN=prevV?prevV.length:null, pTicket=prevV&&pN?pTotal/pN:(prevV?0:null);
+  // serie por día / semana / mes
+  const day=86400000, spanDays=Math.round((dayStart(R.end-1)-R.start)/day)+1;
+  let series=[], every=1, gran='día';
+  if(spanDays<=31){ for(let i=0;i<spanDays;i++){ const s=R.start+i*day, d=new Date(s);
+      series.push({s,e:s+day,label:String(d.getDate()),title:ST_DOWS[d.getDay()]+' '+d.getDate()+' '+ST_MESES[d.getMonth()],val:0}); }
+    every=spanDays>16?(spanDays>24?5:3):1; }
+  else if(spanDays<=140){ gran='semana'; let s=R.start; while(s<R.end){ const d=new Date(s);
+      series.push({s,e:s+7*day,label:d.getDate()+' '+ST_MESES[d.getMonth()],title:'Semana del '+d.getDate()+' '+ST_MESES[d.getMonth()],val:0}); s+=7*day; } every=Math.ceil(series.length/6); }
+  else { gran='mes'; const d0=new Date(R.start); let y=d0.getFullYear(), m=d0.getMonth();
+    while(new Date(y,m,1).getTime()<R.end){ const s=new Date(y,m,1).getTime(), e=new Date(y,m+1,1).getTime();
+      series.push({s,e,label:ST_MESES[m],title:ST_MESES[m]+' '+y,val:0}); m++; if(m>11){m=0;y++;} } every=Math.ceil(series.length/8); }
+  ventas.forEach(o=>{ const t=_refVenta(o); const b=series.find(x=>t>=x.s&&t<x.e); if(b) b.val+=fullTotal(o); });
+  // día de la semana y hora (hora = cuándo hicieron el pedido)
+  const dow=ST_DOW.map((_,i)=>({label:ST_DOWS[i],title:ST_DOW[i],val:0,n:0}));
+  const hrs=Array.from({length:24},(_,h)=>({label:String(h),title:(h%12||12)+(h<12?' a. m.':' p. m.'),val:0,n:0}));
+  ventas.forEach(o=>{ const d=new Date(_refVenta(o)).getDay(); dow[d].val+=fullTotal(o); dow[d].n++;
+    const h=new Date(o.createdAt).getHours(); hrs[h].val++; });
+  const dowOrd=[1,2,3,4,5,6,0].map(i=>dow[i]);
+  // origen, entrega, zona, pago
+  const web=ventas.filter(statsEsWeb), man=ventas.filter(o=>!statsEsWeb(o));
+  const ret=ventas.filter(isRetiro), env=ventas.filter(o=>!isRetiro(o));
+  const zones={}; env.forEach(o=>{ const z=(o.zone||'').trim()||'Sin zona'; (zones[z]=zones[z]||{v:0,n:0}); zones[z].v+=fullTotal(o); zones[z].n++; });
+  const zoneRows=Object.entries(zones).sort((a,b)=>b[1].v-a[1].v).slice(0,6).map(([k,z])=>[k,z.v,z.n+' pedido'+(z.n!==1?'s':'')]);
+  const efe=ventas.filter(o=>payMethodOf(o)==='efectivo'), tra=ventas.filter(o=>payMethodOf(o)!=='efectivo');
+  // productos
+  const byL={}, byLb={};
+  ventas.forEach(o=>(o.items||[]).forEach(it=>{ const a=lineAmount(it); if(a) byL[it.name]=(byL[it.name]||0)+a;
+    const lb=itemLibras(it); if(lb) byLb[it.name]=(byLb[it.name]||0)+lb; }));
+  const top=(obj,k)=>Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,k);
+  // clientes
+  const ck=o=>_digits(o.phone).length>=8?_phoneKey(o.phone):_norm(o.clientName);
+  const firstSale={}; all.filter(_esVenta).forEach(o=>{ const k=ck(o), t=_refVenta(o); if(k&&(firstSale[k]==null||t<firstSale[k])) firstSale[k]=t; });
+  const cli={}; ventas.forEach(o=>{ const k=ck(o); if(!k) return; const c=cli[k]||(cli[k]={name:o.clientName,v:0,n:0}); c.v+=fullTotal(o); c.n++; if(!isPhoneName(o.clientName)) c.name=o.clientName; });
+  const cliKeys=Object.keys(cli), nuevos=cliKeys.filter(k=>firstSale[k]>=R.start), recur=cliKeys.length-nuevos.length;
+  const topCli=Object.values(cli).sort((a,b)=>b.v-a.v).slice(0,5).map(c=>[isPhoneName(c.name)?'Sin nombre · '+c.name:c.name,c.v,c.n+' pedido'+(c.n!==1?'s':'')]);
+  // ciclo (hist) — solo etapas con marca de tiempo en ambos extremos; se descartan negativos y > 7 días
+  const firstAt=(o,s)=>{ const h=(o.hist||[]).find(x=>x.s===s); return h?+h.at:null; };
+  const stages=[['Pedido → cotizado',o=>[o.createdAt,firstAt(o,'espera_pago')??firstAt(o,'preparacion')]],
+    ['Cotizado → pagado',o=>[firstAt(o,'espera_pago'),o.paidAt?+o.paidAt:null]],
+    ['Pagado → lista',o=>[o.paidAt?+o.paidAt:null,o.listaAt?+o.listaAt:firstAt(o,'lista')]],
+    ['Lista → entregada',o=>[o.listaAt?+o.listaAt:firstAt(o,'lista'),firstAt(o,'entregada')]],
+    ['Pedido → entregada (total)',o=>[o.createdAt,firstAt(o,'entregada')]]];
+  const cycle=stages.map(([label,f])=>{ const d=[]; ventas.forEach(o=>{ const [a,b]=f(o); if(a!=null&&b!=null&&b>=a&&(b-a)<7*day) d.push((b-a)/60000); });
+    d.sort((x,y)=>x-y); return {label,n:d.length,avg:d.length?d.reduce((s,x)=>s+x,0)/d.length:null,med:d.length?d[Math.floor(d.length/2)]:null}; });
+  // cancelación: sobre las comandas CREADAS en el período
+  const created=all.filter(o=>inR(o.createdAt,R)), canc=created.filter(o=>o.status==='cancelada');
+  return {R,ventas,n,total,ticket,pTotal,pN,pTicket,series,every,gran,dowOrd,hrs,web,man,ret,env,zoneRows,efe,tra,
+    prodL:top(byL,6),prodLb:top(byLb,6),nuevos:nuevos.length,recur,topCli,cycle,created:created.length,canc:canc.length,sum,
+    lb:ventas.reduce((s,o)=>s+orderLibras(o),0)};
+}
+function adminStats(){
+  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Estadísticas</h2><div class="vh-sub">Solo ventas reales · interno</div></div></div>
+    <div class="st-seg" role="tablist">${ST_PERIODS.map(([k,l])=>`<button role="tab" aria-selected="${statsPeriod===k}" class="${statsPeriod===k?'act':''}" onclick="setStatsPeriod('${k}')">${l}</button>`).join('')}</div>
+    <div id="statsBody">${statsBody()}</div><div style="height:24px"></div>`;
+}
+function setStatsPeriod(p){ statsPeriod=p; const b=$("#statsBody"); if(!b){ renderAdmin(); return; }
+  b.innerHTML=statsBody(); document.querySelectorAll('.st-seg button').forEach(x=>{ const on=x.getAttribute('onclick').includes("'"+p+"'"); x.classList.toggle('act',on); x.setAttribute('aria-selected',on); }); }
+function statsBody(){
+  const S=statsCompute(statsPeriod), pct=(a,b)=>b?Math.round(a/b*100):0;
+  if(!S.n&&!S.created) return `<div class="empty-state"><div class="es-ic">${ic('chart',36)}</div><p>Todavía no hay ventas en este período.<br>Probá con otro rango.</p></div>`;
+  const gSub={día:'por día',semana:'por semana',mes:'por mes'}[S.gran];
+  const cancPct=S.created?Math.round(S.canc/S.created*100):0;
+  const dow=S.dowOrd, hrs=S.hrs;
+  // horas: recortar a la franja con actividad para que las barras respiren
+  const hActive=hrs.map((h,i)=>h.val?i:-1).filter(i=>i>=0), h0=hActive.length?Math.max(0,Math.min(...hActive)-1):7, h1=hActive.length?Math.min(23,Math.max(...hActive)+1):19;
+  const hrsV=hrs.slice(h0,h1+1).map(h=>({...h,label:String(h.label)}));
+  const dPeak=dow.reduce((b,d,i)=>d.val>dow[b].val?i:b,0), hPeak=hrs.reduce((b,h,i)=>h.val>hrs[b].val?i:b,0);
+  const cyc=S.cycle.map(c=>`<div class="st-cyc ${c.n?'':'off'}"><span class="sc-l">${c.label}</span><span class="sc-v">${c.n?statsFmtDur(c.avg):'Sin datos'}</span>${c.n?`<small>mediana ${statsFmtDur(c.med)} · ${c.n} pedido${c.n!==1?'s':''}</small>`:''}</div>`).join('');
+  const nWeb=S.web.length, nMan=S.man.length;
+  return `<div class="st-per">${esc(S.R.label)}</div>
+  <div class="kpis st-kpis">
+    <div class="kpi accent"><div class="kl">Ventas</div><div class="kvv">${money(S.total)}</div>${statsDelta(S.total,S.pTotal)}</div>
+    <div class="kpi"><div class="kl">Pedidos</div><div class="kvv">${S.n}</div>${statsDelta(S.n,S.pN)}</div>
+    <div class="kpi"><div class="kl">Ticket promedio</div><div class="kvv">${money(S.ticket)}</div>${statsDelta(S.ticket,S.pTicket)}</div>
+    <div class="kpi"><div class="kl">Libras vendidas</div><div class="kvv">${_lb(S.lb)}</div></div>
+  </div>
+  <div class="sect-label">Ventas ${gSub}</div>
+  <div class="card chart-card">${statsBars(S.series,{every:S.every,table:true,aria:'Ventas '+gSub})}</div>
+  <div class="sect-label">Día de la semana</div>
+  <div class="card chart-card">${statsBars(dow,{aria:'Ventas por día de la semana'})}
+    <div class="st-note">${dow[dPeak].val?`Tu mejor día es el <b>${dow[dPeak].title.toLowerCase()}</b> · ${dow[dPeak].n} pedido${dow[dPeak].n!==1?'s':''}`:'Sin datos'}</div></div>
+  <div class="sect-label">Horas pico <span class="st-sub">cuándo piden</span></div>
+  <div class="card chart-card">${statsBars(hrsV,{fmt:v=>v+' ped.',aria:'Pedidos por hora',table:true})}
+    <div class="st-note">${hrs[hPeak].val?`La hora más fuerte es a las <b>${hrs[hPeak].title}</b> · ${hrs[hPeak].val} pedido${hrs[hPeak].val!==1?'s':''}`:'Sin datos'}</div></div>
+  <div class="sect-label">Origen del pedido</div>
+  <div class="card st-card">${statsSplit([{label:'Tienda web',val:S.sum(S.web),n:nWeb},{label:'Manual / WhatsApp',val:S.sum(S.man),n:nMan}],{aria:'Origen del pedido'})}
+    <div class="st-note">Se deduce de cómo se guardó la entrega: la tienda web y la captura manual la anotan distinto. Es una estimación, no un campo propio.</div></div>
+  <div class="sect-label">Domicilio o recoger</div>
+  <div class="card st-card">${statsSplit([{label:'A domicilio',val:S.sum(S.env),n:S.env.length},{label:'Recoge en local',val:S.sum(S.ret),n:S.ret.length}],{aria:'Domicilio contra recoger'})}</div>
+  <div class="sect-label">Zonas de entrega</div>
+  ${statsRank(S.zoneRows,money)}
+  <div class="sect-label">Método de pago</div>
+  <div class="card st-card">${statsSplit([{label:'Transferencia',val:S.sum(S.tra),n:S.tra.length},{label:'Efectivo',val:S.sum(S.efe),n:S.efe.length}],{aria:'Método de pago'})}</div>
+  <div class="sect-label">Top productos · por ventas</div>
+  ${statsRank(S.prodL,money)}
+  <div class="sect-label">Top productos · por libras</div>
+  ${statsRank(S.prodLb,_lb)}
+  <div class="sect-label">Clientes</div>
+  <div class="card st-card">${statsSplit([{label:'Nuevos',val:S.nuevos,show:String(S.nuevos)},{label:'Recurrentes',val:S.recur,show:String(S.recur)}],{aria:'Clientes nuevos y recurrentes'})}
+    <div class="st-note">Nuevo = su primera compra cae en este período.</div></div>
+  <div class="sect-label">Top clientes</div>
+  ${statsRank(S.topCli,money)}
+  <div class="sect-label">Tiempo de ciclo <span class="st-sub">promedio</span></div>
+  <div class="card st-card st-cycles">${cyc}
+    <div class="st-note">Sale de las marcas de tiempo de cada estado. Los pedidos viejos o capturados sin pasar por cada estado no entran al promedio.</div></div>
+  <div class="sect-label">Cancelaciones</div>
+  <div class="kpis"><div class="kpi"><div class="kl">Tasa de cancelación</div><div class="kvv">${cancPct}<small>%</small></div></div>
+    <div class="kpi"><div class="kl">Canceladas</div><div class="kvv">${S.canc} <small>de ${S.created}</small></div></div></div>
+  <div class="st-note" style="padding:0 4px">Comandas creadas en el período. Las canceladas no suman a ninguna venta de arriba.</div>`;
 }
 /* ----- CIERRE DE CAJA (cuadre del día) -----
    El método de pago se DEDUCE del tipo de entrega (regla del negocio, confirmada por Ivan):
