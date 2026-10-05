@@ -1085,7 +1085,63 @@ html.rol-carn .kcol-head .kc{font-size:16px;padding:2px 12px}
 @keyframes kin{from{opacity:.35;transform:translateY(10px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.roll,.shake,.kcard2.kin{animation:none!important}}
 
+
+/* RETENCIÓN: línea del cierre de caja (neutra, sin color de relleno) */
+.ret-line{display:flex;align-items:center;gap:8px;margin:12px 2px 0;font-size:14px;color:var(--muted);line-height:1.4;min-height:24px}
+.ret-line svg{flex:none;color:var(--muted)}
+.ret-line b{color:var(--ink);font-weight:700}
+/* ===== V3 · kit de detalle (4 oct 2026): pedido rápido, check que se dibuja, vacíos que invitan. Nada se anima al cargar:
+   las transiciones viven bajo html.kd-live (primera interacción) y el movimiento de JS solo corre dentro de un gesto. ===== */
+.kvoid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;width:100%;min-height:56px;padding:14px 12px;border:1.5px dashed #C9C9D1;border-radius:16px;background:transparent;color:var(--muted);font:inherit}
+.kvoid b{font-weight:700;font-size:15px;color:var(--ink)}
+.kvoid small{font-size:13.5px;line-height:1.35;color:var(--muted);max-width:240px}
+.kvoid svg{color:#9A9AA0}
+.kvoid.big{min-height:132px;gap:6px;padding:22px 14px}
+button.kvoid{cursor:pointer}
+button.kvoid:focus-visible,.qo-form :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.kd-live .kvoid{transition:border-color .14s linear,color .14s linear}
+.kd-live button.kvoid:hover{border-color:var(--ink)}
+html.rol-carn .kvoid{border-radius:18px;min-height:96px;padding:20px 14px}
+html.rol-carn .kvoid b{font-size:18px}
+html.rol-carn .kvoid small{font-size:15.5px;max-width:260px}
+.qo-slot[hidden],.qo-form[hidden],.qo-env[hidden]{display:none}
+.qo-form{display:grid;gap:10px;background:#fff;border-radius:16px;padding:12px;box-shadow:var(--sh-card);text-align:left}
+.qo-form label,.qo-form .lbl{display:grid;gap:5px;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.03em}
+.qo-form .inp{min-height:48px;padding:10px 12px}
+.qo-form .seg button{min-height:48px}
+.qo-form .seg button.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.qo-step{display:flex;gap:8px}
+.qo-step input{flex:1;min-width:0;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
+.qo-step button{flex:none;width:48px;min-height:48px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-size:22px;font-weight:700;color:var(--ink)}
+.qo-step button:active{background:#ECECEF}
+.qo-env{display:grid;gap:10px}
+.qo-err{margin:0;min-height:0;color:var(--rojo);font-weight:800;font-size:14px}
+.qo-err:empty{display:none}
+.qo-acts{display:grid;grid-template-columns:auto 1fr;gap:8px}
+.qo-acts .btn{min-height:48px;white-space:nowrap;padding-inline:14px}
+.toast.hold .t-fuse{animation-play-state:paused}
+.kd-live #readyBtn{transition:background-color .2s linear,color .2s linear,border-color .2s linear}
+.pp-n{display:inline-block}
 </style>
+<!-- SIN-FLASH (4 oct 2026): si hay sesión de Supabase guardada, no se dibuja la tarjeta de login: se ve el tablero vacío
+     hasta que enterApp() lo llena. Siempre hay salida al login: sesión que no sirve, error, sin librería o 8 s sin
+     entrar → ctSessOff() quita la clase y vuelve a verse el login. -->
+<style>
+html.ct-sess #login{display:none!important}
+html.ct-sess #app.hidden{display:flex!important}
+</style>
+<script>
+function ctSessOff(){ try{ document.documentElement.classList.remove('ct-sess'); }catch(e){} }
+(function(){
+  try{
+    var raw=localStorage.getItem('sb-dnyzokgmjuvbrcxxdatr-auth-token'); if(!raw) return;
+    var o=JSON.parse(raw); if(o && o.currentSession) o=o.currentSession;
+    if(!o || typeof o!=='object' || (typeof o.refresh_token!=='string' && typeof o.access_token!=='string')) return;
+    document.documentElement.classList.add('ct-sess');
+    setTimeout(function(){ var a=document.getElementById('app'); if(!a || a.classList.contains('hidden')) ctSessOff(); },8000);
+  }catch(e){}
+})();
+</script>
 </head>
 <body>
 
@@ -1140,6 +1196,103 @@ window.Mo=(function(){
   return {fuse:fuse,roll:roll,num:num,shake:shake};
 })();
 
+</script>
+<script id="kit">
+/* Kit de detalle v3 (propio del estudio, vanilla, sin dependencias): pedido rápido en contexto, check que se dibuja,
+   Deshacer con reversa si no se guardó, vacíos que invitan. SIN FLASH: nada se anima al cargar; el movimiento solo corre
+   dentro de un gesto (gest) y la clase html.kd-live (transiciones CSS) nace en la primera interacción. Respeta Reducir
+   movimiento (solo fundidos y color) y el modo ligero (html.lite: sin movimiento). */
+window.Kd=(function(){
+  var rm=matchMedia('(prefers-reduced-motion: reduce)'), de=document.documentElement, E='cubic-bezier(.22,1,.36,1)', SP='cubic-bezier(.34,1.16,.64,1)', tap=0, bar0={k:null,p:0,n:0};
+  function mark(){ tap=Date.now(); de.classList.add('kd-live'); }
+  addEventListener('pointerdown',mark,true); addEventListener('keydown',mark,true);
+  function gest(){ return Date.now()-tap<900 && !de.classList.contains('lite'); }
+  function an(el,f,o){ return el&&el.animate?el.animate(f,o):null; }
+  function appear(el){ if(!gest()) return; rm.matches?an(el,[{opacity:0}],{duration:120}):an(el,[{opacity:0,transform:'translateY(-6px) scale(.98)'}],{duration:220,easing:E}); }
+  /* FLIP por pedido: las tarjetas vecinas se corren cuando entra o sale una */
+  function flip(root,mutate){
+    var b={}; root.querySelectorAll('[data-oid]').forEach(function(k){ b[k.dataset.oid]=k.getBoundingClientRect(); });
+    mutate();
+    root.querySelectorAll('[data-oid]').forEach(function(k){ var a=b[k.dataset.oid]; if(!a) return appear(k);
+      var dx=a.left-k.getBoundingClientRect().left, dy=a.top-k.getBoundingClientRect().top;
+      if((dx||dy)&&gest()&&!rm.matches) an(k,[{transform:'translate('+dx+'px,'+dy+'px)'}],{duration:220,easing:E}); });
+  }
+  /* Check que se dibuja: el tilde se traza, el botón se aprieta con un rebote apenas visible, el color se funde y el nombre se tacha */
+  function tick(b){
+    if(!b||!gest()) return;
+    var on=b.classList.contains('on'), p=b.querySelector('path'), row=b.closest('.oitem'), nm=row&&row.querySelector('.oitem-name');
+    if(b.classList.contains('oitem-check')) an(b,[on?{backgroundColor:'#fff',borderColor:'#E6E6EB',color:'#C7C7CC'}:{backgroundColor:'#2E7D52',borderColor:'#2E7D52',color:'#fff'}],{duration:160});
+    if(row) an(row,[{opacity:on?1:.6}],{duration:200});
+    if(on&&nm) an(nm,[{textDecorationColor:'transparent'}],{duration:220,delay:60,fill:'backwards'});
+    if(rm.matches) return;
+    if(on&&p){ p.setAttribute('pathLength',1); an(p,[{strokeDasharray:'1 1',strokeDashoffset:1},{strokeDasharray:'1 1',strokeDashoffset:0}],{duration:220,delay:40,easing:E,fill:'backwards'}); }
+    an(b,[{transform:'scale(.88)'},{transform:'none'}],{duration:200,easing:SP});
+  }
+  function prog(box,key){   // barra y conteo de «X de Y preparados»
+    var i=box&&box.querySelector('.pp-bar i'), n=box&&box.querySelector('.pp-n'), p=i?parseFloat(i.style.width)||0:0, c=n?+n.textContent:0, o=bar0;
+    bar0={k:key,p:p,n:c};
+    if(o.k!==key||!gest()||rm.matches) return;
+    if(i&&p&&p!==o.p){ i.style.transformOrigin='left'; an(i,[{transform:'scaleX('+(o.p/p)+')'}],{duration:240,easing:E}); }
+    if(n&&c!==o.n&&window.Mo) Mo.roll(n);
+  }
+  /* Vacíos que invitan: el hueco punteado está donde va a caer lo primero */
+  var HINT={cotizar:'Cuando entre un pedido, aparece acá.',espera_pago:'Acá caen los pedidos ya cotizados.',preparacion:'Acá caen los pedidos ya pagados.',lista:'Acá quedan los pedidos que el carnicero termina.',en_ruta:'Acá caen los pedidos que salen a domicilio.'};
+  var HINTC={cotizar:'Cuando entre un pedido, aparece acá.',espera_pago:'Acá esperan los que ya cotizaste.',preparacion:'Acá caen los pedidos ya pagados.',lista:'Acá quedan los que marcás listos.'};
+  function vacio(st,title,ico,c){ return '<div class="kvoid"><span aria-hidden="true">'+ic(ico||'inbox',22)+'</span><b>'+title+'</b><small>'+((c?HINTC:HINT)[st]||'')+'</small></div>'; }
+  /* Pedido rápido: un cliente, un producto, en la columna «Por cotizar» */
+  var qo=fresh();
+  function fresh(){ return {open:false,name:'',phone:'',zone:'',prod:'',qty:'1',deliv:'recoge',ship:'',err:''}; }
+  function unit(p){ return !p?'':p.unit==='Libra'?'lb':p.unit==='Unidad'?'u':p.unit==='Paquete'?'paq':p.unit; }
+  function form(){
+    var ps=PRODUCTS.filter(function(p){ return !p.disabled; }), env=qo.deliv==='envio', seen={}, cl=[];
+    (state.clients||[]).forEach(function(c){ if(c&&c.name&&!isPhoneName(c.name)&&!seen[c.name]&&cl.length<60){ seen[c.name]=1; cl.push(c.name); } });
+    var opts=CAT.map(function(g){ var l=ps.filter(function(p){ return p.cat===g.cat; }); return l.length?'<optgroup label="'+esc(g.cat)+'">'+l.map(function(p){ return '<option value="'+esc(p.id)+'"'+(qo.prod===p.id?' selected':'')+'>'+esc(p.name)+'</option>'; }).join('')+'</optgroup>':''; }).join('');
+    return '<form class="qo-form" id="qoForm" role="group" aria-label="Pedido rápido" novalidate onsubmit="return Kd.save(event)" onkeydown="if(event.key===\'Escape\')Kd.close()"'+(qo.open?'':' hidden')+'>'+
+      '<label>Cliente<input class="inp" id="qoName" list="qoCli" autocomplete="off" value="'+esc(qo.name)+'" oninput="Kd.inp(1)"><datalist id="qoCli">'+cl.map(function(n){ return '<option value="'+esc(n)+'">'; }).join('')+'</datalist></label>'+
+      '<label>Teléfono, si lo tenés<input class="inp" id="qoPhone" inputmode="tel" value="'+esc(qo.phone)+'" oninput="Kd.inp()"></label>'+
+      '<label>Producto<select class="inp" id="qoProd" onchange="Kd.inp()"><option value="">Elegí un producto</option>'+opts+'</select></label>'+
+      '<div class="lbl"><span>Cantidad <span id="qoU">'+unit(prodById(qo.prod))+'</span></span><div class="qo-step"><button type="button" aria-label="Menos" onclick="Kd.step(-1)">–</button><input class="inp" id="qoQty" inputmode="decimal" aria-label="Cantidad" value="'+esc(qo.qty)+'" oninput="Kd.inp()"><button type="button" aria-label="Más" onclick="Kd.step(1)">+</button></div></div>'+
+      '<div class="seg" role="radiogroup" aria-label="Entrega"><button type="button" role="radio" aria-checked="'+!env+'" class="'+(env?'':'on')+'" onclick="Kd.del(\'recoge\')">'+ic('store',18)+' Recoge</button><button type="button" role="radio" aria-checked="'+env+'" class="'+(env?'on':'')+'" onclick="Kd.del(\'envio\')">'+ic('truck',18)+' Domicilio</button></div>'+
+      '<div class="qo-env" id="qoEnv"'+(env?'':' hidden')+'><label>Colonia o dirección<input class="inp" id="qoZone" value="'+esc(qo.zone)+'" oninput="Kd.inp()"></label><label>Precio del envío (L)<input class="inp" id="qoShip" inputmode="decimal" placeholder="Ponele precio" value="'+esc(qo.ship)+'" oninput="Kd.inp()"></label></div>'+
+      '<p class="qo-err" id="qoErr" role="alert">'+esc(qo.err)+'</p>'+
+      '<div class="qo-acts"><button type="button" class="btn ghost" onclick="Kd.close()">Cancelar</button><button type="submit" class="btn red">Crear pedido</button></div></form>';
+  }
+  function slot(empty){ return '<button type="button" class="kvoid qo-slot'+(empty?' big':'')+'" id="qoSlot" aria-expanded="'+qo.open+'" aria-controls="qoForm" onclick="Kd.open()"'+(qo.open?' hidden':'')+'>'+ic('plus',empty?24:18)+'<b>Pedido rápido</b>'+(empty?'<small>Un cliente, un producto. Lo demás lo completás al cotizar.</small>':'')+'</button>'; }
+  function swap(a,b){ a.hidden=true; b.hidden=false; if(gest()) rm.matches?an(b,[{opacity:0}],{duration:120}):an(b,[{opacity:0,transform:'translateY(-4px) scale(.98)'}],{duration:180,easing:E}); }
+  function inp(pick){
+    var g=function(i){ var e=document.getElementById(i); return e?e.value:''; };
+    qo.name=g('qoName'); qo.phone=g('qoPhone'); qo.prod=g('qoProd'); qo.qty=g('qoQty'); qo.zone=g('qoZone'); qo.ship=g('qoShip');
+    var u=document.getElementById('qoU'); if(u) u.textContent=unit(prodById(qo.prod));
+    if(pick){ var c=(state.clients||[]).filter(function(x){ return x.name===qo.name; })[0];   // eligió un cliente guardado: trae su teléfono y zona
+      if(c){ if(!qo.phone){ qo.phone=c.phone||''; document.getElementById('qoPhone').value=qo.phone; } if(!qo.zone&&c.zone){ qo.zone=c.zone; document.getElementById('qoZone').value=qo.zone; } } }
+  }
+  function board(mut){ var k=document.getElementById('abKanban'); if(k&&adminView==='bandeja') flip(k,function(){ mut(); k.innerHTML=abColsHtml(); }); else { mut(); rerender(); } }
+  return {
+    gest:gest, appear:appear, flip:flip, tick:tick, prog:prog, vacio:vacio,
+    qoHtml:function(empty){ return slot(empty)+'<div id="qoHost">'+(qo.open?form():'')+'</div>'; },
+    open:function(){ var s=document.getElementById('qoSlot'), h=document.getElementById('qoHost'); if(!s||!h) return; qo.open=true; h.innerHTML=form(); s.setAttribute('aria-expanded','true'); swap(s,document.getElementById('qoForm')); document.getElementById('qoName').focus({preventScroll:true}); },
+    close:function(){ var s=document.getElementById('qoSlot'), h=document.getElementById('qoHost'); qo=fresh(); if(!s||!h) return; s.setAttribute('aria-expanded','false'); h.innerHTML=''; s.hidden=false; if(gest()) an(s,[{opacity:0}],{duration:120}); s.focus({preventScroll:true}); },
+    step:function(d){ inp(); var q=parseFloat(String(qo.qty).replace(',','.'))||0, w=prodById(qo.prod), st=w&&w.weigh?.5:1; q=Math.max(st,Math.round((q+d*st)*100)/100); qo.qty=String(q); document.getElementById('qoQty').value=qo.qty; },
+    del:function(v){ inp(); qo.deliv=v; var f=document.getElementById('qoForm'); f.querySelectorAll('.seg button').forEach(function(b,i){ var on=(i===1)===(v==='envio'); b.classList.toggle('on',on); b.setAttribute('aria-checked',on); });
+      var e=document.getElementById('qoEnv'); e.hidden=v!=='envio'; if(!e.hidden) appear(e); },
+    inp:inp,
+    save:function(ev){
+      ev.preventDefault(); inp();
+      var name=qo.name.trim(), p=prodById(qo.prod), q=parseFloat(String(qo.qty).replace(',','.')), env=qo.deliv==='envio', sh=parseFloat(String(qo.ship).replace(',','.'))||0,
+          er=!name?['qoName','Falta el nombre del cliente']:!p?['qoProd','Elegí un producto']:!(q>0)?['qoQty','Poné la cantidad']:(env&&!(sh>0))?['qoShip','Ponele precio al envío']:null;
+      if(er){ qo.err=er[1]; var m=document.getElementById('qoErr'); m.textContent=er[1]; var f=document.getElementById(er[0]); f.focus(); Mo.shake(f); try{ haptic('warn'); }catch(e){} return false; }
+      var folio=String(state.seq++).padStart(4,'0'), z=env?qo.zone.trim():'';
+      var o={id:'o'+folio+'-'+Math.random().toString(36).slice(2,7),folio:folio,clientName:name,phone:qo.phone,zone:z,addr:z,delivery:env?'envio':'recoge',shipping:env?sh:0,note:'',status:'cotizar',createdAt:Date.now(),paid:false,
+        items:[{prodId:p.id,name:p.name,unit:p.unit,price:p.price,weigh:p.weigh,qty:q,available:true,weight:null,note:''}],hist:[{s:'cotizar',at:Date.now()}]};
+      qo=fresh();
+      board(function(){ state.orders.unshift(o); });
+      save(o); upsertClient({phone:o.phone,name:name,zone:z,addr:z}); notifyNewOrder(o);
+      try{ haptic('success'); }catch(e){}
+      toast('Pedido #'+folio+' creado · '+name, function(){ board(function(){ setStatus(o,'cancelada'); save(o); }); });   // Deshacer = dar de baja (estado), nunca borrar
+      return false;
+    }
+  };
+})();
 </script>
 <script>
 "use strict";
@@ -1469,7 +1622,7 @@ const DEVICE_ID=(()=>{ let d; try{ d=localStorage.getItem('ct_device_id'); }catc
   if(!d){ d='d'+Math.random().toString(36).slice(2,10)+Date.now().toString(36); try{ localStorage.setItem('ct_device_id',d); }catch(e){} } return d; })();
 let _coEditChan=null, _openOrderId=null;
 function save(order){ if(order&&order.id) _recentSave[order.id]=Date.now();
-  if(USE_SUPA){ if(order) dbSyncOrder(order); else dbSyncAll(); return; } localStorage.setItem(KEY,JSON.stringify(state)); lastPing=Date.now(); localStorage.setItem("ct_v2_ping",lastPing); bc&&bc.postMessage("sync"); }
+  if(USE_SUPA){ if(order){ _lastSaveAt=Date.now(); return (_lastSave=dbSyncOrder(order)); } dbSyncAll(); return; } localStorage.setItem(KEY,JSON.stringify(state)); lastPing=Date.now(); localStorage.setItem("ct_v2_ping",lastPing); bc&&bc.postMessage("sync"); }
 const dayStart=ts=>{ const d=new Date(ts); d.setHours(0,0,0,0); return d.getTime(); };
 // Las comandas "Lista para entrega" se retiran del tablero al día siguiente, pero quedan en histórico.
 function archiveStaleListas(){
@@ -1556,10 +1709,10 @@ function syncFailed(msg){ console.warn('Supabase:',msg); toast('No se guardó en
 // Sube UNA comanda (la que cambió). Reintenta 1 vez antes de avisar.
 /* v2: sin borrado real de comandas. Se conserva el nombre por si algo lo llama, pero no hace nada: archivar es un estado. */
 function dbDeleteOrder(id){ console.warn('v2: borrado de comandas deshabilitado (se archiva)'); }
-function dbSyncOrder(o){ const row=toRow(o);
-  supa.from('orders').upsert(row).then(({error})=>{
-    if(!error) return;
-    setTimeout(()=>{ supa.from('orders').upsert(row).then(({error:e2})=>{ if(e2) syncFailed('upsert: '+e2.message); }); },1500);
+function dbSyncOrder(o){ const row=toRow(o);   // devuelve una promesa true/false: el kit la usa para revertir si no se guardó
+  return supa.from('orders').upsert(row).then(({error})=>{
+    if(!error) return true;
+    return new Promise(res=>setTimeout(()=>{ supa.from('orders').upsert(row).then(({error:e2})=>{ if(e2) syncFailed('upsert: '+e2.message); res(!e2); }); },1500));
   }); }
 let syncT=null;
 function dbSyncAll(){ clearTimeout(syncT); syncT=setTimeout(async()=>{
@@ -1576,6 +1729,8 @@ async function initSupa(){
   try{ const {data}=await supa.auth.getSession(); const sess=data&&data.session;
     if(sess){ const role=(sess.user&&sess.user.email===AUTH_EMAILS.carnicero)?'carnicero':'admin'; await enterApp(role); }
   }catch(e){}
+  // Sin sesión válida (o enterApp falló): que se vea el login, nunca una pantalla en blanco.
+  if($("#app").classList.contains("hidden")) ctSessOff();
 }
 // Trae datos + se suscribe a tiempo real. Corre DESPUÉS de autenticar (con RLS cerrada requiere sesión).
 async function initSupaData(){
@@ -1749,16 +1904,25 @@ function stuckMin(o){ const now=Date.now();
   return 0; }
 // Umbrales (min) para marcar "lleva mucho aquí".
 const STUCK={cotizar:10, preparacion:15, espera_pago:20, lista:30};
-let toastT, toastUndo=null;
+let toastT, toastUndo=null, _lastSave=null, _lastSaveAt=0, _undoLive=null;
 function toast(m, undo){
-  const t=$("#toast"); $("#toastMsg").textContent=m;
+  const t=$("#toast"); $("#toastMsg").textContent=m; t.classList.remove('hold');
   toastUndo = undo||null;
   $("#toastUndo").style.display = undo? 'inline-flex':'none';
   t.classList.add("show"); clearTimeout(toastT);
   if(undo) Mo.fuse(t,7000,$("#toastUndo")); else t.classList.remove('fuse');
   toastT=setTimeout(()=>{ t.classList.remove("show"); t.classList.remove('fuse'); toastUndo=null; }, undo?7000:2200);
+  // Kit (guardado optimista): el cambio ya se ve y se puede deshacer; si la nube no lo guardó, se revierte solo y lo dice.
+  if(undo){ _undoLive=undo; const sp=(_lastSave&&Date.now()-_lastSaveAt<300)?_lastSave:null;
+    if(sp) sp.then(ok=>{ if(ok===false && _undoLive===undo){ _undoLive=null; undo(); toast('No se guardó. Lo dejé como estaba.'); } }); }
 }
-function doUndo(){ if(toastUndo){ const fn=toastUndo; toastUndo=null; $("#toast").classList.remove("show","fuse"); fn(); } }
+// Con el mouse o el foco encima, el Deshacer espera (la mecha y el reloj se pausan).
+(function(){ const t=$("#toast"); if(!t) return;
+  const pause=()=>{ if(!toastUndo||!t.classList.contains('show')) return; clearTimeout(toastT); t.classList.add('hold'); };
+  const go=()=>{ if(!t.classList.contains('hold')) return; t.classList.remove('hold'); const a=(t.querySelector('.t-fuse').getAnimations()||[])[0], rem=a?Math.max(1500,7000-a.currentTime):2500;
+    toastT=setTimeout(()=>{ t.classList.remove('show','fuse'); toastUndo=null; },rem); };
+  t.addEventListener('mouseenter',pause); t.addEventListener('mouseleave',go); t.addEventListener('focusin',pause); t.addEventListener('focusout',go); })();
+function doUndo(){ if(toastUndo){ const fn=toastUndo; toastUndo=null; _undoLive=null; $("#toast").classList.remove("show","fuse"); fn(); } }
 // ---- Haptics: vibra en Android (el Samsung del carnicero); en iPhone Safari no existe y no pasa nada ----
 function haptic(kind){ try{ if(!navigator.vibrate) return;
   navigator.vibrate(kind==='success'?[14,55,22]:kind==='warn'?[28,45,28]:kind==='error'?[45,40,45,40,45]:10);
@@ -2008,6 +2172,7 @@ function ic(n,s=20){const p={
   inbox:'<path d="M4 4h16v16H4zM4 13.5h5l1.5 2.2h3l1.5-2.2h5"/>',
   bell:'<path d="M6.5 9a5.5 5.5 0 1111 0c0 4.5 2 5.5 2 5.5h-15s2-1 2-5.5M10 19a2 2 0 004 0"/>',
   belloff:'<path d="M9.2 4.6A5.5 5.5 0 0117.5 9c0 2 .4 3.4 1 4.5M5.4 5.4l13.2 13.2M6.5 9.2c0 4.3-1.9 5.3-1.9 5.3h9M10 19a2 2 0 004 0"/>',
+  chat:'<path d="M4.5 5.5h15v10.5H10.5L6 19.5V16H4.5z"/>',
   user:'<circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6"/>',
   chart:'<path d="M4 4v16h16M8 16v-5M12 16V8M16 16v-9"/>',
   tag:'<path d="M4 4h7l9 9-7 7-9-9zM8.5 8.5h.01"/>',
@@ -2066,7 +2231,7 @@ async function enterApp(role){
   lastDingAt=Date.now(); prevCotizar=null; prevPreparacion=null;
   if(USE_SUPA) await initSupaData(); else archiveStaleListas();
   unlockAudio(); // activar sonido dentro del gesto del login (necesario en iPad)
-  $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
+  $("#login").classList.add("hidden"); $("#app").classList.remove("hidden"); ctSessOff();
   $("#loginErr").textContent=""; $("#loginGo").disabled=false;
   startClock(); rerender();
   if(role==='carnicero'){
@@ -2084,7 +2249,7 @@ function askLogout(){
       <button class="btn red block" onclick="logout()">Sí, salir</button></div>
   </div></div>`;
 }
-function logout(){ session.role=null; document.documentElement.classList.remove('rol-carn'); clearInterval(clockT); releaseWake(); prevCotizar=null; prevPreparacion=null;
+function logout(){ ctSessOff(); session.role=null; document.documentElement.classList.remove('rol-carn'); clearInterval(clockT); releaseWake(); prevCotizar=null; prevPreparacion=null;
   document.body.classList.remove('carn-mode');
   if(USE_SUPA && supa){ try{ supa.auth.signOut(); }catch(e){} }
   $("#app").classList.add("hidden"); $("#overlayHost").innerHTML=""; $("#login").classList.remove("hidden");
@@ -2169,6 +2334,7 @@ function renderAdmin(){
   else if(adminView==="bandeja") content=adminBandeja(groups);
   else if(adminView==="nueva") content=adminNueva();
   else if(adminView==="clientes") content=adminClientes();
+  else if(adminView==="novuelven") content=adminNoVuelven();
   else if(adminView==="reporte") content=adminReporte();
   else if(adminView==="stats") content=adminStats();
   else if(adminView==="cierre") content=adminCierre();
@@ -2227,7 +2393,7 @@ function abColsHtml(){
     return `<div class="kcol ${cls}">
       <div class="kcol-head"><span class="kn">${label}</span><span class="kc">${arr.length}</span></div>
       <div class="kcol-body">
-        ${arr.length?arr.map(o=>akcard(o,st)).join(""):`<div class="kempty"><div class="ke-ic">${ic(bandejaQ?'search':'inbox',22)}</div>${bandejaQ?'Sin coincidencias':A_EMPTY[st]}</div>`}
+        ${st==='cotizar'?Kd.qoHtml(!arr.length&&!bandejaQ):''}${arr.map(o=>akcard(o,st)).join("")}${arr.length?'':(bandejaQ?`<div class="kempty"><div class="ke-ic">${ic('search',22)}</div>Sin coincidencias</div>`:(st==='cotizar'?'':Kd.vacio(st,A_EMPTY[st])))}
       </div></div>`;
   }).join("");
 }
@@ -2284,7 +2450,7 @@ function akcard(o,st){
     ? `<button class="kmv anav" onclick="event.stopPropagation();adminMove('${o.id}',${d})" aria-label="${d<0?'Regresar':'Avanzar'} de estación">${ic(d<0?'left':'right',16)}</button>`
     : `<span class="kmv anav ghost"></span>`;
   const carnLive=_othersOnOrder(o.id).includes('carnicero'); // ¿un carnicero la tiene abierta ahora?
-  return `<div class="kcard2 ${carnLive?'islive':''}" onclick="openAdminOrder('${o.id}')">
+  return `<div class="kcard2 ${carnLive?'islive':''}" data-oid="${o.id}" onclick="openAdminOrder('${o.id}')">
     <div class="kf"><span class="kfolio">#${o.folio}</span><span class="ktime">${timeAgo(o.createdAt)}</span></div>
     <div class="kname">${dispName(o.clientName)}</div>
     <div class="kdtag">${deliveryTag(o)}</div>
@@ -2979,6 +3145,73 @@ function shipUseInDraft(){
   closeShipMap(); toast('Envío '+money(draft.shipping));
 }
 
+/* ----- RETENCIÓN (4 oct 2026) -----
+   Solo lectura sobre allOrders(): nada se escribe y nada se manda solo. «Escribirle» abre WhatsApp con un texto
+   que el admin edita y envía A MANO. Cliente = últimos 8 dígitos del teléfono (igual que Estadísticas). */
+const RET_DIAS=30;          // umbral: «sin pedir hace más de N días»
+const RET_MIN_COMPRAS=2;    // ventas válidas (_esVenta) para contar como cliente que podía volver
+const RET_GUION='Hola {nombre}, hace rato no te vemos por El Torito. Esta semana tenemos {producto}. ¿Te apartamos algo?';
+function retNoVuelven(){
+  adminClientes(); // reconstruye _cliMap (mismo agrupado por teléfono y nombres editados que la pestaña Clientes)
+  const today=dayStart(Date.now()), out=[];
+  Object.values(_cliMap).forEach(c=>{
+    if(c.baja || _phoneKey(c.phone).length!==8) return;        // de baja o sin teléfono con quién hablar
+    const ventas=c.orders.filter(_esVenta); if(ventas.length<RET_MIN_COMPRAS) return;
+    // último pedido = lo más reciente entre la última venta y cualquier comanda abierta (si hay una en curso, no es que no pida)
+    const last=Math.max(...ventas.map(_refVenta),...c.orders.map(o=>o.createdAt||0));
+    const dias=Math.round((today-dayStart(last))/86400000);
+    if(dias>RET_DIAS) out.push({key:c.key,name:c.name,phone:c.phone,compras:ventas.length,last,dias});
+  });
+  return out.sort((a,b)=>(b.compras-a.compras)||(a.dias-b.dias));
+}
+function adminNoVuelven(){
+  const r=retNoVuelven();
+  return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Clientes que no vuelven</h2><div class="vh-sub">${r.length} sin pedir hace más de ${RET_DIAS} días · compraron ${RET_MIN_COMPRAS} veces o más</div></div></div>
+    ${r.length?`<div class="olist">${r.map(c=>`<button class="ocard" onclick="retVerFicha('${c.key}')">
+        <span class="obody"><span class="oname">${dispName(c.name)}</span>
+          <span class="ometa">Último pedido ${esc(fechaCorta(c.last))} · hace ${c.dias} días</span></span>
+        <span class="oright"><span class="ototal" style="font-size:14px">${c.compras} compras</span></span></button>`).join('')}</div>
+      <div class="pp-note" style="margin-top:12px">Tocá un cliente para ver su ficha y escribirle. Si ya tiene una comanda abierta, no aparece aquí.</div>`
+    :`<div class="empty-state"><div class="es-ic">${ic('user',40)}</div><p>Ningún cliente lleva más de ${RET_DIAS} días sin pedir.</p></div>`}
+    <div style="height:24px"></div>`;
+}
+function retVerFicha(key){ adminClientes(); openClientProfile(key); }
+let _retKey=null;
+function retEscribir(key){
+  const c=_cliMap[key]; if(!c) return; _retKey=key;
+  const nom=isPhoneName(c.name)?'':String(c.name).trim().split(/\s+/)[0];
+  const txt=RET_GUION.replace('{nombre}',nom).replace('Hola ,','Hola,');
+  $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)retVolver()">
+    <div class="sheet" style="max-width:460px"><div class="sheet-head"><span class="sh-name">Escribirle a ${esc(nom||c.name)}</span><button class="x" onclick="retVolver()" aria-label="Cerrar">${ic('x',16)}</button></div>
+    <div class="sheet-body">
+      <div class="field"><label for="retTxt">Mensaje (podés cambiarlo)</label>
+        <textarea class="msg-tpl" id="retTxt" rows="5" style="font-size:16px;font-family:inherit" oninput="retErr('')">${esc(txt)}</textarea></div>
+      <div id="retErr" role="alert" style="font-size:13px;color:var(--rojo);min-height:18px;font-weight:600"></div>
+      <button class="btn red lg block btn-ic" style="min-height:48px" onclick="retAbrirWA()">${ic('send',17)} Abrir WhatsApp</button>
+      <button class="btn ghost block" style="margin-top:10px;min-height:48px" onclick="retVolver()">Volver a la ficha</button>
+      <div class="pp-note" style="margin-top:10px">Completá <b>{producto}</b> con lo que tengan esta semana. No se manda solo: se abre WhatsApp con este texto y lo enviás vos.</div>
+    </div></div></div>`;
+  const t=$("#retTxt"); if(t){ const i=txt.indexOf('{producto}'); try{ t.focus(); if(i>=0) t.setSelectionRange(i,i+10); }catch(e){} }
+}
+function retErr(m){ const e=$("#retErr"); if(e) e.textContent=m; }
+function retVolver(){ const k=_retKey; _retKey=null; if(k&&_cliMap[k]) openClientProfile(k); else closeSheet(); }
+function retAbrirWA(){
+  const c=_cliMap[_retKey]; const t=$("#retTxt"); if(!c||!t) return;
+  const txt=t.value.trim();
+  if(!txt){ retErr('Escribí el mensaje.'); return; }
+  if(/\{[^}]*\}/.test(txt)){ retErr('Falta completar lo que está entre llaves, por ejemplo {producto}.'); t.focus(); return; }
+  const k=_phoneKey(c.phone); if(k.length!==8){ retErr('Este cliente no tiene un teléfono válido.'); return; }
+  window.open('https://wa.me/504'+k+'?text='+encodeURIComponent(txt),'_blank','noopener');
+}
+// «Hoy: N nuevos, N que volvieron»: nuevo = su primera venta es ese día; volvió = compró ese día y ya tenía ventas antes.
+function retLineaCierre(sel,lbl,ventasDia){
+  const ck=o=>_digits(o.phone).length>=8?_phoneKey(o.phone):_norm(o.clientName);
+  const first={}; allOrders().filter(_esVenta).forEach(o=>{ const k=ck(o), t=_refVenta(o); if(k&&(first[k]==null||t<first[k])) first[k]=t; });
+  const hoy=new Set(); ventasDia.forEach(o=>{ const k=ck(o); if(k) hoy.add(k); });
+  let nu=0, vo=0; hoy.forEach(k=>{ if(dayStart(first[k])===sel) nu++; else vo++; });
+  return `<div class="ret-line">${ic('user',15)}<span>${esc(lbl)}: <b>${nu}</b> nuevo${nu===1?'':'s'}, <b>${vo}</b> que ${vo===1?'volvió':'volvieron'}</span></div>`;
+}
+
 /* ----- CLIENTES (editables por el admin) ----- */
 // Agrupa por TELÉFONO (últimos 8 dígitos); sin teléfono, por nombre. Los datos editados
 // en la ficha del cliente (state.clients) mandan sobre lo derivado de las comandas.
@@ -3062,6 +3295,7 @@ function openClientProfile(key){
         <div class="kpi"><div class="kl">Total comprado</div><div class="kvv" style="color:var(--rojo)">${money(c.total)}</div></div>
         <div class="kpi"><div class="kl">Pedidos pagados</div><div class="kvv">${ventas}</div></div>
       </div>
+      ${_phoneKey(c.phone).length===8?`<button class="btn red lg block btn-ic" style="margin-top:12px;min-height:48px" onclick="retEscribir('${c.key}')">${ic('chat',17)} Escribirle</button>`:''}
       ${top.length?`<div class="sect-label">Lo que más compra</div>
         <div class="rank">${top.map(([n,cnt])=>`<div class="rrow"><span class="rk-name" style="width:auto;flex:1">${esc(n)}</span><span class="rv">${cnt}×</span></div>`).join('')}</div>`:''}
       <div class="sect-label">Historial de pedidos · ${orders.length}</div>
@@ -3200,6 +3434,7 @@ function adminResumen(g){
     </div>
     <div class="carn-info" onclick="go('bandeja')">${ic('knife',15)} <span>Con el carnicero: <b>${g.proceso.length}</b> en proceso (cotizar / preparación)</span></div>
     ${(()=>{const n=unnamedWebCount();return n?`<div class="carn-info namebanner" onclick="go('clientes')">${ic('user',15)} <span><b>${n}</b> cliente${n>1?'s':''} de la web sin nombre · ponles nombre ${ic('right',13)}</span></div>`:'';})()}
+    ${(()=>{ const r=retNoVuelven(); return r.length?`<button class="hist-link card ret-card" style="margin-bottom:14px" onclick="go('novuelven')"><span class="act-ic">${ic('user',20)}</span><span class="hist-tx"><b>${r.length} cliente${r.length>1?'s':''} sin pedir hace más de ${RET_DIAS} días</b><small>Ya compraron ${RET_MIN_COMPRAS} veces o más · tocá para ver la lista</small></span><span class="hist-ch">${ic('right',18)}</span></button>`:''; })()}
     <button class="hist-link card st-link" style="margin-bottom:14px" onclick="go('stats')"><span class="act-ic">${ic('chart',20)}</span><span class="hist-tx"><b>Estadísticas</b><small>Ventas, horas pico, clientes, tiempos y más</small></span><span class="hist-ch">${ic('right',18)}</span></button>
     <div class="sect-label">Caja</div>
     <button class="hist-link card" onclick="go('cierre')"><span class="act-ic">${ic('cash',20)}</span><span class="hist-tx"><b>Cierre de caja del día</b><small>Efectivo vs transferencia · cuadre</small></span><span class="hist-ch">${ic('right',18)}</span></button>
@@ -3612,6 +3847,7 @@ function adminCierre(){
       <div class="kpi accent"><div class="kl">Total del día</div><div class="kvv">${money(total)}</div></div>
       <div class="kpi"><div class="kl">Comandas vendidas</div><div class="kvv">${ventas.length}</div></div>
     </div>
+    ${retLineaCierre(sel,lbl,ventas)}
     <div class="sect-label">Desglose por método</div>
     <div class="kpis">
       <div class="kpi"><div class="kl">${ic('cash',15)} Efectivo · ${nEfe}</div><div class="kvv">${money(efe)}</div></div>
@@ -3859,7 +4095,7 @@ function carnColsHtml(){
     return `<div class="kcol ${cls}${urge} ${(st==='cotizar'&&alertC1)||(st==='preparacion'&&alertC3)?'alerted':''}" id="col${cls.toUpperCase()}">
       <div class="kcol-head"><span class="kn">${ic(C_ICON[st],20)} ${label}</span><span class="kc">${arr.length}</span></div>
       <div class="kcol-body">
-        ${arr.length?arr.map(o=>kcard(o,st)).join(""):`<div class="kempty"><div class="ke-ic">${ic('check',24)}</div>${C_EMPTY[st]}</div>`}
+        ${arr.length?arr.map(o=>kcard(o,st)).join(""):Kd.vacio(st,C_EMPTY[st],'check',1)}
       </div></div>`;
   }).join("");
   state.orders.forEach(o=>_seenCards.add(o.id)); _seenReady=true;
@@ -4122,7 +4358,7 @@ function oitemSeqHtml(vo){ return oitemSequence(vo).map(e=> e.header!==undefined
 function rerenderOitems(){ const el=$("#oitems"); if(el) el.innerHTML=oitemSeqHtml(curSheetVO);
   const ca=$("#confirmAllHost"); if(ca) ca.innerHTML=curCotizar?confirmAllBtnHtml():''; }
 // CONFIRMAR LO QUE NO SE PESA (fase cotizar): un toque por línea, o todas de golpe.
-function toggleConfirm(i){ if(!editItems||!editItems[i]) return; editItems[i]._confirmed=!editItems[i]._confirmed; delete editItems[i]._bad; persistEdits(); rerenderOitems(); }
+function toggleConfirm(i){ if(!editItems||!editItems[i]) return; editItems[i]._confirmed=!editItems[i]._confirmed; delete editItems[i]._bad; persistEdits(); rerenderOitems(); Kd.tick($(`[onclick="toggleConfirm(${i})"]`)); }
 function confirmAllNonWeigh(){ if(!editItems) return; let n=0;
   editItems.forEach(it=>{ if(it.available && !it.weigh && !it._confirmed){ it._confirmed=true; n++; } });
   if(n){ persistEdits(); rerenderOitems(); toast(n+' confirmado'+(n>1?'s':'')); } }
@@ -4135,12 +4371,12 @@ function confirmAllBtnHtml(){ if(!editItems) return '';
 function prepProgInner(){ const arr=(editItems||[]).filter(x=>x.available!==false), total=arr.length, done=arr.filter(x=>x.done).length;
   const all=total>0&&done===total;
   return `<div class="pp-bar"><i style="width:${total?Math.round(done/total*100):0}%"></i></div>
-    <div class="pp-txt ${all?'all':''}">${all?ic('check',15)+' Todo preparado':done+' de '+total+' preparados'}</div>`; }
-function updatePrepProgress(){ const el=$("#prepProg"); if(el) el.innerHTML=prepProgInner(); refreshPrepBtn(); }
+    <div class="pp-txt ${all?'all':''}">${all?ic('check',15)+' Todo preparado':'<span class="pp-n">'+done+'</span> de '+total+' preparados'}</div>`; }
+function updatePrepProgress(){ const el=$("#prepProg"); if(el){ el.innerHTML=prepProgInner(); Kd.prog(el,currentSheetId); } refreshPrepBtn(); }
 // El botón "Marcar listo" siempre se puede tocar; solo cambia de peso: contorno mientras falten, lleno cuando todo está preparado.
 function refreshPrepBtn(){ const b=$("#readyBtn"); if(!b||!editItems) return; const arr=editItems.filter(x=>x.available!==false); b.classList.toggle('soft', !(arr.length&&arr.every(x=>x.done))); }
 // Tachar/destachar un producto como "ya preparado" (solo visual, NO cambia precio ni total).
-function toggleDone(i){ if(!editItems[i]) return; editItems[i].done=!editItems[i].done; persistEdits(); rerenderOitems(); updatePrepProgress(); }
+function toggleDone(i){ if(!editItems[i]) return; editItems[i].done=!editItems[i].done; persistEdits(); rerenderOitems(); updatePrepProgress(); Kd.tick($(`[onclick="toggleDone(${i})"]`)); }
 // "No hay": deja rastro en la línea (it.noHay = quién y cuándo) para que el admin vea qué faltó. Con Deshacer.
 function _flipNoHay(it){ it.available=!it.available; if(!it.available){ it.noHay={at:Date.now(),by:session.role}; it.done=false; } else delete it.noHay; }
 function togItem(i,quiet){ const it=editItems&&editItems[i]; if(!it) return;
@@ -4310,8 +4546,8 @@ function sheet(o,bodyHtml,titleOverride){
 function closeSheet(){ $("#overlayHost").innerHTML=""; currentSheetId=null; editItems=null; rerender(); }
 
 /* ============ INIT ============ */
-if(window.supabase && SUPA_URL){ initSupa().catch(e=>{ console.warn('Supabase init falló, modo local:',e); USE_SUPA=false; load(); archiveStaleListas(); }); }
-else { USE_SUPA=false; load(); archiveStaleListas(); }
+if(window.supabase && SUPA_URL){ initSupa().catch(e=>{ ctSessOff(); console.warn('Supabase init falló, modo local:',e); USE_SUPA=false; load(); archiveStaleListas(); }); }
+else { ctSessOff(); USE_SUPA=false; load(); archiveStaleListas(); }
 // Si no cargó la nube, avisar ANTES de entrar (el modo local es demostración: no ve ni guarda pedidos reales).
 setTimeout(()=>{ const w=$("#cloudWarn"); if(w && !USE_SUPA) w.textContent="Sin conexión a la nube — modo de demostración. Los pedidos reales NO se verán aquí; revisa el internet y recarga."; },1500);
 
