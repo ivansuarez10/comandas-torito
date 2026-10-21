@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="Pedidos El Torito">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --rojo:#9F2629; --rojo-d:#7E1E21; --rojo-l:#B83A3D;
@@ -1126,6 +1126,133 @@ html.rol-carn .kvoid small{font-size:15.5px;max-width:260px}
 .toast.hold .t-fuse{animation-play-state:paused}
 .kd-live #readyBtn{transition:background-color .2s linear,color .2s linear,border-color .2s linear}
 .pp-n{display:inline-block}
+
+/* ===== CLIENTES (panel, 16 oct 2026): tema claro, Poppins + Helvetica, rojo solo de acento ===== */
+.cl2,.cl-sheet{--cl-head:'Poppins','Helvetica Neue',Helvetica,Arial,sans-serif;--cl-body:'Helvetica Neue',Helvetica,Arial,sans-serif;--cl-line:#E6E6EB;--cl-track:#E8E8ED;--cl-shadow:0 1px 2px rgba(29,29,31,.04),0 6px 20px rgba(29,29,31,.05);--cl-ease:cubic-bezier(.32,.72,0,1);font-family:var(--cl-body);font-variant-numeric:tabular-nums}
+.cl2{max-width:940px;padding-bottom:24px}
+.cl2 button,.cl-sheet button{font-family:inherit;text-align:inherit}
+.cl2 button:focus-visible,.cl-sheet button:focus-visible,.cl-sheet a:focus-visible,.cl-sheet textarea:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:8px}
+.cl-h1{font:700 32px/1.1 var(--cl-head);letter-spacing:-.025em;text-transform:none}
+.cl-sub{margin-top:6px;color:var(--muted);font-size:13px}
+.cl-stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:26px;gap:0 8px}
+.cl-stat{display:block;padding:6px 0 14px;position:relative;min-height:44px}
+.cl-stat::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--ink);transform:scaleX(0);transform-origin:left;transition:transform .28s var(--cl-ease)}
+.cl-stat[aria-pressed="true"]::after{transform:scaleX(1)}
+.cl-fig{display:flex;align-items:baseline;gap:4px;font:600 34px/1.05 var(--cl-head);letter-spacing:-.03em;white-space:nowrap}
+.cl-fig small{font:600 14px/1 var(--cl-head);letter-spacing:0;color:var(--muted)}
+.cl-fig.red,.cl-fig.red small{color:var(--rojo)}
+.cl-lbl{display:block;margin-top:8px;font-size:13px;font-weight:700}
+.cl-ctx{display:block;margin-top:1px;font-size:12.5px;color:var(--muted)}
+.cl-stat[aria-pressed="false"] .cl-lbl{font-weight:400;color:var(--muted)}
+.cl-tabs{display:flex;gap:2px;margin:20px -16px 0;padding:0 40px 0 16px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--cl-line);scroll-padding:0 16px}
+.cl-tabs::-webkit-scrollbar{display:none}
+@media(max-width:899px){.cl-tabs{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent)}}
+.cl-tab{flex:none;position:relative;display:flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;font-size:14px;color:var(--muted);white-space:nowrap}
+.cl-tab:first-child{padding-left:0}
+.cl-tab .n{font-size:12.5px}
+.cl-tab[aria-pressed="true"]{color:var(--ink);font-weight:700}
+.cl-tab[aria-pressed="true"]::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;background:var(--ink);border-radius:2px}
+.cl-tab:first-child[aria-pressed="true"]::after{left:0}
+.cl-meta{margin:16px 4px 10px;font-size:13px;color:var(--muted)}
+.cl-list{background:#fff;border-radius:20px;box-shadow:var(--cl-shadow);overflow:hidden;list-style:none;padding:0}
+.cl-list li{position:relative}
+.cl-list li+li::before{content:"";position:absolute;top:0;left:20px;right:0;height:1px;background:var(--cl-line)}
+.cl-row{display:grid;grid-template-columns:minmax(0,1fr) auto 16px;align-items:center;column-gap:12px;width:100%;min-height:76px;padding:14px 20px;transition:background .15s}
+.cl-row:hover{background:#FAFAFB}
+.cl-row:active{opacity:.6}
+.cl-name{display:flex;align-items:center;gap:7px;font:600 16px/1.25 var(--cl-head);letter-spacing:-.01em;min-width:0}
+.cl-name .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cl-name svg{flex:none;color:var(--muted)}
+.cl-name .chip{font-family:var(--cl-body);flex:none}
+.cl-sec{margin-top:3px;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cl-mid{display:none;min-width:0}
+.cl-end{text-align:right}
+.cl-tot{font-size:16px;font-weight:700;letter-spacing:-.01em}
+.cl-sub2{margin-top:3px;font-size:13px;color:var(--muted);white-space:nowrap}
+.cl-sub2.red{color:var(--rojo);font-weight:700}
+.cl-go{color:#B0B0B5}
+.cl-empty{padding:48px 24px;text-align:center;color:var(--muted);font-size:15px;line-height:1.5}
+.cl-empty strong{display:block;color:var(--ink);font:600 17px/1.35 var(--cl-head);letter-spacing:-.01em;margin-bottom:2px}
+.cl-empty .cl-link{margin-top:10px}
+.cl-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:14px;font-weight:700;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:#B0B0B5}
+.cl-foot{margin-top:18px;display:flex;flex-wrap:wrap;gap:0 22px}
+.cl-back{display:inline-flex;align-items:center;gap:2px;min-height:44px;margin-left:-6px;padding:0 10px 0 4px;font-size:15px;color:var(--ink)}
+/* ficha */
+.cl-scrim{position:fixed;inset:0;z-index:48;background:rgba(29,29,31,.22);opacity:0;visibility:hidden;transition:opacity .3s var(--cl-ease,ease),visibility 0s .3s}
+.cl-scrim.on{opacity:1;visibility:visible;transition:opacity .3s var(--cl-ease,ease)}
+.cl-sheet{position:fixed;z-index:50;inset:0;background:var(--bg);overflow-y:auto;overscroll-behavior:contain;transform:translateX(100%);visibility:hidden;transition:transform .38s var(--cl-ease),visibility 0s .38s}
+.cl-sheet.on{transform:none;visibility:visible;transition:transform .38s var(--cl-ease)}
+.cl-bar{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 8px 0 4px;margin-top:env(safe-area-inset-top);background:rgba(245,245,247,.82);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+.cl-bar button{display:flex;align-items:center;gap:2px;min-height:44px;min-width:44px;padding:0 10px 0 6px;font-size:16px;color:var(--ink)}
+.cl-bar .cl-x{display:none;justify-content:center;padding:0}
+.cl-bar .cl-edit{font-size:15px;font-weight:700}
+.cl-fbody{padding:4px 16px calc(40px + env(safe-area-inset-bottom))}
+.cl-fbody h2{font:700 28px/1.12 var(--cl-head);letter-spacing:-.025em;text-transform:none;overflow-wrap:anywhere}
+.cl-fbody h2:focus{outline:none}
+.cl-phone{margin-top:6px;color:var(--muted);font-size:14px}
+.cl-acts{display:flex;gap:8px;margin-top:16px}
+.cl-act{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border-radius:12px;background:#fff;box-shadow:var(--cl-shadow);font-size:14px;font-weight:700;color:var(--ink);text-decoration:none}
+.cl-act:active{opacity:.6}
+.cl-acct{margin-top:16px;font-size:13px;color:var(--muted)}
+.cl-fstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:22px;padding-top:20px;border-top:1px solid var(--cl-line)}
+.cl-fstats .cl-fig{font-size:26px}
+.cl-fstats .cl-fig small{font-size:13px}
+.cl-fstats .cl-lbl{margin-top:6px}
+.cl-sec-t{margin:30px 4px 10px;font-size:13px;color:var(--muted);font-weight:700;text-transform:none;letter-spacing:0;font-family:var(--cl-body)}
+.cl-panel{background:#fff;border-radius:20px;box-shadow:var(--cl-shadow)}
+.cl-note{display:block;width:100%;resize:none;border:0;background:transparent;padding:16px 20px;font:400 16px/1.5 var(--cl-body);color:var(--ink);min-height:76px;border-radius:20px}
+.cl-note::placeholder{color:var(--muted)}
+.cl-sugg{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px;font-size:14px}
+.cl-sugg button{min-height:44px;padding:0 4px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.cl-ord{padding:18px 20px}
+.cl-ord+.cl-ord{border-top:1px solid var(--cl-line)}
+.cl-oh{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;min-height:44px;margin:-8px 0 -4px}
+.cl-oh b{font-weight:700;font-size:15px}
+.cl-oh .d{color:var(--muted);font-weight:400;margin-left:6px;font-size:13px}
+.cl-oh .s{font-size:13px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:2px}
+.cl-it{display:grid;grid-template-columns:minmax(0,1fr) auto 84px;gap:0 12px;margin-top:10px;font-size:14px;align-items:baseline}
+.cl-it+.cl-it{margin-top:6px}
+.cl-it .q{color:var(--muted);text-align:right}
+.cl-it .p{text-align:right}
+.cl-of{margin-top:14px;padding-top:12px;border-top:1px solid var(--cl-line);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;font-size:13px;color:var(--muted)}
+.cl-of .r{text-align:right}
+.cl-of .tt{font-size:15px;font-weight:700;color:var(--ink)}
+.cl-of .st{margin-top:2px}
+.cl-of .st.red{color:var(--rojo);font-weight:700}
+.cl-pay{margin:10px -8px -8px auto;display:flex;min-height:44px;align-items:center;padding:0 8px;font-size:14px;font-weight:700;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.cl-ord.off .tt,.cl-ord.off .cl-it .q,.cl-ord.off .cl-oh b{color:#6E6E73}
+.cl-ord.off .tt,.cl-ord.off .cl-it .p{text-decoration:line-through}
+.cl-seg{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:3px;background:var(--cl-track);border-radius:13px}
+.cl-seg button{min-height:44px;border-radius:10px;font-size:13px;color:var(--muted);text-align:center;transition:background .2s var(--cl-ease),color .2s,box-shadow .2s}
+.cl-seg button[aria-pressed="true"]{background:#fff;color:var(--ink);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.12),0 2px 8px rgba(0,0,0,.06)}
+.cl-help{margin:10px 4px 0;font-size:13px;color:var(--muted)}
+.cl-btn-name{margin-top:14px;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:12px;background:#F6E7C9;color:#8A5A11;border:1px solid #EAD9AC;font-size:14px;font-weight:700}
+body.cl-fopen .toast.show{bottom:20px}
+@media(min-width:900px){
+  .cl2{padding-top:12px}
+  .cl-h1{font-size:36px}
+  .cl-stats{margin-top:32px;max-width:640px;gap:0 32px}
+  .cl-fig{font-size:42px}
+  .cl-fig small{font-size:16px}
+  .cl-tabs{margin:28px 0 0;padding:0;scroll-padding:0}
+  .cl-meta{margin:20px 4px 12px}
+  .cl-row{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) 168px 16px;column-gap:24px;min-height:80px}
+  .cl-mid{display:block}
+  .cl-mid .cl-nt{margin-top:3px;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cl-scrim{background:rgba(29,29,31,.16)}
+  .cl-sheet{left:auto;width:500px;box-shadow:0 0 0 1px rgba(29,29,31,.04),0 24px 64px rgba(29,29,31,.18)}
+  .cl-bar .cl-back2{display:none}
+  .cl-bar .cl-x{display:flex}
+  .cl-bar{padding-right:12px}
+  .cl-fbody{padding:8px 32px 48px}
+  .cl-fstats .cl-fig{font-size:26px}
+  body.cl-fopen .toast.show{bottom:28px}
+}
+@media(max-width:380px){.cl-fig{font-size:30px}.cl-fstats .cl-fig{font-size:23px}}
+@media(prefers-reduced-motion:reduce){.cl2 *,.cl-sheet,.cl-sheet *,.cl-scrim{transition-duration:.01ms!important;animation-duration:.01ms!important}.cl-sheet{transition:none}}
+@media(max-width:560px){.cl-name .cw-l{display:none}}
+.cl-bar-r{display:flex;align-items:center}
+.cl-bar [hidden]{display:none}
 </style>
 <!-- SIN-FLASH (4 oct 2026): si hay sesión de Supabase guardada, no se dibuja la tarjeta de login: se ve el tablero vacío
      hasta que enterApp() lo llena. Siempre hay salida al login: sesión que no sirve, error, sin librería o 8 s sin
@@ -1177,6 +1304,14 @@ function ctSessOff(){ try{ document.documentElement.classList.remove('ct-sess');
 <!-- ====== APP ====== -->
 <div class="app hidden" id="app"></div>
 <div id="overlayHost"></div>
+<div class="cl-scrim" id="cliScrim" onclick="cliClose()"></div>
+<aside class="cl-sheet" id="cliSheet" role="dialog" aria-modal="true" aria-labelledby="cliName" inert>
+  <div class="cl-bar">
+    <button class="cl-back2" onclick="cliClose()"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6l-6 6 6 6"/></svg>Clientes</button>
+    <span class="cl-bar-r"><button class="cl-edit" id="cliEditB" hidden>Editar</button><button class="cl-x" onclick="cliClose()" aria-label="Cerrar ficha"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>
+  </div>
+  <div class="cl-fbody" id="cliBody"></div>
+</aside>
 <div id="numpadHost"></div>
 <div class="toast" id="toast"><span id="toastMsg"></span><button id="toastUndo" class="t-undo" onclick="doUndo()">Deshacer</button><i class="t-fuse"></i></div>
 
@@ -1690,20 +1825,23 @@ async function dbFetch(){
   try{ const {data:cw,error:we}=await supa.rpc('cuentas_web');
     if(!we && Array.isArray(cw)){ const m={}; cw.forEach(r=>{ if(r&&r.tel8) m[r.tel8]=r; }); state.webAcc=m; }
   }catch(e){ /* sin cuentas_web la app sigue igual que siempre */ }
+  // Panel Clientes: si el admin lo tiene abierto, las cifras se actualizan con cada bajada de datos.
+  if(session.role==='admin' && (adminView==='clientes'||CL.open)) cliFetch().then(ok=>{ if(!ok) return; if(adminView==='clientes' && safeToRefreshAdmin()) cliRefresh(); if(CL.open) cliPaintFicha(false); });
   return true;
 }
 // Respaldo local de clientes: si la tabla `clients` no existe en la nube (SQL_clients.sql),
 // los clientes editados persisten al menos en este dispositivo.
 function loadClientsLocal(){ try{ return JSON.parse(localStorage.getItem('ct_v2_clients')||'[]'); }catch(e){ return []; } }
 function saveClientsLocal(){ try{ localStorage.setItem('ct_v2_clients', JSON.stringify(state.clients||[])); }catch(e){} }
-function toRowC(c){ return {phone:_digits(c.phone), name:c.name||'', zone:c.zone||'', addr:c.addr||'', note:c.note||'', created_at:c.createdAt||Date.now()}; }
-function fromRowC(r){ return {phone:r.phone, name:r.name, zone:r.zone, addr:r.addr, note:r.note, createdAt:Number(r.created_at)||0}; }
+// `etiqueta` (cliente/prueba/familia/equipo) solo se manda cuando se está cambiando a propósito (conTag): así ningún otro guardado de clientes pisa la marca.
+function toRowC(c,conTag){ const r={phone:_digits(c.phone), name:c.name||'', zone:c.zone||'', addr:c.addr||'', note:c.note||'', created_at:c.createdAt||Date.now()}; if(conTag&&c.etiqueta) r.etiqueta=c.etiqueta; return r; }
+function fromRowC(r){ return {phone:r.phone, name:r.name, zone:r.zone, addr:r.addr, note:r.note, createdAt:Number(r.created_at)||0, etiqueta:r.etiqueta||'cliente'}; }
 function upsertClient(c){
   if(!c||_digits(c.phone).length<4||!c.name) return;
   const np=_digits(c.phone); if(!state.clients) state.clients=[];
   const i=state.clients.findIndex(x=>_phoneKey(x.phone)===_phoneKey(np));
   // si ya existe, conservar el teléfono guardado (evita duplicar "98765432" vs "50498765432")
-  const rec={phone:(i>=0?state.clients[i].phone:np), name:c.name, zone:c.zone||'', addr:c.addr||'', note:(i>=0?state.clients[i].note:'')||'', createdAt:(i>=0?state.clients[i].createdAt:Date.now())};
+  const rec={phone:(i>=0?state.clients[i].phone:np), name:c.name, zone:c.zone||'', addr:c.addr||'', note:(i>=0?state.clients[i].note:'')||'', createdAt:(i>=0?state.clients[i].createdAt:Date.now()), etiqueta:(i>=0?state.clients[i].etiqueta:undefined)};
   if(i>=0) state.clients[i]=rec; else state.clients.push(rec);
   saveClientsLocal();
   if(USE_SUPA) supa.from('clients').upsert(toRowC(rec)).then(({error})=>{ if(error) console.warn('Supabase client upsert:',error.message); });
@@ -2270,7 +2408,7 @@ function updateClock(){ const el=$("#syncClock"); if(el) el.textContent="actuali
   const b=$("#syncBtn"); if(b) b.classList.toggle('stale', Date.now()-lastSync>120000); } // ámbar si lleva >2 min sin sincronizar
 // Refresco automático cada 30s. NO hace logout; el logout es por inactividad (2h, abajo).
 // No refresca al admin si está capturando una comanda o con una hoja/editor abierto (perdería lo escrito).
-function safeToRefreshAdmin(){ if(adminView==='nueva') return false; if(document.querySelector('.overlay')) return false;
+function safeToRefreshAdmin(){ if(adminView==='nueva') return false; if(document.querySelector('.overlay')) return false; if(CL.open) return false; // ficha de cliente abierta
   // No re-dibujar mientras el admin ESCRIBE en cualquier campo (búsqueda de bandeja, dirección de
   // Envíos, catálogo…): un refresco automático a media escritura le saca el foco y le revierte el texto.
   const ae=document.activeElement;
@@ -2371,7 +2509,7 @@ function renderAdmin(){
   if(adminView==="envios"){ shipMountMap(); shipWireSearch(); }
   if(adminView==="bandeja" && _kx){ const k=$("#abKanban"); if(k) k.scrollLeft=_kx; } // no regresar el tablero al mover una comanda
 }
-function go(v){ adminView=v; if(v==="nueva"){ draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null,shipAuto:true,shipCalc:null}; prodOpen=false; _shipAutoLast=''; } if(v==="bandeja") bandejaQ=''; if(v==="resumen") dayFilter=null; renderAdmin(); window.scrollTo(0,0); }
+function go(v){ adminView=v; if(v==="nueva"){ draft={clientName:"",phone:"",zone:"",addr:"",delivery:"envio",shipping:0,note:"",items:[],pasteText:"",pastePhone:"",lastParse:null,shipAuto:true,shipCalc:null}; prodOpen=false; _shipAutoLast=''; } if(v==="bandeja") bandejaQ=''; if(v==="resumen") dayFilter=null; renderAdmin(); window.scrollTo(0,0); if(v==="clientes") cliLoad(); }
 
 function ocard(o,actionHtml){
   return `<button class="ocard" onclick="openAdminOrder('${o.id}')">
@@ -3156,10 +3294,11 @@ const RET_DIAS=30;          // umbral: «sin pedir hace más de N días»
 const RET_MIN_COMPRAS=2;    // ventas válidas (_esVenta) para contar como cliente que podía volver
 const RET_GUION='Hola {nombre}, hace rato no te vemos por El Torito. Esta semana tenemos {producto}. ¿Te apartamos algo?';
 function retNoVuelven(){
-  adminClientes(); // reconstruye _cliMap (mismo agrupado por teléfono y nombres editados que la pestaña Clientes)
+  cliBuildMap(); // reconstruye _cliMap (mismo agrupado por teléfono y nombres editados que la pestaña Clientes)
   const today=dayStart(Date.now()), out=[];
   Object.values(_cliMap).forEach(c=>{
     if(c.baja || _phoneKey(c.phone).length!==8) return;        // de baja o sin teléfono con quién hablar
+    { const rc=(state.clients||[]).find(x=>_phoneKey(x.phone)===_phoneKey(c.phone)); if(rc&&rc.etiqueta&&rc.etiqueta!=='cliente') return; } // pruebas, familia y equipo no son clientes que «no vuelven»
     const ventas=c.orders.filter(_esVenta); if(ventas.length<RET_MIN_COMPRAS) return;
     // último pedido = lo más reciente entre la última venta y cualquier comanda abierta (si hay una en curso, no es que no pida)
     const last=Math.max(...ventas.map(_refVenta),...c.orders.map(o=>o.createdAt||0));
@@ -3179,7 +3318,7 @@ function adminNoVuelven(){
     :`<div class="empty-state"><div class="es-ic">${ic('user',40)}</div><p>Ningún cliente lleva más de ${RET_DIAS} días sin pedir.</p></div>`}
     <div style="height:24px"></div>`;
 }
-function retVerFicha(key){ adminClientes(); openClientProfile(key); }
+function retVerFicha(key){ cliBuildMap(); openClientProfile(key); }
 let _retKey=null;
 function retEscribir(key){
   const c=_cliMap[key]; if(!c) return; _retKey=key;
@@ -3219,13 +3358,14 @@ function retLineaCierre(sel,lbl,ventasDia){
 /* ----- CLIENTES (editables por el admin) ----- */
 // Agrupa por TELÉFONO (últimos 8 dígitos); sin teléfono, por nombre. Los datos editados
 // en la ficha del cliente (state.clients) mandan sobre lo derivado de las comandas.
+// _cliMap sigue alimentando Editar, Dar de baja, Escribirle y «Clientes que no vuelven».
 let _cliMap={};
 const BAJA_TAG='[BAJA] ';
 const _isBaja=n=>String(n||'').startsWith(BAJA_TAG);
 const _noteClean=n=>_isBaja(n)?String(n).slice(BAJA_TAG.length):(n||'');
 let showBaja=false;
 function toggleBaja(){ showBaja=!showBaja; renderAdmin(); window.scrollTo(0,0); }
-function adminClientes(){
+function cliBuildMap(){
   const map={};
   // Índice nombre→teléfono: para fusionar pedidos viejos SIN teléfono con el cliente que sí lo tiene.
   const nameToPhone={};
@@ -3246,71 +3386,256 @@ function adminClientes(){
       map[k].zone=c.zone||map[k].zone; map[k].addr=c.addr||map[k].addr; map[k].note=c.note||''; } });
   Object.values(map).forEach(c=>{ c.baja=_isBaja(c.note); c.note=_noteClean(c.note); });
   _cliMap=map;
-  // Los clientes web sin nombre van PRIMERO (para nombrarlos fácil); luego por total gastado.
-  const allCls=Object.values(map).sort((a,b)=>(isPhoneName(b.name)-isPhoneName(a.name))||(b.total-a.total));
-  const nBaja=allCls.filter(c=>c.baja).length;
-  const cls=allCls.filter(c=>!!c.baja===showBaja); // v2: los dados de baja salen de la lista, no se borran
-  const nSin=cls.filter(c=>isPhoneName(c.name)).length;
-  const nWeb=cls.filter(c=>cuentaWeb(c.phone)).length;
-  return `<div class="view-head"><div><h2>Clientes</h2><div class="vh-sub">${cls.length} clientes${showBaja?' dados de baja':''}${nWeb?` · <b>${nWeb}</b> con cuenta en la web`:''} · toca uno para ver su perfil</div></div></div>
-    ${nSin?`<button class="carn-info namebanner" onclick="go('clientes')" style="cursor:default">${ic('user',15)} <span><b>${nSin}</b> cliente${nSin>1?'s':''} de la web sin nombre · tócalos abajo para nombrarlos</span></button>`:''}
-    ${cls.length? `<div class="olist">${cls.map(c=>{
-      const top=Object.entries(c.prods).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join(", ");
-      const sinN=isPhoneName(c.name);
-      return `<div class="card cli-card${sinN?' unnamed':''}" style="padding:14px;cursor:pointer" onclick="${sinN?`nameWebPrompt('${esc(c.phone||c.name)}')`:`openClientProfile('${c.key}')`}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-          <div style="min-width:0"><div style="font-weight:700;font-size:15.5px">${dispName(c.name)}${cuentaWeb(c.phone)?` <span class="chip webacc">${ic('user',11)} Cuenta web</span>`:''}</div>
-            <div style="font-size:12.5px;color:var(--muted);margin-top:2px">${esc(c.phone||'—')} · ${esc(c.zone||'')}</div></div>
-          <div style="display:flex;align-items:flex-start;gap:4px;flex:none">
-            <div style="text-align:right"><div class="disp" style="font-weight:600;font-size:18px;color:var(--rojo)">${money(c.total)}</div>
-              <div style="font-size:11px;color:var(--muted-2)">${c.orders.length} comandas</div></div>
-            <button class="ce-icon" onclick="event.stopPropagation();openClientEdit('${c.key}')" aria-label="Editar cliente">${ic('edit',15)}</button>
-          </div>
-        </div>
-        ${c.note?`<div style="font-size:12.5px;color:var(--muted);margin-top:9px;background:#F5F5F7;border-radius:9px;padding:7px 10px">${ic('note',13)} ${esc(c.note)}</div>`:""}
-        ${top?`<div style="font-size:12.5px;color:var(--muted);margin-top:9px">Compra seguido: <b style="color:var(--ink)">${esc(top)}</b></div>`:""}
-        ${sinN
-          ? `<div class="cli-name-cta">${ic('user',14)} Ponerle nombre ${ic('right',13)}</div>`
-          : `<div style="margin-top:9px;display:flex;align-items:center;gap:6px;color:var(--rojo);font-size:12.5px;font-weight:600">${ic('eye',14)} Ver perfil e historial ${ic('right',13)}</div>`}
-      </div>`;}).join("")}</div>`
-    : `<div class="empty-state"><div class="es-ic">${ic('user',40)}</div><p>${showBaja?'No hay clientes dados de baja.':'Aún no hay clientes.<br>Se crean solos al capturar comandas con teléfono.'}</p></div>`}
-    ${(nBaja||showBaja)?`<button class="btn ghost block" style="margin-top:18px" onclick="toggleBaja()">${showBaja?'Volver a los clientes activos':'Ver clientes dados de baja ('+nBaja+')'}</button>`:''}`;
+  return Object.values(map);
 }
-/* Perfil del cliente: datos + historial COMPLETO de pedidos (cada uno abre su detalle) */
-function openClientProfile(key){
-  const c=_cliMap[key]; if(!c) return;
-  const orders=c.orders.slice().sort((a,b)=>(b.paidAt||b.createdAt)-(a.paidAt||a.createdAt));
-  const top=Object.entries(c.prods).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  const ventas=orders.filter(_esVenta).length;
-  $("#overlayHost").innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()">
-    <div class="sheet"><div class="sheet-head">
-      <span class="sh-name" style="font-size:16px;font-weight:700;color:var(--ink)">${esc(c.name)}</span>
-      <button class="x" onclick="openClientEdit('${c.key}')" aria-label="Editar" style="margin-left:auto;background:#EFEFF3">${ic('edit',15)}</button>
-      <button class="x" onclick="closeSheet()" aria-label="Cerrar">${ic('x',16)}</button></div>
-    <div class="sheet-body">
-      <div class="kv"><span class="k">${ic('user',14)} Teléfono</span><span class="v">${esc(c.phone||'—')}</span></div>
-      ${(()=>{ const w=cuentaWeb(c.phone); return `<div class="kv"><span class="k">${ic('store',14)} Cuenta en la web</span><span class="v">${
-        w ? `Sí · desde ${esc(fechaCorta(w.creada))}${w.nombre&&_norm(w.nombre)!==_norm(c.name)?` · se registró como ${esc(w.nombre)}`:''}` : 'No tiene'
-      }</span></div>`; })()}
-      <div class="kv"><span class="k">${ic('truck',14)} Zona</span><span class="v">${esc(c.zone||'—')}</span></div>
-      <div class="kv"><span class="k">${ic('store',14)} Dirección</span><span class="v" style="max-width:60%">${esc(c.addr||'—')}</span></div>
-      ${c.note?`<div class="note-banner" style="margin-top:10px">${ic('note',15)} ${esc(c.note)}</div>`:''}
-      <div class="kpis" style="margin-top:12px">
-        <div class="kpi"><div class="kl">Total comprado</div><div class="kvv" style="color:var(--rojo)">${money(c.total)}</div></div>
-        <div class="kpi"><div class="kl">Pedidos pagados</div><div class="kvv">${ventas}</div></div>
-      </div>
-      ${_phoneKey(c.phone).length===8?`<button class="btn red lg block btn-ic" style="margin-top:12px;min-height:48px" onclick="retEscribir('${c.key}')">${ic('chat',17)} Escribirle</button>`:''}
-      ${top.length?`<div class="sect-label">Lo que más compra</div>
-        <div class="rank">${top.map(([n,cnt])=>`<div class="rrow"><span class="rk-name" style="width:auto;flex:1">${esc(n)}</span><span class="rv">${cnt}×</span></div>`).join('')}</div>`:''}
-      <div class="sect-label">Historial de pedidos · ${orders.length}</div>
-      <div class="olist">${orders.map(o=>`<button class="ocard" onclick="openAdminOrder('${o.id}')">
-        <span class="folio">#${o.folio}</span>
-        <span class="obody"><span class="oname">${new Date(o.paidAt||o.createdAt).toLocaleDateString('es-HN',{day:'numeric',month:'short',year:'numeric'})}</span>
-          <span class="ometa">${o.items.length} prod · <span class="chip ${CHIP[o.status]}">${STATUS[o.status]}</span></span></span>
-        <span class="oright"><span class="ototal">${money(fullTotal(o))}</span></span></button>`).join('')||'<div class="kempty">Sin pedidos registrados</div>'}</div>
-      <div style="height:14px"></div>
-    </div></div></div>`;
+
+/* ===== Panel de clientes (16 oct 2026) =====
+   Las cifras vienen de la función clientes_panel() (solo admin; SQL_2026-10-16_clientes_panel.sql):
+   una fila por teléfono. Los pedidos de la ficha salen de las comandas que la app ya tiene cargadas.
+   La etiqueta (cliente / prueba / familia / equipo) vive en clients.etiqueta: es un estado, nunca se borra nada. */
+const CL={filter:'todos',rows:null,loading:false,err:false,open:null,openBaja:false,opener:null,openerKey:null,noteT:null,noteKey:null,noteVal:null};
+const CL_TAGS=['cliente','prueba','familia','equipo'];
+const CL_TAGN={cliente:'Cliente real',prueba:'Prueba',familia:'Familia',equipo:'Equipo'};
+const CL_ICTEL='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h3l1.6 4-2 1.3a10 10 0 0 0 5.6 5.6l1.3-2 4 1.6v3a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 4 5.7 2 2 0 0 1 6 3.5z"/></svg>';
+async function cliFetch(){
+  if(!USE_SUPA||!supa) return false;
+  CL.loading=true;
+  try{
+    const {data,error}=await supa.rpc('clientes_panel');
+    if(error||!Array.isArray(data)) throw (error||new Error('sin datos'));
+    CL.rows=data; CL.err=false; CL.loading=false; return true;
+  }catch(e){ console.warn('clientes_panel:',e&&e.message); CL.loading=false; if(!CL.rows) CL.err=true; return false; }
 }
+function cliLoad(){ return cliFetch().then(ok=>{ if(adminView==='clientes') cliRefresh(); return ok; }); }
+function cliReintentar(){ CL.err=false; CL.loading=true; cliRefresh(); cliLoad(); }
+const cliRec=t8=>(state.clients||[]).find(x=>_phoneKey(x.phone)===t8)||null;
+const cliRowOf=t8=>(CL.rows||[]).find(r=>r.tel8===t8)||null;
+function cliTag(r){ const c=cliRec(r.tel8); const t=(c&&c.etiqueta)||r.etiqueta||'cliente'; return CL_TAGS.includes(t)?t:'cliente'; }
+function cliName(r){ const c=cliRec(r.tel8); return (c&&c.name)||r.nombre||r.tel8; }
+function cliBaja(r){ const c=cliRec(r.tel8); return !!(c&&_isBaja(c.note)); }
+function cliNote(r){ const c=cliRec(r.tel8); return c?_noteClean(c.note):''; }
+function cliView(r){ return {r, t8:r.tel8, tag:cliTag(r), baja:cliBaja(r), name:cliName(r), n:Number(r.pedidos)||0, total:Number(r.total)||0, lb:Number(r.libras)||0,
+  owed:Number(r.por_cobrar)||0, nowed:Number(r.entregados_sin_pagar)||0, last:r.ultimo_pedido?Date.parse(r.ultimo_pedido):null, web:!!r.tiene_cuenta}; }
+// Los números de arriba NO cuentan prueba / familia / equipo ni a quien está de baja.
+function cliDerive(){
+  const all=(CL.rows||[]).map(cliView);
+  const act=all.filter(v=>!v.baja);
+  const real=act.filter(v=>v.tag==='cliente'&&v.n>0);
+  return {all:act, bajas:all.filter(v=>v.baja), real, rep:real.filter(v=>v.n>=2), cob:real.filter(v=>v.owed>0), web:real.filter(v=>v.web), pru:act.filter(v=>v.tag!=='cliente')};
+}
+function cliListFor(D){
+  const l=({todos:D.real,repiten:D.rep,cobrar:D.cob,web:D.web,pruebas:D.pru}[CL.filter]||D.real).slice();
+  return l.sort((a,b)=>(b.last||0)-(a.last||0));
+}
+function cliAgo(ts){ if(!ts) return ''; const d=Math.round((dayStart(Date.now())-dayStart(ts))/86400000);
+  if(d<=0) return 'hoy'; if(d===1) return 'ayer'; if(d<60) return 'hace '+d+' días';
+  if(d<365) return 'hace '+Math.floor(d/30)+' meses'; return 'hace más de un año'; }
+function cliTop(){ const m={}; allOrders().forEach(o=>{ if(o.status==='cancelada') return; const k=_phoneKey(o.phone); if(k.length!==8) return;
+  const p=m[k]||(m[k]={}); (o.items||[]).forEach(it=>{ p[it.name]=(p[it.name]||0)+1; }); });
+  return m; }
+const cliLbs=n=>(Math.round(n*10)/10).toString().replace(/\.0$/,'')+' lb';
+const cliFig=(n,red)=>`<span class="cl-fig${red?' red':''}">${n>0?'<small>L</small>'+_num(n):'0'}</span>`;
+
+function cliRowHtml(v,top){
+  const tg=v.tag==='cliente'?'':CL_TAGN[v.tag]+' · ';
+  const sec=tg+v.n+(v.n===1?' pedido':' pedidos')+(v.last?' · '+cliAgo(v.last):'');
+  const tp=Object.entries(top[v.t8]||{}).sort((a,b)=>b[1]-a[1]||(a[0]<b[0]?-1:1)).slice(0,2).map(x=>x[0]);
+  const note=cliNote(v.r);
+  const end=v.owed>0?`<div class="cl-sub2 red">Falta cobrar ${money(v.owed)}</div>`:`<div class="cl-sub2">${cliLbs(v.lb)}</div>`;
+  return `<li><button class="cl-row" data-t8="${v.t8}" onclick="cliOpen('${v.t8}',this)">
+    <div style="min-width:0"><div class="cl-name"><span class="t">${dispName(v.name)}</span>${v.web?'<span class="chip webacc" aria-label="Cuenta web"><span class="cw-l" aria-hidden="true">Cuenta </span><span aria-hidden="true">web</span></span>':''}</div><div class="cl-sec">${esc(sec)}</div></div>
+    <div class="cl-mid"><div class="cl-sec" style="margin-top:0">${tp.length?esc(tp.join(', ')):'Sin compras'}</div>${note?`<div class="cl-nt">${esc(note)}</div>`:''}</div>
+    <div class="cl-end"><div class="cl-tot">${money(v.total)}</div>${end}</div>
+    <span class="cl-go">${ic('right',16)}</span></button></li>`;
+}
+function cliInner(){
+  const head=(t,s)=>`<h2 class="cl-h1">${t}</h2><p class="cl-sub">${s}</p>`;
+  if(!USE_SUPA) return head('Clientes','')+`<div class="cl-list" style="margin-top:22px"><div class="cl-empty"><strong>Clientes necesita la conexión a internet.</strong>Entrá con la nube activada para ver los números.</div></div>`;
+  if(!CL.rows){
+    if(CL.err) return head('Clientes','')+`<div class="cl-list" style="margin-top:22px"><div class="cl-empty" role="alert"><strong>No se pudieron cargar los clientes.</strong>Revisá el internet y volvé a intentar.<br><button class="cl-link" onclick="cliReintentar()">Reintentar</button></div></div>`;
+    return head('Clientes','')+`<p class="cl-meta" role="status" style="margin-top:22px">Cargando clientes…</p>`;
+  }
+  const D=cliDerive(), top=cliTop();
+  if(showBaja){
+    const L=D.bajas.slice().sort((a,b)=>(b.last||0)-(a.last||0));
+    return `<button class="cl-back" onclick="toggleBaja()">${ic('left',20)} Clientes</button>`+head('Dados de baja','No salen en las listas ni en los números. Sus pedidos se conservan.')+
+      `<ul class="cl-list" style="margin-top:22px">${L.length?L.map(v=>cliRowHtml(v,top)).join(''):'<li class="cl-empty"><strong>No hay clientes dados de baja.</strong></li>'}</ul>`;
+  }
+  const owed=D.cob.reduce((s,v)=>s+v.owed,0);
+  const stat=(f,fig,lab,ctx,red)=>`<button class="cl-stat" data-f="${f}" aria-pressed="${CL.filter===f}" onclick="cliFilter('${f}','stat')"><span class="cl-fig${red?' red':''}">${fig}</span><span class="cl-lbl">${lab}</span><span class="cl-ctx">${ctx}</span></button>`;
+  const T=[['todos','Todos',D.real.length],['repiten','Repiten',D.rep.length],['cobrar','Por cobrar',D.cob.length],['web','Cuenta web',D.web.length],['pruebas','Pruebas / familia',D.pru.length]];
+  const L=cliListFor(D);
+  const meta=L.length?(L.length+(L.length===1?' cliente':' clientes')+(CL.filter==='pruebas'?', no suman en los números':', por último pedido')):'';
+  const msg={todos:['Todavía no hay clientes.','Se crean solos con cada comanda.'],repiten:['Todavía nadie repite.','Cuando un cliente vuelva a pedir, aparece aquí.'],
+    cobrar:['Nadie te debe nada.',''],web:['Nadie ha entrado con su número.','Los clientes con cuenta web aparecen aquí.'],pruebas:['No hay pruebas ni familia marcadas.','']}[CL.filter]||['',''];
+  const nVuelven=retNoVuelven().length, nBaja=D.bajas.length;
+  return head('Clientes','Los números no cuentan pruebas, familia ni equipo.')+
+    `<div class="cl-stats">${stat('todos',D.real.length,'Compran','clientes reales')}${stat('repiten',D.rep.length,'Repiten','2 o más pedidos')}${stat('cobrar',owed>0?'<small>L</small>'+_num(owed):'<small>L</small>0','Por cobrar',D.cob.length?(D.cob.length+(D.cob.length===1?' cliente':' clientes')):'Nadie te debe',owed>0)}</div>
+    <div class="cl-tabs" role="group" aria-label="Filtrar clientes">${T.map(t=>`<button class="cl-tab" data-f="${t[0]}" aria-pressed="${CL.filter===t[0]}" onclick="cliFilter('${t[0]}','tab')">${t[1]} <span class="n">${t[2]}</span></button>`).join('')}</div>
+    <p class="cl-meta" id="clMeta" aria-live="polite">${meta}</p>
+    <ul class="cl-list">${L.length?L.map(v=>cliRowHtml(v,top)).join(''):`<li class="cl-empty"><strong>${msg[0]}</strong>${msg[1]}</li>`}</ul>
+    <div class="cl-foot"><button class="cl-link" onclick="go('novuelven')">Clientes que no vuelven${nVuelven?' · '+nVuelven:''}</button>${nBaja?`<button class="cl-link" onclick="toggleBaja()">Ver clientes dados de baja · ${nBaja}</button>`:''}</div>`;
+}
+function adminClientes(){ cliBuildMap(); return `<div class="cl2" id="cl2">${cliInner()}</div>`; }
+function cliRefresh(){
+  const h=document.getElementById('cl2'); if(!h) return;
+  cliBuildMap(); h.innerHTML=cliInner();
+  const tb=h.querySelector('.cl-tabs'), ta=h.querySelector('.cl-tab[aria-pressed="true"]');
+  if(tb&&ta&&tb.scrollWidth>tb.clientWidth) tb.scrollLeft=Math.max(0,ta.offsetLeft-16);
+}
+function cliFilter(f,kind){
+  CL.filter=f; cliRefresh();
+  const b=document.querySelector('.cl-'+kind+'[data-f="'+f+'"]'); if(b) b.focus({preventScroll:true});
+}
+
+/* ----- Ficha ----- */
+function cliSetBg(on){ const a=$("#app"); if(a){ if(on) a.setAttribute('inert',''); else a.removeAttribute('inert'); }
+  document.body.classList.toggle('cl-fopen',on); document.body.style.overflow=on?'hidden':''; }
+function cliOpen(t8,el){
+  cliBuildMap(); if(!cliRowOf(t8)) return;
+  CL.open=t8; CL.opener=el||document.activeElement; CL.openerKey=t8; CL.openBaja=cliBaja(cliRowOf(t8));
+  cliPaintFicha(true);
+  const s=$("#cliSheet"); s.removeAttribute('inert'); s.classList.add('on'); $("#cliScrim").classList.add('on'); cliSetBg(true);
+  setTimeout(()=>{ const n=$("#cliName"); if(n&&CL.open) n.focus({preventScroll:true}); },60);
+}
+function cliClose(){
+  if(!CL.open) return;
+  cliFlushNote();
+  const key=CL.openerKey, op=CL.opener; CL.open=null; CL.opener=null;
+  $("#cliSheet").classList.remove('on'); $("#cliScrim").classList.remove('on'); $("#cliSheet").setAttribute('inert',''); cliSetBg(false);
+  if(adminView==='clientes') cliRefresh(); else rerender();
+  const el=(op&&document.body.contains(op))?op:(document.querySelector('.cl-row[data-t8="'+key+'"]')||document.querySelector('.cl-row')||document.querySelector('.ocard'));
+  if(el) el.focus({preventScroll:true});
+}
+function cliQty(it){ if(!it.available) return 'No hay'; const u=it.unit==='Libra'?'lb':it.unit==='Unidad'?'u':it.unit==='Paquete'?'paq':it.unit;
+  return (it.weigh&&it.weight!=null)?it.weight+' lb':it.qty+' '+u; }
+function cliPaintFicha(reset,focusSel){
+  cliFlushNote();
+  const t8=CL.open, r=t8&&cliRowOf(t8); if(!r){ cliClose(); return; }
+  cliBuildMap();
+  const v=cliView(r);
+  if(v.baja!==CL.openBaja){ cliClose(); return; } // pasó a baja (o volvió): ya no pertenece a esta lista
+  const ords=allOrders().filter(o=>_phoneKey(o.phone)===t8).sort((a,b)=>b.createdAt-a.createdAt);
+  const okd=ords.filter(o=>o.status!=='cancelada').map(o=>o.createdAt);
+  const cad=okd.length>1?Math.round((Math.max(...okd)-Math.min(...okd))/86400000/(okd.length-1)):null;
+  const cadTxt=cad!==null?'cada '+cad+' '+(cad===1?'día':'días'):(v.n===1?'una sola vez':'sin compras');
+  const ph='+504 '+t8.slice(0,4)+'-'+t8.slice(4);
+  const acct=v.web?'Cuenta web desde '+esc(fechaCorta(r.cuenta_creada))+(r.ultimo_ingreso?' · último ingreso '+cliAgo(Date.parse(r.ultimo_ingreso)):''):'Sin cuenta web.';
+  const sugg=(v.tag==='cliente'&&/test|prueba/i.test(v.name))?`<div class="cl-sugg"><span>El nombre parece de una prueba.</span><button onclick="cliSetTag('${t8}','prueba')">Marcar como prueba</button></div>`:'';
+  const canPay=session.role==='admin';
+  const orders=ords.map(o=>{
+    const cx=o.status==='cancelada', owed=o.status==='entregada'&&!o.paid;
+    const rows=(o.items||[]).map(it=>`<div class="cl-it"><span>${esc(it.name)}</span><span class="q">${esc(cliQty(it))}</span><span class="p">${it.available&&it.price!=null?_num(lineAmount(it)):'—'}</span></div>`).join('');
+    const modo=isRetiro(o)?'Recoger en el local':'A domicilio'+(o.shipping?' · envío '+money(o.shipping):'');
+    const est=cx?'':(o.paid?'Pagado':(owed?'Sin pagar':'Pendiente de pago'));
+    const tot=o.status==='cotizar'?'Por cotizar':money(fullTotal(o));
+    return `<div class="cl-ord${cx?' off':''}"><button class="cl-oh" onclick="openAdminOrder('${o.id}')" aria-label="Ver pedido ${esc(o.folio)}"><b>#${esc(o.folio)}<span class="d">${esc(new Date(o.createdAt).toLocaleDateString('es-HN',{day:'numeric',month:'short'}))}</span></b><span class="s">${esc(STATUS[o.status]||o.status)}${ic('right',14)}</span></button>${rows}
+      <div class="cl-of"><div>${modo}</div><div class="r"><div class="tt">${tot}</div>${est?`<div class="st${owed?' red':''}">${est}</div>`:''}</div></div>
+      ${owed&&canPay?`<button class="cl-pay" data-pay="${o.id}" onclick="cliPay('${o.id}')">Marcar pagado</button>`:''}</div>`;
+  }).join('');
+  const seg=CL_TAGS.map(t=>`<button data-tag="${t}" aria-pressed="${v.tag===t}" onclick="cliSetTag('${t8}','${t}')">${CL_TAGN[t]}</button>`).join('');
+  const help=v.tag==='cliente'?'Cuenta en los números y sale en Todos.':'No cuenta en los números ni sale en Todos. Nada se borra.';
+  const hasMap=!!_cliMap['p'+t8];
+  const ae=document.activeElement, hadNote=!!(ae&&ae.id==='cliNote');
+  let keep=null; if(ae&&ae.closest&&ae.closest('#cliBody')) keep=ae.id?'#'+ae.id:(ae.dataset.tag?'[data-tag="'+ae.dataset.tag+'"]':(ae.dataset.pay?'[data-pay="'+ae.dataset.pay+'"]':null));
+  const sc=$("#cliSheet").scrollTop;
+  $("#cliEditB").hidden=!hasMap; $("#cliEditB").setAttribute('onclick',"openClientEdit('p"+t8+"')");
+  $("#cliBody").innerHTML=
+    `<h2 id="cliName" tabindex="-1">${dispName(v.name)}</h2><div class="cl-phone">${ph}</div>
+    <div class="cl-acts"><a class="cl-act" href="tel:+504${t8}">${CL_ICTEL} Llamar</a>${hasMap?`<button class="cl-act" onclick="retEscribir('p${t8}')">${ic('chat',18)} Escribirle</button>`:''}</div>
+    ${isPhoneName(v.name)?`<button class="cl-btn-name" onclick="nameWebPrompt('${t8}')">${ic('user',15)} Ponerle nombre</button>`:''}
+    <p class="cl-acct">${acct}</p>
+    <div class="cl-fstats"><div>${cliFig(v.total)}<span class="cl-lbl">Comprado</span><span class="cl-ctx">${cliLbs(v.lb)} en total</span></div>
+      <div><span class="cl-fig">${v.n}</span><span class="cl-lbl">${v.n===1?'Pedido':'Pedidos'}</span><span class="cl-ctx">${cadTxt}</span></div>
+      <div>${cliFig(v.owed,v.owed>0)}<span class="cl-lbl">Falta cobrar</span><span class="cl-ctx">${v.owed>0?v.nowed+(v.nowed===1?' pedido entregado':' pedidos entregados'):'Al día'}</span></div></div>
+    ${sugg}
+    <h3 class="cl-sec-t">Nota</h3><div class="cl-panel"><textarea class="cl-note" id="cliNote" rows="2" placeholder="Cómo le gusta el corte, cómo paga, qué avisarle." aria-label="Nota del cliente" oninput="cliNoteInput(this.value)" onblur="cliFlushNote()">${esc(cliNote(r))}</textarea></div>
+    <h3 class="cl-sec-t">Pedidos</h3><div class="cl-panel">${orders||'<div class="cl-empty" style="padding:28px 20px">Sin pedidos registrados.</div>'}</div>
+    <h3 class="cl-sec-t">Tipo de cliente</h3><div class="cl-seg" role="group" aria-label="Tipo de cliente">${seg}</div><p class="cl-help">${help}</p>`;
+  $("#cliSheet").scrollTop=reset?0:sc;
+  if(!reset){
+    if(hadNote){ const n=$("#cliNote"); if(n){ n.focus(); n.setSelectionRange(n.value.length,n.value.length); } }
+    else if(focusSel||keep){ const f=document.querySelector('#cliBody '+(focusSel||keep))||(focusSel?$("#cliName"):null); if(f) f.focus({preventScroll:true}); }
+  }
+}
+// Reabrir la ficha desde «Escribirle» → «Volver», o desde «Clientes que no vuelven».
+async function openClientProfile(key){
+  const t8=String(key||'').replace(/^p/,'');
+  if(!/^\d{8}$/.test(t8)){ toast('Este cliente no tiene un teléfono válido'); return; }
+  $("#overlayHost").innerHTML="";
+  if(!CL.rows) await cliFetch();
+  if(!cliRowOf(t8)){ toast('No encontré a este cliente'); return; }
+  if(CL.open===t8){ cliPaintFicha(false,'#cliName'); const n=$("#cliName"); if(n) n.focus({preventScroll:true}); return; }
+  cliOpen(t8,document.activeElement);
+}
+
+/* ----- Cambios desde la ficha ----- */
+function cliAfterChange(focusSel){
+  if(adminView==='clientes') cliRefresh();
+  if(CL.open) cliPaintFicha(false,focusSel);
+}
+function cliEnsureRec(t8,r){
+  if(!state.clients) state.clients=[];
+  let rec=state.clients.find(x=>_phoneKey(x.phone)===t8), created=false;
+  if(!rec){ const m=_cliMap['p'+t8], ph=_digits((m&&m.phone)||'')||('504'+t8);
+    rec={phone:ph,name:cliName(r),zone:(m&&m.zone)||'',addr:(m&&m.addr)||'',note:'',createdAt:Date.now()}; state.clients.push(rec); created=true; }
+  return {rec,created};
+}
+// Escribe clients.etiqueta con upsert por teléfono (nunca delete). Optimista: lo local cambia al instante y se revierte si la nube no lo guardó.
+async function cliWriteTag(t8,tag){
+  const r=cliRowOf(t8); if(!r) return false;
+  const prevRow=r.etiqueta, {rec,created}=cliEnsureRec(t8,r), prevRec=rec.etiqueta;
+  rec.etiqueta=tag; r.etiqueta=tag; saveClientsLocal();
+  if(!USE_SUPA) return true;
+  let err=null;
+  try{ const res=await supa.from('clients').upsert(toRowC(rec,true)); err=res.error; }catch(e){ err=e; }
+  if(err){ console.warn('client etiqueta:',err.message);
+    if(created) state.clients=state.clients.filter(x=>x!==rec); else rec.etiqueta=prevRec;
+    r.etiqueta=prevRow; saveClientsLocal(); return false; }
+  return true;
+}
+async function cliSetTag(t8,tag){
+  const r=cliRowOf(t8); if(!r) return; const prev=cliTag(r); if(prev===tag) return;
+  const name=cliName(r), p=cliWriteTag(t8,tag);
+  cliAfterChange('[data-tag="'+tag+'"]');
+  toast(name+' pasó a '+(tag==='cliente'?'Clientes reales':'Pruebas / familia')+'.',()=>{
+    cliWriteTag(t8,prev).then(ok=>{ if(!ok) toast('No se guardó. Lo dejé como estaba.'); cliAfterChange('[data-tag="'+prev+'"]'); });
+    cliAfterChange('[data-tag="'+prev+'"]'); });
+  const ok=await p; if(!ok){ cliAfterChange('[data-tag="'+prev+'"]'); toast('No se guardó. Lo dejé como estaba.'); }
+}
+// «Marcar pagado» de un pedido ya entregado: mismo camino que usa la app para cobrar (paid + paidAt y save → upsert a orders).
+// El disparador de la base solo deja pasar a admin@; con otra sesión el botón ni se dibuja.
+function cliOwedLocal(t8){ const L=allOrders().filter(o=>_phoneKey(o.phone)===t8&&o.status==='entregada'&&!o.paid);
+  return {n:L.length, sum:L.reduce((s,o)=>s+fullTotal(o),0)}; }
+function cliSyncRowOwed(t8){ const r=cliRowOf(t8); if(!r) return; const w=cliOwedLocal(t8); r.por_cobrar=w.sum; r.entregados_sin_pagar=w.n; }
+function cliPay(id){
+  if(session.role!=='admin') return;
+  const o=orderById(id); if(!o||o.paid) return; const t8=_phoneKey(o.phone);
+  o.paid=true; o.paidAt=Date.now(); save(o); cliSyncRowOwed(t8);
+  cliAfterChange('[data-pay]');
+  toast('Pedido #'+o.folio+' marcado como pagado.',()=>{ o.paid=false; o.paidAt=null; save(o); cliSyncRowOwed(t8); cliAfterChange('[data-pay]'); cliFetch().then(()=>cliAfterChange()); });
+  // reconciliar con la cifra que calcula la base una vez guardado
+  Promise.resolve(_lastSave).then(()=>cliFetch()).then(ok=>{ if(ok) cliAfterChange(); });
+}
+function cliNoteInput(v){ CL.noteKey=CL.open; CL.noteVal=v; clearTimeout(CL.noteT); CL.noteT=setTimeout(cliFlushNote,700); }
+function cliFlushNote(){
+  clearTimeout(CL.noteT); CL.noteT=null;
+  const t8=CL.noteKey, val=CL.noteVal; CL.noteKey=null; CL.noteVal=null;
+  if(!t8||val==null) return;
+  const r=cliRowOf(t8); if(!r) return;
+  if(!cliRec(t8)&&!val.trim()) return;
+  const {rec}=cliEnsureRec(t8,r), baja=_isBaja(rec.note);
+  if(_noteClean(rec.note)===val) return;
+  rec.note=(baja?BAJA_TAG:'')+val; saveClientsLocal();
+  if(USE_SUPA) supa.from('clients').upsert(toRowC(rec)).then(({error})=>{ if(error){ console.warn('client nota:',error.message); toast('No se guardó la nota — revisa el internet'); } });
+}
+// Escape cierra la ficha (si hay otra hoja encima —Editar, Escribirle, un pedido— primero va esa).
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&CL.open&&!$("#overlayHost").children.length) cliClose(); });
+// Mientras hay otra hoja encima de la ficha, la ficha queda inerte; al cerrarla, el foco vuelve a la ficha.
+(function(){ const h=document.getElementById('overlayHost'); if(!h||!window.MutationObserver) return;
+  new MutationObserver(()=>{ if(!CL.open) return; const s=$("#cliSheet");
+    if(h.children.length) s.setAttribute('inert','');
+    else { s.removeAttribute('inert'); const ae=document.activeElement; if(!ae||ae===document.body){ const n=$("#cliName"); if(n) n.focus({preventScroll:true}); } } }).observe(h,{childList:true}); })();
 /* Ficha editable del cliente */
 let currentCliEdit=null; // key del cliente en edición ('p<8dígitos>' o 'n<nombre>')
 function openClientEdit(key){
@@ -3369,7 +3694,7 @@ function saveClientEdit(){
   }
   const i=state.clients.findIndex(x=>_phoneKey(x.phone)===newPk);
   const wasBaja=!!(_cliMap[oldKey]&&_cliMap[oldKey].baja);
-  const rec={phone:np, name, zone, addr, note:(wasBaja?BAJA_TAG:'')+note, createdAt:(i>=0?state.clients[i].createdAt:Date.now())};
+  const rec={phone:np, name, zone, addr, note:(wasBaja?BAJA_TAG:'')+note, createdAt:(i>=0?state.clients[i].createdAt:Date.now()), etiqueta:(i>=0?state.clients[i].etiqueta:undefined)};
   if(i>=0) state.clients[i]=rec; else state.clients.push(rec);
   saveClientsLocal();
   if(USE_SUPA) supa.from('clients').upsert(toRowC(rec)).then(({error})=>{ if(error) console.warn('client upsert:',error.message); });
@@ -4548,7 +4873,7 @@ function sheet(o,bodyHtml,titleOverride){
       <button class="x" onclick="closeSheet()">${ic('x',16)}</button>
     </div><div class="sheet-body">${bodyHtml}</div></div></div>`;
 }
-function closeSheet(){ $("#overlayHost").innerHTML=""; currentSheetId=null; editItems=null; rerender(); }
+function closeSheet(){ $("#overlayHost").innerHTML=""; currentSheetId=null; editItems=null; rerender(); if(CL.open) cliPaintFicha(false); }
 
 /* ============ INIT ============ */
 if(window.supabase && SUPA_URL){ initSupa().catch(e=>{ ctSessOff(); console.warn('Supabase init falló, modo local:',e); USE_SUPA=false; load(); archiveStaleListas(); }); }
