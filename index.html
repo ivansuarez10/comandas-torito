@@ -1094,6 +1094,22 @@ html.rol-carn .kcol-head .kc{font-size:16px;padding:2px 12px}
 .ret-line{display:flex;align-items:center;gap:8px;margin:12px 2px 0;font-size:14px;color:var(--muted);line-height:1.4;min-height:24px}
 .ret-line svg{flex:none;color:var(--muted)}
 .ret-line b{color:var(--ink);font-weight:700}
+/* Fase 2: línea «Sin N pruebas/familia» + interruptor, y tarjeta «Por cobrar» */
+.px-line{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;margin:6px 2px 10px;font-size:13px;color:var(--muted);line-height:1.35}
+.px-tx b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;margin-left:2px}
+.px-sw{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:0 2px;background:none;border:0;font:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}
+.px-sw i{position:relative;flex:none;width:36px;height:22px;border-radius:11px;background:#D1D1D6;transition:background .18s}
+.px-sw i::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .18s}
+.px-sw[aria-checked="true"] i{background:#1D1D1F}
+.px-sw[aria-checked="true"] i::after{transform:translateX(14px)}
+.px-sw:focus-visible,.px-owed:focus-visible{outline:2px solid #1D1D1F;outline-offset:2px}
+.px-owed{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:.5px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0 4px;min-height:56px;font:inherit;color:var(--ink);cursor:pointer;box-shadow:0 1px 2px rgba(29,29,31,.04)}
+.px-owed .po-l{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.px-owed .po-l b{font-size:15px;font-weight:600}
+.px-owed .po-l small{font-size:12.5px;color:var(--muted);line-height:1.3}
+.px-owed .po-v{font-size:17px;font-weight:700;color:#9F2629;font-variant-numeric:tabular-nums;white-space:nowrap}
+.px-owed .po-go{color:var(--muted);display:flex}
+@media (prefers-reduced-motion:reduce){.px-sw i,.px-sw i::after{transition:none}}
 /* ===== V3 · kit de detalle (4 oct 2026): pedido rápido, check que se dibuja, vacíos que invitan. Nada se anima al cargar:
    las transiciones viven bajo html.kd-live (primera interacción) y el movimiento de JS solo corre dentro de un gesto. ===== */
 .kvoid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;width:100%;min-height:56px;padding:14px 12px;border:1.5px dashed #C9C9D1;border-radius:16px;background:transparent;color:var(--muted);font:inherit}
@@ -3349,7 +3365,7 @@ function retAbrirWA(){
 // «Hoy: N nuevos, N que volvieron»: nuevo = su primera venta es ese día; volvió = compró ese día y ya tenía ventas antes.
 function retLineaCierre(sel,lbl,ventasDia){
   const ck=o=>_digits(o.phone).length>=8?_phoneKey(o.phone):_norm(o.clientName);
-  const first={}; allOrders().filter(_esVenta).forEach(o=>{ const k=ck(o), t=_refVenta(o); if(k&&(first[k]==null||t<first[k])) first[k]=t; });
+  const first={}; allOrders().filter(_cuenta).forEach(o=>{ const k=ck(o), t=_refVenta(o); if(k&&(first[k]==null||t<first[k])) first[k]=t; });
   const hoy=new Set(); ventasDia.forEach(o=>{ const k=ck(o); if(k) hoy.add(k); });
   let nu=0, vo=0; hoy.forEach(k=>{ if(dayStart(first[k])===sel) nu++; else vo++; });
   return `<div class="ret-line">${ic('user',15)}<span>${esc(lbl)}: <b>${nu}</b> nuevo${nu===1?'':'s'}, <b>${vo}</b> que ${vo===1?'volvió':'volvieron'}</span></div>`;
@@ -3707,7 +3723,7 @@ function saveClientEdit(){
 function adminResumen(g){
   const now=Date.now(), today=dayStart(now), day=86400000;
   const refTs=o=>o.paidAt||o.listaAt||o.createdAt;
-  const done=allOrders().filter(_esVenta);
+  const done=allOrders().filter(_cuenta);
   const todayDone=done.filter(o=>dayStart(refTs(o))===today);
   const ventasHoy=todayDone.reduce((s,o)=>s+fullTotal(o),0);
   const ticket=todayDone.length?ventasHoy/todayDone.length:0;
@@ -3734,7 +3750,7 @@ function adminResumen(g){
     return e.map(([k,v])=>`<div class="rrow"><span class="rk-name">${esc(k)}</span><span class="rbar"><i style="width:${Math.max(6,v/mx*100)}%"></i></span><span class="rv">${money(v)}</span></div>`).join("");};
   // DÍA seleccionado (flechas ‹ › debajo del título). Default = hoy.
   const sel=dayStart(dayFilter!=null?dayFilter:now), isToday=sel===today;
-  const dayAll=_dayOrders(sel), dayVentas=dayAll.filter(_esVenta);
+  const dayAll=_dayOrders(sel).filter(_visible), dayVentas=dayAll.filter(_cuenta);
   const ventasDia=dayVentas.reduce((s,o)=>s+fullTotal(o),0);
   const tickDia=dayVentas.length?ventasDia/dayVentas.length:0;
   const canc=dayAll.filter(o=>o.status==='cancelada').length;
@@ -3754,6 +3770,8 @@ function adminResumen(g){
         ? `<div class="kpi"><div class="kl">Activas ahora</div><div class="kvv">${activas}</div></div>`
         : `<div class="kpi"><div class="kl">Canceladas</div><div class="kvv">${canc}</div></div>`}
     </div>
+    ${pruebasLinea(_fuera(o=>dayStart(_refVenta(o))===sel))}
+    ${porCobrarCard(_deuda(isToday?()=>true:o=>dayStart(_refVenta(o))===sel), isToday?'en total':'de este día')}
     ${isToday ? `
     ${recordatorios}
     <div class="sect-label">Necesita tu mano</div>
@@ -3852,7 +3870,7 @@ let dayFilter=null; // ts del día visto en el Resumen (null = hoy)
 function shiftDay(n){ const base=dayFilter!=null?dayFilter:dayStart(Date.now()); const next=dayStart(base)+n*86400000; if(next>dayStart(Date.now())) return; dayFilter=next; renderAdmin(); window.scrollTo(0,0); }
 // Comandas creadas un día (activas + archivadas), más nuevas arriba.
 function _dayOrders(sel){ return allOrders().filter(o=>dayStart(o.createdAt)===sel).sort((a,b)=>b.createdAt-a.createdAt); }
-function dayOrdersListHtml(sel){ const all=_dayOrders(sel);
+function dayOrdersListHtml(sel){ const all=_dayOrders(sel).filter(_visible);
   if(!all.length) return `<div class="empty-state"><div class="es-ic">${ic('inbox',36)}</div><p>No hubo comandas este día.</p></div>`;
   return `<div class="olist">${all.map(o=>`<div class="ocard hist-row"><button class="hist-open" onclick="openAdminOrder('${o.id}')">
     <span class="folio">#${o.folio}</span>
@@ -3871,13 +3889,13 @@ function orderLibras(o){ return (o.items||[]).reduce((s,it)=>s+itemLibras(it),0)
 const _lb=n=>{ const r=Math.round(n*10)/10; return (r%1===0?r.toFixed(0):r.toFixed(1))+' lb'; };
 function adminHistorico(){
   const h=(state.history||[]).slice().sort((a,b)=>_refVenta(b)-_refVenta(a));
-  const totalLb=h.filter(_esVenta).reduce((s,o)=>s+orderLibras(o),0);
+  const totalLb=h.filter(_cuenta).reduce((s,o)=>s+orderLibras(o),0);
   // agrupar por día (del pedido)
   const groups=[]; const byDay={};
   h.forEach(o=>{ const d=dayStart(_refVenta(o)); if(!byDay[d]){ byDay[d]={day:d, orders:[]}; groups.push(byDay[d]); } byDay[d].orders.push(o); });
   return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Histórico</h2><div class="vh-sub">${h.length} comandas archivadas${totalLb?' · '+_lb(totalLb)+' vendidas':''}</div></div></div>
     ${groups.length? groups.map(g=>{
-      const ventasArr=g.orders.filter(_esVenta);
+      const ventasArr=g.orders.filter(_cuenta);
       const ventas=ventasArr.reduce((s,o)=>s+fullTotal(o),0);
       const dayLb=ventasArr.reduce((s,o)=>s+orderLibras(o),0);
       return `<div class="hist-day-head">
@@ -3915,11 +3933,45 @@ function askCancelOrder(id){ const o=orderById(id); if(!o) return;
       <button class="btn red block" onclick="cancelOrder('${o.id}')">Sí, cancelar</button></div>
   </div></div>`;
 }
-// Una VENTA = entregada o pagada, nunca cancelada (una cancelada pagada no debe sumar).
-const _esVenta=o=>(o.status==="entregada"||o.paid) && o.status!=="cancelada";
+// Una VENTA = dinero cobrado: pagada y nunca cancelada. Un pedido entregado pero SIN pagar no es venta: es «por cobrar»
+// (_esPorCobrar) y se muestra aparte. Una cancelada, pagada o no, jamás suma.
+const _esVenta=o=>!!o.paid && o.status!=="cancelada";
+const _esPorCobrar=o=>o.status==="entregada" && !o.paid;
 const _refVenta=o=>o.paidAt||o.listaAt||o.createdAt;
+/* FASE 2 · quién cuenta en las cifras. MISMO criterio que el panel Clientes (cliDerive): fuera prueba / familia / equipo
+   (clients.etiqueta) y los dados de baja ([BAJA] en la nota). Se busca por los últimos 8 dígitos del teléfono; un pedido
+   sin teléfono válido no se puede etiquetar, así que cuenta. Solo lectura: nada de esto escribe. */
+let incluirPruebas=false; // interruptor «Incluir pruebas y familia» (en memoria: al recargar vuelve a excluir)
+function _exclMotivo(o){
+  const k=_phoneKey(o&&o.phone); if(k.length!==8) return null;
+  const c=(state.clients||[]).find(x=>_phoneKey(x.phone)===k);
+  if(c&&_isBaja(c.note)) return 'baja';
+  const r=(typeof CL!=='undefined'&&CL.rows)?CL.rows.find(x=>x.tel8===k):null;
+  const t=(c&&c.etiqueta)||(r&&r.etiqueta)||'cliente';
+  return (t!=='cliente'&&['prueba','familia','equipo'].includes(t))?t:null;
+}
+const _visible=o=>incluirPruebas||!_exclMotivo(o);          // ¿el pedido entra en las cifras?
+const _cuenta=o=>_esVenta(o)&&_visible(o);                  // venta cobrada que SÍ cuenta
+const _cuentaDeuda=o=>_esPorCobrar(o)&&_visible(o);         // entregado sin pagar que SÍ se muestra
+// Lo que el filtro deja fuera (ventas cobradas de pruebas/familia/equipo/baja) dentro de un rango, para decirlo en pantalla.
+function _fuera(pred){ let n=0,sum=0; allOrders().forEach(o=>{ if(_esVenta(o)&&_exclMotivo(o)&&pred(o)){ n++; sum+=fullTotal(o); } }); return {n,sum}; }
+function _deuda(pred){ const l=allOrders().filter(o=>_cuentaDeuda(o)&&pred(o)); return {n:l.length,sum:l.reduce((s,o)=>s+fullTotal(o),0)}; }
+function togglePruebas(){ incluirPruebas=!incluirPruebas;
+  if(adminView==='stats'&&$("#statsBody")) setStatsPeriod(statsPeriod); else { const y=window.scrollY; renderAdmin(); window.scrollTo(0,y); } }
+// Línea discreta: «Sin 6 pruebas/familia · L 1,240» + interruptor. No se dibuja si no hay nada que excluir.
+function pruebasLinea(f){
+  if(!f.n) return '';
+  const tx=incluirPruebas?`Incluye ${f.n} ${f.n===1?'prueba':'pruebas'}/familia`:`Sin ${f.n} ${f.n===1?'prueba':'pruebas'}/familia`;
+  return `<div class="px-line"><span class="px-tx">${tx} <b>${money(f.sum)}</b></span><button type="button" class="px-sw" role="switch" aria-checked="${incluirPruebas}" onclick="togglePruebas()"><i aria-hidden="true"></i><span>Incluir pruebas y familia</span></button></div>`;
+}
+// Tarjeta «Por cobrar»: entregados sin pagar. NO suman a ventas. Lleva al panel Clientes filtrado por «Por cobrar».
+function verPorCobrar(){ CL.filter='cobrar'; showBaja=false; go('clientes'); }
+function porCobrarCard(d,ctx){
+  if(!d.n) return '';
+  return `<button type="button" class="px-owed" onclick="verPorCobrar()"><span class="po-l"><b>Por cobrar</b><small>${d.n} ${d.n===1?'pedido entregado sin pagar':'pedidos entregados sin pagar'}${ctx?' · '+ctx:''} · no es venta</small></span><span class="po-v">${money(d.sum)}</span><span class="po-go">${ic('right',16)}</span></button>`;
+}
 function ventasDelMes(){ const dN=new Date();
-  return allOrders().filter(o=>{ if(!_esVenta(o)) return false;
+  return allOrders().filter(o=>{ if(!_cuenta(o)) return false;
     const d=new Date(_refVenta(o)); return d.getMonth()===dN.getMonth()&&d.getFullYear()===dN.getFullYear(); }); }
 function adminReporte(){
   const done=ventasDelMes(); // el reporte dice "Este mes" → ahora de verdad es el mes
@@ -3927,18 +3979,22 @@ function adminReporte(){
   const tick=done.length?total/done.length:0;
   let efe=0,tra=0,nEfe=0,nTra=0; done.forEach(o=>{ if(payMethodOf(o)==='efectivo'){efe+=fullTotal(o);nEfe++;} else {tra+=fullTotal(o);nTra++;} });
   const pend=state.orders.filter(o=>!["entregada","cancelada"].includes(o.status)).length;
+  const dN=new Date(), enMes=o=>{ const d=new Date(_refVenta(o)); return d.getMonth()===dN.getMonth()&&d.getFullYear()===dN.getFullYear(); };
+  const fuera=_fuera(enMes), deuda=_deuda(enMes);
   const byProd={}, byCli={};
   done.forEach(o=>{ byCli[o.clientName]=(byCli[o.clientName]||0)+fullTotal(o);
     o.items.forEach(it=>{ byProd[it.name]=(byProd[it.name]||0)+lineAmount(it); }); });
   const rank=(obj)=>{const e=Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,6);const mx=e.length?e[0][1]:1;
     return e.map(([k,v])=>`<div class="rrow"><span style="flex:none;width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k)}</span><span class="rbar"><i style="width:${Math.max(6,v/mx*100)}%"></i></span><span class="rv">${money(v)}</span></div>`).join("");};
   return `<div class="view-head"><div><button class="back-btn btn-ic" onclick="go('resumen')">${ic('left',16)} Resumen</button><h2>Reporte de ventas</h2><div class="vh-sub">Este mes · interno</div></div></div>
+    ${pruebasLinea(fuera)}
     <div class="kpis">
       <div class="kpi"><div class="kl">Total vendido</div><div class="kvv">${money(total)}</div></div>
       <div class="kpi"><div class="kl">Comandas</div><div class="kvv">${done.length}</div></div>
       <div class="kpi"><div class="kl">Ticket prom.</div><div class="kvv">${money(tick)}</div></div>
       <div class="kpi"><div class="kl">Activas</div><div class="kvv">${pend}</div></div>
     </div>
+    ${porCobrarCard(deuda,'este mes')}
     <div class="sect-label">Por método de pago</div>
     <div class="kpis">
       <div class="kpi"><div class="kl">${ic('cash',15)} Efectivo · ${nEfe}</div><div class="kvv">${money(efe)}</div></div>
@@ -3967,6 +4023,13 @@ function exportReporte(){
   // fila de totales
   lines.push(['TOTAL','','','','','','','','','','', (Math.round(totLb*10)/10).toFixed(1),
     rows.reduce((s,o)=>s+orderTotal(o),0).toFixed(2), rows.reduce((s,o)=>s+(o.shipping||0),0).toFixed(2), rows.reduce((s,o)=>s+fullTotal(o),0).toFixed(2)].map(q).join(','));
+  // Lo que NO está en el total, dicho en el propio archivo (el total de arriba es solo lo cobrado).
+  const dMes=new Date(), enMes=o=>{ const d=new Date(_refVenta(o)); return d.getMonth()===dMes.getMonth()&&d.getFullYear()===dMes.getFullYear(); };
+  const pc=_deuda(enMes), fu=_fuera(enMes), blank=Array(15).fill('');
+  const nota=(txt,n,tot)=>{ const r=blank.slice(); r[0]=txt; r[10]=n+' pedidos'; r[14]=tot.toFixed(2); lines.push(r.map(q).join(',')); };
+  if(pc.n) nota('POR COBRAR (entregados sin pagar; NO incluidos en el total)',pc.n,pc.sum);
+  if(fu.n&&!incluirPruebas) nota('EXCLUIDOS (pruebas/familia/equipo; NO incluidos en el total)',fu.n,fu.sum);
+  if(fu.n&&incluirPruebas) nota('INCLUIDOS en el total: pruebas/familia/equipo',fu.n,fu.sum);
   const dN=new Date();
   const blob=new Blob(["\ufeff"+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
@@ -3989,7 +4052,7 @@ function statsRange(p){
   if(p==='mes'){ const d=new Date(now), start=new Date(d.getFullYear(),d.getMonth(),1).getTime(),
       pStart=new Date(d.getFullYear(),d.getMonth()-1,1).getTime(), span=now-start;
     return {start,end,prev:{start:pStart,end:Math.min(pStart+span+1,start)},label:ST_MESES[d.getMonth()]+' '+d.getFullYear()+' · se compara con el mismo tramo del mes anterior'}; }
-  const vs=allOrders().filter(_esVenta); const first=vs.length?Math.min(...vs.map(_refVenta)):today;
+  const vs=allOrders().filter(_cuenta); const first=vs.length?Math.min(...vs.map(_refVenta)):today;
   return {start:dayStart(first),end,prev:null,label:'Todo el historial'};
 }
 function statsFmtDur(min){ if(min==null||!isFinite(min)) return '—';
@@ -4028,8 +4091,8 @@ function statsRank(rows,fmt){ if(!rows.length) return '<div class="kempty">Sin d
 function statsCompute(p){
   const R=statsRange(p), all=allOrders();
   const inR=(ts,r)=>ts>=r.start&&ts<r.end;
-  const ventas=all.filter(o=>_esVenta(o)&&inR(_refVenta(o),R));
-  const prevV=R.prev?all.filter(o=>_esVenta(o)&&inR(_refVenta(o),R.prev)):null;
+  const ventas=all.filter(o=>_cuenta(o)&&inR(_refVenta(o),R));
+  const prevV=R.prev?all.filter(o=>_cuenta(o)&&inR(_refVenta(o),R.prev)):null;
   const sum=a=>a.reduce((s,o)=>s+fullTotal(o),0);
   const total=sum(ventas), n=ventas.length, ticket=n?total/n:0;
   const pTotal=prevV?sum(prevV):null, pN=prevV?prevV.length:null, pTicket=prevV&&pN?pTotal/pN:(prevV?0:null);
@@ -4064,7 +4127,7 @@ function statsCompute(p){
   const top=(obj,k)=>Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,k);
   // clientes
   const ck=o=>_digits(o.phone).length>=8?_phoneKey(o.phone):_norm(o.clientName);
-  const firstSale={}; all.filter(_esVenta).forEach(o=>{ const k=ck(o), t=_refVenta(o); if(k&&(firstSale[k]==null||t<firstSale[k])) firstSale[k]=t; });
+  const firstSale={}; all.filter(_cuenta).forEach(o=>{ const k=ck(o), t=_refVenta(o); if(k&&(firstSale[k]==null||t<firstSale[k])) firstSale[k]=t; });
   const cli={}; ventas.forEach(o=>{ const k=ck(o); if(!k) return; const c=cli[k]||(cli[k]={name:o.clientName,v:0,n:0}); c.v+=fullTotal(o); c.n++; if(!isPhoneName(o.clientName)) c.name=o.clientName; });
   const cliKeys=Object.keys(cli), nuevos=cliKeys.filter(k=>firstSale[k]>=R.start), recur=cliKeys.length-nuevos.length;
   const topCli=Object.values(cli).sort((a,b)=>b.v-a.v).slice(0,5).map(c=>[isPhoneName(c.name)?'Sin nombre · '+c.name:c.name,c.v,c.n+' pedido'+(c.n!==1?'s':'')]);
@@ -4078,8 +4141,9 @@ function statsCompute(p){
   const cycle=stages.map(([label,f])=>{ const d=[]; ventas.forEach(o=>{ const [a,b]=f(o); if(a!=null&&b!=null&&b>=a&&(b-a)<7*day) d.push((b-a)/60000); });
     d.sort((x,y)=>x-y); return {label,n:d.length,avg:d.length?d.reduce((s,x)=>s+x,0)/d.length:null,med:d.length?d[Math.floor(d.length/2)]:null}; });
   // cancelación: sobre las comandas CREADAS en el período
-  const created=all.filter(o=>inR(o.createdAt,R)), canc=created.filter(o=>o.status==='cancelada');
+  const created=all.filter(o=>_visible(o)&&inR(o.createdAt,R)), canc=created.filter(o=>o.status==='cancelada');
   return {R,ventas,n,total,ticket,pTotal,pN,pTicket,series,every,gran,dowOrd,hrs,web,man,ret,env,zoneRows,efe,tra,
+    fuera:_fuera(o=>inR(_refVenta(o),R)), deuda:_deuda(o=>inR(_refVenta(o),R)),
     prodL:top(byL,6),prodLb:top(byLb,6),nuevos:nuevos.length,recur,topCli,cycle,created:created.length,canc:canc.length,sum,
     lb:ventas.reduce((s,o)=>s+orderLibras(o),0)};
 }
@@ -4092,7 +4156,7 @@ function setStatsPeriod(p){ statsPeriod=p; const b=$("#statsBody"); if(!b){ rend
   b.innerHTML=statsBody(); document.querySelectorAll('.st-seg button').forEach(x=>{ const on=x.getAttribute('onclick').includes("'"+p+"'"); x.classList.toggle('act',on); x.setAttribute('aria-selected',on); }); }
 function statsBody(){
   const S=statsCompute(statsPeriod), pct=(a,b)=>b?Math.round(a/b*100):0;
-  if(!S.n&&!S.created) return `<div class="empty-state"><div class="es-ic">${ic('chart',36)}</div><p>Todavía no hay ventas en este período.<br>Probá con otro rango.</p></div>`;
+  if(!S.n&&!S.created&&!S.deuda.n&&!S.fuera.n) return `<div class="empty-state"><div class="es-ic">${ic('chart',36)}</div><p>Todavía no hay ventas en este período.<br>Probá con otro rango.</p></div>`;
   const gSub={día:'por día',semana:'por semana',mes:'por mes'}[S.gran];
   const cancPct=S.created?Math.round(S.canc/S.created*100):0;
   const dow=S.dowOrd, hrs=S.hrs;
@@ -4103,12 +4167,14 @@ function statsBody(){
   const cyc=S.cycle.map(c=>`<div class="st-cyc ${c.n?'':'off'}"><span class="sc-l">${c.label}</span><span class="sc-v">${c.n?statsFmtDur(c.avg):'Sin datos'}</span>${c.n?`<small>mediana ${statsFmtDur(c.med)} · ${c.n} pedido${c.n!==1?'s':''}</small>`:''}</div>`).join('');
   const nWeb=S.web.length, nMan=S.man.length;
   return `<div class="st-per">${esc(S.R.label)}</div>
+  ${pruebasLinea(S.fuera)}
   <div class="kpis st-kpis">
     <div class="kpi accent"><div class="kl">Ventas</div><div class="kvv">${money(S.total)}</div>${statsDelta(S.total,S.pTotal)}</div>
     <div class="kpi"><div class="kl">Pedidos</div><div class="kvv">${S.n}</div>${statsDelta(S.n,S.pN)}</div>
     <div class="kpi"><div class="kl">Ticket promedio</div><div class="kvv">${money(S.ticket)}</div>${statsDelta(S.ticket,S.pTicket)}</div>
     <div class="kpi"><div class="kl">Libras vendidas</div><div class="kvv">${_lb(S.lb)}</div></div>
   </div>
+  ${porCobrarCard(S.deuda,'en este período')}
   <div class="sect-label">Ventas ${gSub}</div>
   <div class="card chart-card">${statsBars(S.series,{every:S.every,table:true,aria:'Ventas '+gSub})}</div>
   <div class="sect-label">Día de la semana</div>
@@ -4152,7 +4218,7 @@ function adminCierre(){
   const now=Date.now(), today=dayStart(now), day=86400000;
   const sel=dayStart(dayFilter!=null?dayFilter:now), isToday=sel===today;
   // Ventas atribuidas al día en que ENTRÓ el dinero (paidAt/listaAt), no al día de creación.
-  const ventas=allOrders().filter(o=>_esVenta(o) && dayStart(_refVenta(o))===sel);
+  const ventas=allOrders().filter(o=>_cuenta(o) && dayStart(_refVenta(o))===sel);
   let efe=0, tra=0, nEfe=0, nTra=0;
   ventas.forEach(o=>{ const t=fullTotal(o); if(payMethodOf(o)==='efectivo'){efe+=t;nEfe++;} else {tra+=t;nTra++;} });
   const total=efe+tra;
@@ -4176,6 +4242,8 @@ function adminCierre(){
       <div class="kpi accent"><div class="kl">Total del día</div><div class="kvv">${money(total)}</div></div>
       <div class="kpi"><div class="kl">Comandas vendidas</div><div class="kvv">${ventas.length}</div></div>
     </div>
+    ${pruebasLinea(_fuera(o=>dayStart(_refVenta(o))===sel))}
+    ${porCobrarCard(_deuda(o=>dayStart(_refVenta(o))===sel),'de este día')}
     ${retLineaCierre(sel,lbl,ventas)}
     <div class="sect-label">Desglose por método</div>
     <div class="kpis">
