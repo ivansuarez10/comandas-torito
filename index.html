@@ -1276,6 +1276,67 @@ body.cl-fopen .toast.show{bottom:20px}
 <style>
 html.ct-sess #login{display:none!important}
 html.ct-sess #app.hidden{display:flex!important}
+
+/* ===== 18 nov 2026 · cortes en la comanda, entrega a la vista del carnicero, botón Salir ===== */
+.cartline{flex-wrap:wrap}
+.cartline.needcut{border-color:#e3b9ba;box-shadow:0 0 0 3px rgba(159,38,41,.07)}
+.cutrow{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-top:2px;padding-top:9px;border-top:.5px dashed var(--line)}
+.cut-lbl{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;letter-spacing:.03em;color:var(--muted);text-transform:uppercase}
+.cut-lbl b{color:var(--rojo)}
+.cut-opts{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 220px;min-width:0}
+.cutchip{min-height:36px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font:600 13.5px var(--font);cursor:pointer}
+.cutchip.on{background:var(--negro);color:#fff;border-color:var(--negro)}
+.cutchip:focus-visible,.cut-free:focus-visible,.dp-map:focus-visible,.out-btn:focus-visible{outline:2px solid var(--rojo);outline-offset:2px}
+.cut-free{flex:1 1 160px;min-height:36px;padding:0 12px;border:1px solid var(--line);border-radius:10px;font:500 14px var(--font);min-width:0}
+.cut-msg{flex:1 1 100%;font-size:12.5px;color:var(--rojo);font-weight:600}
+.corte-tag.need{background:#FBF0D9;color:#8a5a06}
+.pp-nota{display:block;color:var(--muted);font-weight:500;font-size:11.5px}
+.oitem-corte.miss{background:#FBF0D9;color:#8a5a06}
+.oitem-corte.miss small{color:#a9741a}
+
+.dpanel{border:.5px solid var(--line);border-radius:16px;background:#fff;box-shadow:var(--sh);padding:14px 15px;margin-bottom:13px;display:flex;flex-direction:column;gap:11px}
+.dpanel.domi{border-left:4px solid var(--negro)}
+.dpanel.retiro{border-left:4px solid #9fb3c4}
+.dp-mode{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.dp-mode b{font-size:15px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.dp-mode svg{flex:none}
+.dp-zone,.dp-time{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--muted)}
+.dp-where{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dp-addr{flex:1 1 200px;min-width:0;font-size:17px;line-height:1.35;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.dp-addr i{font-weight:500;color:var(--muted-2)}
+.dp-map{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:0 16px;border-radius:12px;background:var(--negro);color:#fff;font:700 14px var(--font);text-decoration:none}
+.dp-map.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.dp-fee{border-radius:12px;padding:10px 12px;background:#F3F3F6}
+.dp-fee-t{display:flex;align-items:center;gap:7px;font-size:16px;font-weight:800}
+.dp-fee-s{font-size:12.5px;color:var(--muted);margin-top:2px;font-weight:500}
+.dp-fee.ok{background:#EAF4EE;color:#1F6B45} .dp-fee.ok .dp-fee-s{color:#3c7d5a}
+.dp-fee.due{background:#fff;border:1.5px solid var(--negro);color:var(--ink)}
+.dp-fee.warn{background:#FBF0D9;color:#7a4e05} .dp-fee.warn .dp-fee-s{color:#946a1a}
+.dp-pay{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:700}
+.dp-pay.ok{color:var(--paid)} .dp-pay.due{color:var(--muted)}
+.kdel{margin-top:9px;display:flex;flex-direction:column;gap:6px}
+.kdel-w{display:flex;align-items:flex-start;gap:7px;font-size:14.5px;font-weight:600;line-height:1.3;color:var(--ink)}
+.kdel-w svg{flex:none;margin-top:2px;color:var(--muted)}
+.kdel-w span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.kdel-f{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:800;border-radius:9px;padding:6px 9px;background:#F3F3F6}
+.kdel-f.ok{background:#EAF4EE;color:#1F6B45} .kdel-f.due{background:#fff;border:1.5px solid var(--negro)} .kdel-f.warn{background:#FBF0D9;color:#7a4e05}
+html.rol-carn .dp-addr{font-size:19px} html.rol-carn .kdel-w{font-size:16px} html.rol-carn .kdel-f{font-size:14.5px}
+
+.out-btn{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:44px;min-height:44px;padding:0 12px;border-radius:12px;border:.5px solid var(--line);background:#fff;box-shadow:var(--sh);color:var(--ink);font:600 13.5px var(--font);cursor:pointer}
+.out-btn:active{background:#f1f1f4}
+.out-lbl{display:none}
+@media (min-width:700px){ .out-lbl{display:inline} }
+.cb-warn{display:flex;gap:9px;align-items:flex-start;background:#FBF0D9;color:#7a4e05;border-radius:11px;padding:10px 12px;font-size:14px;font-weight:600;margin:8px 0;text-align:left}
+.cb-warn svg{flex:none;margin-top:2px}
+@media(max-width:560px){
+  .ctop{gap:6px;padding-left:12px;padding-right:12px}
+  .ctop-brand{flex:1 1 0;min-width:0;overflow:hidden}
+  .ctop-logo{display:none}
+  html.rol-carn .ctop-snd,.ctop-snd{width:44px;height:44px}
+  html.rol-carn .ctop-push,.ctop-push{min-width:44px;min-height:44px;justify-content:center;padding:0 12px}
+  html.rol-carn .ctop-sync,.ctop-sync{min-width:44px;min-height:44px;justify-content:center;padding:0 12px}
+}
+@media(max-width:380px){ .ctop-role{font-size:12px;letter-spacing:.04em} .ctop-badge{width:36px;height:36px} }
 </style>
 <script>
 function ctSessOff(){ try{ document.documentElement.classList.remove('ct-sess'); }catch(e){} }
@@ -1548,7 +1609,8 @@ function rebuildFromStore(){
     const price = p.quote ? null : (p.price==null ? null : p.price);
     // name = el nombre EXACTO de la web (lo que ve el cliente). canon = alias para que el parser resuelva.
     PRODUCTS.push({ id:p.id, cat:CATMAP[p.cat]||p.cat, name:p.name, canon:CANON[p.id]||p.name,
-      unit, price, weigh:!!p.validate, custom:false, disabled:!!dis[p.id], fromStore:true });
+      unit, price, weigh:!!p.validate, custom:false, disabled:!!dis[p.id], fromStore:true,
+      catId:p.cat, cuts:Array.isArray(p.cuts)?p.cuts.filter(Boolean):[] }); // cuts = opciones de corte del panel de la tienda
   });
 }
 function rebuildCatalog(){
@@ -1698,7 +1760,310 @@ function _matchProduct(rest){
     const sc=c/Math.max(A.length,B.length); if(sc>bs){bs=sc;best=p.name;} }
   return bs>=0.5?best:null;
 }
-function parseOrderText(text){
+/* ====== LECTOR DETERMINISTA (OM) — mismo código que la Edge Function parse-order.nuevo.ts ====== */
+/*OM:START*/
+/* OM · lector de pedidos DETERMINISTA de Comandas Torito.
+   Misma pieza (idéntica, byte a byte) en comandas-torito.html y en la Edge Function parse-order.
+   Entrada: catálogo [{id,name,cat,unit,cuts?,disabled?}] + texto. Salida: items / ambiguous / unknown.
+   Regla de oro: si el catálogo ya lo resuelve, NO se pregunta. Solo se pregunta con 2+ candidatos reales y distintos. */
+const OM=(function(){
+  const STOP=new Set(['de','del','la','el','los','las','un','una','uno','unos','unas','por','favor','porfa','porfis','pf','pls','me','mi','mis','dame','das','regalas','regala','quiero','quisiera','necesito','ocupo','ya','y','e','con','para','en','a','al','que','es','si','mas','orden','pedido','hola','buenas','buenos','dias','tardes','noches','gracias','como','tipo','seria','este','esta','ahi','mande','mandame','tambien','lo','le','se','su','sus','nos','ud','usted','soy','quedo','pues','son','sea','van','ser','favorcito','amigo','don','dona']);
+  // palabras que describen pero no identifican: no cuentan en contra
+  const FREE=new Set(['carne','fresco','fresca','frescos','frescas','bien','buen','buena','buenos','rica','rico','grande','grandes','fresquito','fresquita','limpia','bonito','bonita','blandito','tierno','tierna','natural','mas','menos','aprox','aproximadamente','como','unos','casi','ahorita','hoy','manana','pieza','piezas','solo','sola']);
+  const SYN={puerco:'cerdo',chancho:'cerdo',marrano:'cerdo',cochino:'cerdo',vaca:'res',vacuno:'res',azar:'asar',asada:'asar',bisteces:'bistec',bistecs:'bistec',bisteck:'bistec',bistek:'bistec',bistecito:'bistec',bistecitos:'bistec',higados:'higado',libritas:'libra',librita:'libra',lbs:'libra',lb:'libra',lbr:'libra',lbrs:'libra',libras:'libra',kilos:'kilo',kg:'kilo',kgs:'kilo',paquetes:'paquete',paq:'paquete',pancitas:'pancita',filetes:'filete',chuletas:'chuleta',alitas:'alita',muslos:'muslo',papas:'papa',mollejas:'molleja',pechugas:'pechuga',fajitas:'fajita',patas:'pata',costillas:'costilla',chorizos:'chorizo',tajos:'tajo',camarones:'camaron',alas:'ala',lonjas:'lonja',medallones:'medallon',pechuguitas:'pechuguita',trocitos:'trocito',trozos:'trozo',tiras:'tira',tiritas:'tira',cubos:'cubo',cubitos:'cubo',rodajas:'rodaja',rodajitas:'rodaja',rebanadas:'rebanada',cortadas:'cortada',cortados:'cortado',partidas:'partida',partidos:'partido',manitas:'manita',menudos:'menudo',entera:'entero',enteros:'entero',enteras:'entero',ahumados:'ahumado',ahumadas:'ahumada'};
+  const NUMW={un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,doce:12,quince:15,veinte:20};
+  const QUAL={res:'res',cerdo:'cerdo',pollo:'pollo'};
+  const strip=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  function tok(s){ return strip(s).replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean).map(t=>{ if(SYN[t]) return SYN[t]; if(t.length>3 && /s$/.test(t) && !/(ss|us|is)$/.test(t) && t!=='res') return SYN[t.slice(0,-1)]||t.slice(0,-1); return t; }); }
+  function lev1(a,b){ if(a===b) return true; if(Math.abs(a.length-b.length)>1) return false; let i=0,j=0,d=0; while(i<a.length&&j<b.length){ if(a[i]===b[j]){i++;j++;continue;} if(++d>1) return false; if(a.length>b.length) i++; else if(b.length>a.length) j++; else {i++;j++;} } return d+(a.length-i)+(b.length-j)<=1; }
+  const tokEq=(a,b)=> a===b ? 1 : ((a.length>=5&&b.length>=5&&lev1(a,b)) ? 0.8 : 0);
+
+  /* ---- alias curados por id del catálogo de la tienda (apodos, errores comunes, hondureñismos) ----
+     [frase, id, {exact:true → solo si es TODO lo que dice la línea, cut:'clave de corte'}] */
+  const A=(id,list,o)=>list.map(p=>[p,id,o||null]);
+  const ALIAS=[].concat(
+    A('res-rib-eye',['rib eye','ribeye','rai bay','rye bay','rye bays','raibay','ribay','rib ai']),
+    A('res-new-york',['new york','newyork','niu yor','new yor','niuyor','niu york','nueva york']),
+    A('res-puyaso',['puyaso','puyazo']),
+    A('res-mano-de-piedra',['mano de piedra','mano piedra','manopiedra']),
+    A('res-cabeza-de-lomo',['cabeza de lomo','cabeza lomo']),
+    A('res-tajo-negro',['tajo negro','tajo']),
+    A('res-lomo-limpio',['lomo limpio']),
+    A('res-carne-salada',['carne salada','salada']),
+    A('res-entrana',['entrana']),
+    A('res-milanesa',['milanesa','milanesas']),
+    A('res-fajitas',['fajitas de res','fajita de res']),
+    A('res-bistec',['bistec de res']),
+    A('res-bolita',['bolita']),
+    A('res-falda',['falda']),
+    A('res-asar',['carne de asar','carne para asar','carne asar','asar de res','asar res','carne asada']),
+    A('res-costilla',['costilla de res']),
+    A('res-molida',['carne molida','molida de res']),
+    A('res-estofado',['estofado de res','carne de estofado']),
+    A('res-t-bone',['t bone','tbone','tibon','tibone']),
+    A('res-tomahawk',['tomahawk','tomahok','tomahock']),
+    A('res-filete',['filete','filet mignon','filete mignon']),
+    A('cerdo-asar-de-cerdo',['asar de cerdo','cerdo para asar','cerdo asar','asar cerdo','cerdo de asar']),
+    A('cerdo-bistec-de-cerdo',['bistec de cerdo','bistec cerdo']),
+    A('cerdo-chuleta',['chuleta de cerdo']),
+    A('cerdo-chuleta-ahumada',['chuleta ahumada','chuleta ahumado','chuletas ahumadas']),
+    A('cerdo-costilla-de-cerdo',['costilla de cerdo','costilla cerdo']),
+    A('cerdo-estofado-de-cerdo',['estofado de cerdo','estofado cerdo']),
+    A('cerdo-fajitas-de-cerdo',['fajitas de cerdo','fajita de cerdo']),
+    A('cerdo-lomo-de-cerdo',['lomo de cerdo','lomo cerdo']),
+    A('cerdo-lonja-carnuda',['lonja carnuda','lonja']),
+    A('cerdo-molida-de-cerdo',['molida de cerdo','molida cerdo','carne molida de cerdo']),
+    A('cerdo-patas-de-cerdo',['patas de cerdo','pata de cerdo','patas cerdo','manita de cerdo','manitas de cerdo']),
+    A('embutidos-chorizo-barbacoa',['chorizo barbacoa']),
+    A('embutidos-chorizo-cervecero',['chorizo cervecero']),
+    // «chorizo ahumado» ES el Chorizo Criollo (el ahumado de la casa; así lo anuncia el banner de la tienda)
+    A('embutidos-chorizo-criollo',['chorizo criollo','chorizo ahumado','criollo ahumado','criollo']),
+    A('embutidos-chorizo-criollo',['ahumado'],{exact:true}),
+    A('embutidos-chorizo-indio',['chorizo indio']),
+    A('embutidos-chorizo-parrillero',['chorizo parrillero','chorizo para asar','chorizo de asar','chorizo asar','chorizo parrilla']),
+    A('embutidos-chorizo-suelto',['chorizo suelto']),
+    A('extras-bacon',['bacon','tocino','tocineta','beicon']),
+    A('extras-manteca-de-cerdo',['manteca de cerdo','manteca']),
+    A('extras-papas-congeladas',['papas congeladas','papa congelada']),
+    A('extras-papas-sazonadas',['papas sazonadas','papa sazonada']),
+    A('extras-papas-tornillo',['papas tornillo','papa tornillo']),
+    A('pollo-chicken-finger',['chicken finger','chicken fingers','chicken','finger','fingers','deditos de pollo','deditos']),
+    A('pollo-entero',['pollo entero','pollo completo','pollo'],{}),
+    A('pollo-entero',['pollo partido','pollo picado','pollo cortado'],{cut:'partido'}),
+    A('pollo-hot-dog-de-pollo',['hot dog de pollo','hotdog de pollo','hot dog','hotdog','salchicha de pollo']),
+    A('pollo-medallones',['medallones','medallon','medallones de pollo']),
+    A('pollo-menudo',['menudo de pollo','menudo']),
+    A('pollo-mollejas',['mollejas','molleja']),
+    A('pollo-patas',['patas de pollo','pata de pollo','patas pollo']),
+    A('pollo-pechuga-ala',['pechuga','ala','alita','pechuga ala','pechuga o ala','pechuga y ala']),
+    A('pollo-pechugas-sin-hueso',['pechuga sin hueso','pollo deshuesado','sin hueso','pechuga deshuesada','pechuga filete','deshuesado','deshuesada']),
+    A('pollo-pechuguitas',['pechuguita']),
+    A('pollo-pierna-muslo',['pierna','muslo','pierna muslo','pierna y muslo','pierna o muslo','muslito']),
+    A('pollo-pollo-en-pieza',['pollo en pieza','pollo pieza','pieza de pollo','pollo en piezas','piezas de pollo','pollo por pieza']),
+    A('pollo-trocitos-en-caja',['trocitos de pollo','pollo en caja','trocitos en caja','caja de pollo']),
+    A('visceras-higado',['higado','higadito']),
+    A('visceras-lengua',['lengua']),
+    A('visceras-mondongo',['mondongo','pancita'])
+  );
+
+  /* ---- cortes: palabra del cliente → clave; clave → texto de opción del catálogo ---- */
+  const CUTSYN=[
+    ['bistec',['bistec']],['asar',['asar']],['tira',['tira']],['cubo',['cubo']],
+    ['trozo',['trocito','trozo','troceado','troceada','pedacito','pedazo','picado','picada','picadito']],
+    ['pieza',['una pieza','una sola pieza','sola pieza','sin cortar','entera','entero','completo','completa','en un pedazo','todo junto','todo entero']],
+    ['rodaja',['rodaja','rebanada','medallon']],
+    ['cortada',['cortada','cortado','partida','partido','partidos']],
+    ['_x',[]]
+  ];
+  const CUTOPT={bistec:['bistec'],asar:['asar'],tira:['tira'],cubo:['cubo'],trozo:['trocito','trozo'],pieza:['una sola pieza','pieza','entera','entero'],rodaja:['rodaja'],cortada:['cortada','partido','cortado'],partido:['partido','cortada'],fajita:['fajita'],molida:['molida']};
+  const CUTMARK='(?:en|para|tipo|corte|cortes|cortad[oa]s?\\s+en|picad[oa]s?\\s+en|cortad[oa]s?\\s+tipo|cortad[oa]s?\\s+como|como)';
+  // palabras de corte que se pueden leer SUELTAS (no chocan con ningún producto)
+  const CUTBARE=new Set(['tira','cubo','trozo','trocito','rodaja','rebanada','cortada','cortado','partida','partido','troceado','pedacito','picado','picada','picadito','medallon','pedazo']);
+
+  function parseQty(raw){
+    let s=strip(raw).replace(/,/g,'.'), q=null, m, half=false;
+    if(/\by\s+(media|medio)\b/.test(s)){ half=true; s=s.replace(/\by\s+(media|medio)\b/,' '); }
+    if((m=s.match(/(\d+)\s+(\d)\s*\/\s*(\d)/))) { q=+m[1]+(+m[2])/(+m[3]); s=s.replace(m[0],' '); }
+    else if((m=s.match(/(\d+)\s*\/\s*(\d+)/)) && +m[2]>0 && +m[2]<=8){ q=(+m[1])/(+m[2]); s=s.replace(m[0],' '); }
+    else if((m=s.match(/(\d+(?:\.\d+)?)/))){ q=parseFloat(m[1]); s=s.replace(m[0],' '); }
+    else if((m=s.match(/\b(tres cuartos)\b/))){ q=0.75; s=s.replace(m[0],' '); }
+    else if((m=s.match(/\b(un cuarto|cuarto)\b/))){ q=0.25; s=s.replace(m[0],' '); }
+    else if((m=s.match(/\b(docena)\b/))){ q=12; s=s.replace(m[0],' '); }
+    else if((m=s.match(/\b(media|medio)\b/))){ q=0.5; s=s.replace(m[0],' '); }
+    else if((m=s.match(/\b(dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|doce|quince|veinte|una|uno|un)\b/))){ q=NUMW[m[1]]; s=s.replace(m[0],' '); }
+    // "1 libra y media", "2 libras y medio", "libra y media"
+    if(half){ q=(q==null?1:q)+0.5; }
+    else if(q==null && /\b(libra|librita)\b/.test(s)) q=1;
+    let nota='';
+    if(/\b(kilo|kg)\b/.test(s) && q!=null){ const lb=Math.round(q*2.2*10)/10; nota='pidió '+q+' kg ≈ '+lb+' lb'; q=lb; }
+    if(q==null||!(q>0)) q=1;
+    return {qty:Math.round(q*100)/100, text:s, nota};
+  }
+
+  function buildCat(products){
+    return (products||[]).map(p=>{
+      const toks=tok(p.name).filter(t=>!STOP.has(t));
+      return Object.assign({},p,{_t:toks,_cuts:Array.isArray(p.cuts)?p.cuts.filter(Boolean):[]});
+    });
+  }
+  const FREELABEL={bistec:'Corte bistec',asar:'Corte asar',tira:'En tiras',cubo:'En cubos',trozo:'Trocitos',pieza:'Una sola pieza',rodaja:'Rodajas',cortada:'Cortada',partido:'Partido',fajita:'En fajitas',molida:'Molida'};
+  function cutFor(prod,key,rawText){
+    const opts=prod._cuts||(Array.isArray(prod.cuts)?prod.cuts:[]);
+    const rt=strip(rawText||'').trim();
+    if(!key && rt){ const o=opts.find(c=>strip(c)===rt||(rt.length>3&&strip(c).includes(rt))); if(o) return o; }
+    if(key && CUTOPT[key]){
+      for(const w of CUTOPT[key]){ const o=opts.find(c=>strip(c).includes(w)); if(o) return o; }
+    }
+    return FREELABEL[key]||(rawText?rawText.trim():'');
+  }
+  function findCut(tokens,cat){
+    // devuelve {key, free, rest[]}. Busca "en <corte>", "corte <corte>", o palabras sueltas de corte
+    const s=' '+tokens.join(' ')+' '; let key=null, free='', rest=tokens.slice();
+    for(const [k,syns] of CUTSYN){
+      for(const sy of syns){
+        const syT=tok(sy).join(' ');
+        const re=new RegExp('\\s(?:'+CUTMARK.replace(/\\\\s/g,'\\s')+'\\s+)?(?:un\\s+)?'+syT.replace(/ /g,'\\s+')+'\\s');
+        const hasMark=new RegExp('\\s(?:en|para|tipo|corte|cortes|cortado\\s+en|cortada\\s+en|picado\\s+en|como)\\s+(?:un\\s+)?'+syT.replace(/ /g,'\\s+')+'\\s').test(s);
+        const bare=!hasMark && CUTBARE.has(syT.split(' ')[0]) && re.test(s) && syT.split(' ').length===1;
+        const multi=!hasMark && syT.split(' ').length>1 && re.test(s);
+        if(hasMark||bare||multi){ key=k; free=sy; }
+        if(key) break;
+      }
+      if(key) break;
+    }
+    return key?{key,free}:null;
+  }
+  function stripCutTokens(tokens,cutInfo){
+    if(!cutInfo) return tokens;
+    const syT=tok(cutInfo.free);
+    const out=tokens.slice();
+    // quitar marcador + palabra(s) de corte
+    for(let i=0;i<=out.length-syT.length;i++){
+      if(syT.every((t,j)=>out[i+j]===t)){
+        let st=i; const prev=out[i-1]; if(['en','para','tipo','corte','cortes','como'].includes(prev)) st=i-1;
+        if(out[st-1]==='un'||out[st-1]==='una') st--;
+        // "cortado en X": quita también cortado/picado
+        if(['cortado','cortada','picado','picada'].includes(out[st-1])) st--;
+        out.splice(st,i-st+syT.length); break;
+      }
+    }
+    return out;
+  }
+
+  /* resuelve el texto de UNA línea (sin cantidad) → {kind:'ok'|'ask'|'unknown', ...} */
+  function resolveText(tokensAll,cat,cutHint){
+    const real=tokensAll.filter(t=>!STOP.has(t));
+    const hasProductWords=real.some(t=>!FREE.has(t)&&!QUAL[t]&&!/^\d/.test(t)&&!['libra','kilo','paquete','unidad'].includes(t));
+    if(!hasProductWords && !real.includes('pollo')) return {kind:'skip'};
+    const byId={}; cat.forEach(p=>{byId[p.id]=p;});
+    // 1) alias curado: la frase más larga que aparece seguida en la línea
+    const stopLess=tokensAll.filter(t=>!STOP.has(t));
+    let hits=[];
+    ALIAS.forEach(([ph,id,o])=>{
+      const p=byId[id]; if(!p) return;
+      const at=tok(ph).filter(t=>!STOP.has(t)); if(!at.length) return;
+      if(o&&o.exact){ const core=stopLess.filter(t=>!FREE.has(t)&&!QUAL[t]); const ex=at.join(' '); if(!(core.join(' ')===ex||core.join(' ')==='chorizo '+ex)) return; hits.push({id,len:at.length,start:0,end:stopLess.length,cut:o.cut}); return; }
+      for(let i=0;i<=stopLess.length-at.length;i++){
+        if(at.every((t,j)=>stopLess[i+j]===t)){ hits.push({id,len:at.length,start:i,end:i+at.length,cut:o&&o.cut}); break; }
+      }
+    });
+    if(hits.length){
+      hits.sort((a,b)=>b.len-a.len||a.start-b.start);
+      const chosen=[]; hits.forEach(h=>{ if(!chosen.some(c=>!(h.end<=c.start||h.start>=c.end))) chosen.push(h); });
+      const ids=[...new Set(chosen.map(h=>h.id))];
+      if(ids.length===1){
+        const h=chosen[0], p=byId[h.id];
+        if(p.disabled) return {kind:'off',prod:p};
+        // lo que sobra después del alias: ¿otro producto distinto?
+        const left=stopLess.filter((t,i)=>!chosen.some(c=>i>=c.start&&i<c.end)&&!FREE.has(t)&&!QUAL[t]&&!/^\d/.test(t)&&!['libra','kilo','paquete','unidad'].includes(t)&&!CUTBARE.has(t)&&!(CUTSYN.some(([k,s])=>s.some(x=>tok(x).includes(t)))));
+        if(left.length){
+          const sub=scoreCands(left,cat,QUAL_OF(tokensAll));
+          if(sub.cands.length && sub.full) return {kind:'mixed'};
+        }
+        return {kind:'ok',prod:p,cut:h.cut||cutHint};
+      }
+      return {kind:'mixed'};
+    }
+    // 2) puntaje por palabras del nombre
+    const r=scoreCands(real.filter(t=>!FREE.has(t)),cat,QUAL_OF(tokensAll));
+    if(!r.cands.length) return {kind:'unknown'};
+    let c=r.cands;
+    if(!r.full) return c.length>=1?{kind:'suggest',cands:c.slice(0,4)}:{kind:'unknown'};
+    // prefijo: si algunos nombres EMPIEZAN con lo dicho y otros solo lo contienen, quedan los primeros
+    const T=r.T;
+    const pref=c.filter(p=>T.every((t,i)=>p._t[i]!==undefined&&tokEq(p._t[i],t)>0));
+    if(pref.length&&pref.length<c.length) c=pref;
+    if(c.length===1) return {kind:'ok',prod:c[0],cut:cutHint};
+    const ex=c.filter(p=>p._t.length===T.length);
+    if(ex.length===1 && c.every(p=>p.cat===ex[0].cat)) return {kind:'ok',prod:ex[0],cut:cutHint};
+    return {kind:'ask',cands:c.slice(0,6)};
+  }
+  const QUAL_OF=tokens=>tokens.filter(t=>QUAL[t]).map(t=>QUAL[t]);
+  function scoreCands(T,cat,quals){
+    const hardT=T.filter(t=>!QUAL[t]&&!/^\d/.test(t)&&!['libra','kilo','paquete','unidad'].includes(t)&&!CUTBARE.has(t));
+    const useT=hardT.length?hardT:T.filter(t=>QUAL[t]&&false);
+    if(!useT.length) return {cands:[],full:false,T:[]};
+    let out=[];
+    cat.forEach(p=>{
+      if(p.disabled) return;
+      if(quals.length && !quals.includes(p.cat)) return;
+      let m=0; useT.forEach(t=>{ let b=0; p._t.forEach(u=>{ b=Math.max(b,tokEq(t,u)); }); m+=b; });
+      if(m>0) out.push({p,m,cov:m/useT.length});
+    });
+    const full=out.filter(x=>x.cov>=0.99);
+    if(full.length) return {cands:full.map(x=>x.p),full:true,T:useT};
+    out=out.filter(x=>x.cov>=0.5).sort((a,b)=>b.m-a.m);
+    return {cands:out.map(x=>x.p),full:false,T:useT};
+  }
+
+  function parseSegment(raw,cat){
+    const q=parseQty(raw);
+    let toks=tok(q.text).filter(t=>!['libra','kilo','paquete','unidad'].includes(t));
+    const ci=findCut(toks,cat);
+    let toks2=stripCutTokens(toks,ci);
+    let r=resolveText(toks2,cat,ci?ci.key:null);
+    // si al quitar el "corte" se rompió el producto (ej. «bistec» era el producto), probar sin quitar
+    if(ci && (r.kind==='unknown'||r.kind==='skip') ) r=resolveText(toks,cat,null);
+    const base={line:String(raw).trim(),qty:q.qty,nota:q.nota};
+    if(r.kind==='skip') return {kind:'skip'};
+    if(r.kind==='ok' && !ci && cutNeeded(r.prod) && !/^res-(bistec|asar)$|^cerdo-(bistec|asar)/.test(r.prod.id)){
+      const k=toks.includes('bistec')?'bistec':(toks.includes('asar')?'asar':null); if(k) r.cut=k;
+    }
+    if(r.kind==='ok'){
+      const cutTxt=r.cut?cutFor(r.prod,r.cut,ci&&ci.free):(ci?cutFor(r.prod,ci.key,ci.free):'');
+      return Object.assign(base,{kind:'ok',prod:r.prod,cut:cutTxt});
+    }
+    if(r.kind==='ask') return Object.assign(base,{kind:'ask',cands:r.cands,cut:ci?ci.key:null,cutFree:ci?ci.free:''});
+    if(r.kind==='suggest') return Object.assign(base,{kind:'suggest',cands:r.cands});
+    if(r.kind==='off') return Object.assign(base,{kind:'off',prod:r.prod});
+    return Object.assign(base,{kind:'unknown'});
+  }
+  function labelOptions(cands){
+    const cats=new Set(cands.map(p=>p.cat));
+    return cands.map(p=>[cats.size>1?(p.catLabel||p.cat.charAt(0).toUpperCase()+p.cat.slice(1)):p.name,p.name]);
+  }
+  function segments(text){
+    return String(text||'').split(/[\n\r;]+/).flatMap(l=>l.split(/\s*,\s*(?=\D*\d|\s*(?:una?|dos|tres|media|medio)\b)|\s+\+\s+/i)).map(s=>s.trim()).filter(Boolean);
+  }
+  /* parseText: lo que usan el botón Autollenar y la Edge Function */
+  function parseText(text,products){
+    const cat=buildCat(products), items=[], ambiguous=[], unknown=[];
+    const push=r=>{
+      const ex=items.find(x=>x.id===r.prod.id&&(x.cut||'')===(r.cut||''));
+      if(ex){ ex.qty=Math.round((ex.qty+r.qty)*100)/100; } else items.push({id:r.prod.id,name:r.prod.name,qty:r.qty,cut:r.cut||'',nota:r.nota||''});
+    };
+    const handle=(seg,allowSplit)=>{
+      if(allowSplit && /\sy\s+(\d(?![\d.,]*\s*\/)|una?\s|un\s|dos\s|tres\s|cuatro\s|cinco\s)/i.test(seg)){ seg.split(/\s+y\s+(?=(?:\d|una?\s|un\s|dos\s|tres\s|cuatro\s|cinco\s))/i).forEach(p=>handle(p,false)); return; }
+      const r=parseSegment(seg,cat);
+      if(r.kind==='skip') return;
+      if(r.kind==='ok') return push(r);
+      if(allowSplit && /\sy\s/i.test(seg)){
+        const parts=seg.split(/\s+y\s+/i);
+        if(parts.length>=2){ const rs=parts.map(p=>parseSegment(p,cat)); if(rs.every(x=>x.kind==='ok'||x.kind==='ask'||x.kind==='skip')&&rs.some(x=>x.kind!=='skip')){ parts.forEach(p=>handle(p,false)); return; } }
+      }
+      if(r.kind==='ask') return ambiguous.push({line:r.line,qty:r.qty,cut:r.cut?cutFor(r.cands[0],r.cut,r.cutFree):'',cutKey:r.cut||null,cutFree:r.cutFree||'',options:labelOptions(r.cands),kind:'ask'});
+      if(r.kind==='suggest') return ambiguous.push({line:r.line,qty:r.qty,cut:'',options:r.cands.map(p=>[p.name,p.name]),kind:'confirm'});
+      if(r.kind==='off') return unknown.push(r.line+' (agotado: '+r.prod.name+')');
+      unknown.push(r.line);
+    };
+    segments(text).forEach(s=>handle(s,true));
+    return {items,ambiguous,unknown};
+  }
+  // ¿la línea comparte alguna palabra (o alias) con el producto? Sirve para validar lo que propone la IA.
+  function plausible(line,prod){
+    const L=tok(line).filter(t=>!STOP.has(t)&&!FREE.has(t));
+    const P=new Set(tok(prod.name));
+    ALIAS.forEach(([ph,id])=>{ if(id===prod.id) tok(ph).forEach(t=>P.add(t)); });
+    return L.some(t=>[...P].some(u=>tokEq(t,u)>0));
+  }
+  function cutNeeded(prod){ return !!(prod&&Array.isArray(prod.cuts)&&prod.cuts.filter(Boolean).length); }
+  return {parseText,parseSegment,buildCat,plausible,cutNeeded,labelOptions,tok,strip,cutFor};
+})();
+/*OM:END*/
+// Catálogo en el formato que entiende OM (id, categoría, cortes). Los agotados se marcan, no se mandan como válidos.
+function omCatalog(){ return PRODUCTS.map(p=>({id:p.id,name:p.name,cat:p.catId||OM.strip(p.cat),catLabel:p.cat,unit:p.unit,cuts:p.cuts||[],disabled:!!p.disabled})); }
+function parseOrderText(text){ return OM.parseText(text,omCatalog()); }
+function parseOrderTextOld(text){
   const lines=(text||'').split(/[\n\r]+/).map(l=>l.trim()).filter(Boolean);
   const items=[], unknown=[], ambiguous=[];
   for(const raw of lines){
@@ -2212,7 +2577,7 @@ function playDing(force){ if(!soundOn) return;
 /* ===== HOJA DE SONIDO (bocina): silenciar + elegir tono + probar volumen ===== */
 // Versión visible en Ajustes → sirve para confirmar que "Buscar actualización" trajo lo último.
 // SUBIR esta fecha en cada deploy.
-const APP_BUILD='23 sep 2026 · v46';
+const APP_BUILD='18 nov 2026 · v47';
 // Trae la última versión sin tener que desinstalar la PWA: borra los cachés del service worker
 // y recarga. Como el HTML es network-first, la recarga baja el index.html más reciente.
 async function forceUpdate(){
@@ -2343,6 +2708,7 @@ function ic(n,s=20){const p={
   pin:'<path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
   sound:'<path d="M4 9.5h3L12 5v14l-5-4.5H4zM15.5 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12"/>',
   soundoff:'<path d="M4 9.5h3L12 5v14l-5-4.5H4zM16 9.5l5 5M21 9.5l-5 5"/>',
+  logout:'<path d="M9.5 4.5H6.8A2.3 2.3 0 004.5 6.8v10.4a2.3 2.3 0 002.3 2.3h2.7M15 8l4 4-4 4M19 12H9.5"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>'
  }[n]||'';
  return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px;flex:none">${p}</svg>`;
@@ -2399,17 +2765,32 @@ async function enterApp(role){
     refreshPushState().then(()=>{ if(session.role==='admin') renderAdmin(); }); // estado del botón "Activar avisos" del admin
   }
 }
+// Trabajo a medias que se perdería al salir: comanda nueva sin enviar o cotización/edición abierta.
+function pendingWork(){
+  const w=[];
+  try{
+    if(session.role==='admin' && adminView==='nueva' && draft && ((draft.items&&draft.items.length)||(draft.clientName||'').trim()||(draft.pasteText||'').trim())){
+      const n=draft.items.length; w.push('Tenés una comanda nueva sin enviar'+(n?' ('+n+' producto'+(n>1?'s':'')+')':'')+'. Si salís, se pierde.'); }
+    if(currentSheetId && editItems && $("#overlayHost") && $("#overlayHost").querySelector('.osheet')){
+      const o=orderById(currentSheetId); w.push('Tenés abierta la comanda'+(o?' #'+o.folio:'')+'. Lo que ya guardaste queda; lo que estés tecleando se pierde.'); }
+  }catch(e){}
+  return w;
+}
 function askLogout(){
-  $("#overlayHost").innerHTML=`<div class="overlay"><div class="confirm-box">
-    <div class="cb-t">¿Salir de la sesión?</div>
-    <div class="cb-s">Para volver a entrar vas a necesitar la contraseña.</div>
-    <div class="cb-row"><button class="btn ghost block" onclick="closeSheet()">Quedarme</button>
-      <button class="btn red block" onclick="logout()">Sí, salir</button></div>
+  const w=pendingWork();
+  $("#overlayHost").innerHTML=`<div class="overlay" role="dialog" aria-modal="true" aria-label="Cerrar sesión" onclick="if(event.target===this)dismissLogout()"><div class="confirm-box">
+    <div class="cb-t">¿Cerrar sesión?</div>
+    ${w.length?`<div class="cb-warn">${ic('clock',16)}<div>${w.map(esc).join('<br>')}</div></div>`:''}
+    <div class="cb-s">Para volver a entrar vas a necesitar la contraseña. Los pedidos y clientes no se tocan.</div>
+    <div class="cb-row"><button class="btn ghost block" onclick="dismissLogout()">${w.length?'Volver a la comanda':'Cancelar'}</button>
+      <button class="btn red block" onclick="logout()">Cerrar sesión</button></div>
   </div></div>`;
 }
+// Cancelar NO re-renderiza ni limpia nada (así no se pierde el borrador): solo quita el aviso.
+function dismissLogout(){ const h=$("#overlayHost"); if(h && h.querySelector('.confirm-box') && h.querySelector('[aria-label="Cerrar sesión"]')) h.innerHTML=''; }
 function logout(){ ctSessOff(); session.role=null; document.documentElement.classList.remove('rol-carn'); clearInterval(clockT); releaseWake(); prevCotizar=null; prevPreparacion=null;
   document.body.classList.remove('carn-mode');
-  if(USE_SUPA && supa){ try{ supa.auth.signOut(); }catch(e){} }
+  if(USE_SUPA && supa){ try{ supa.auth.signOut({scope:'local'}); }catch(e){} } // 'local': cierra SOLO este dispositivo (el global tumbaba la sesión del tablero del carnicero)
   $("#app").classList.add("hidden"); $("#overlayHost").innerHTML=""; $("#login").classList.remove("hidden");
   selRole=null; document.querySelectorAll(".role-btn").forEach(x=>x.classList.remove("sel"));
   $("#pinInput").value=""; $("#pinInput").disabled=true; $("#loginGo").disabled=true; $("#pinLabel").textContent="Selecciona un acceso";
@@ -2467,7 +2848,7 @@ function topbar(extra=""){
     <img src="assets/torito-badge.png" class="badge" alt="">
     <div class="tb-brand tb-brand-h"><img src="assets/torito-wordmark.svg" class="tb-logo" alt="El Torito Carnicería"><span class="tb-role">${session.role==="admin"?"ADMIN":"PRODUCCIÓN"}</span></div>
     <div class="tb-spacer"></div>${extra}
-    <button class="tb-out" onclick="askLogout()">Salir</button>
+    <button class="out-btn" onclick="askLogout()" aria-label="Cerrar sesión" title="Cerrar sesión">${ic('logout',20)}<span class="out-lbl">Salir</span></button>
   </div>`;
 }
 
@@ -2636,17 +3017,18 @@ function parsePreviewHtml(){
     const desg = (p&&p.price!=null&&p.price>0)
       ? `${it.qty} ${u} × ${money(p.price)} = <b>${money(it.qty*p.price)}</b>`
       : `× ${it.qty} · por encargo`;
-    return `<div class="pp-row ok"><span class="pp-ic">${ic('check',14)}</span><span class="pp-name">${esc(it.name)}</span><span class="pp-qty">${desg}</span></div>`;}).join("");
+    const needCut=OM.cutNeeded(p)&&!(it.cut||'').trim();
+    return `<div class="pp-row ok"><span class="pp-ic">${ic('check',14)}</span><span class="pp-name">${esc(it.name)}${it.cut?` <span class="corte-tag">${esc(it.cut)}</span>`:''}${needCut?` <span class="corte-tag need">falta corte</span>`:''}${it.nota?` <small class="pp-nota">${esc(it.nota)}</small>`:''}</span><span class="pp-qty">${desg}</span></div>`;}).join("");
   const amb=(lp.ambiguous||[]).map((a,idx)=>`<div class="pp-row amb">
       <span class="pp-ic">${ic('clock',14)}</span>
-      <span class="pp-name">${esc(a.line)} <span class="amb-q">¿cuál?</span></span>
+      <span class="pp-name">${esc(a.line)} <span class="amb-q">${a.kind==='confirm'?'¿es este?':'¿cuál?'}</span></span>
       <span class="amb-opts">${a.options.map((o,oi)=>`<button class="amb-btn" onclick="resolveAmbiguous(${idx},${oi})">${esc(o[0])}</button>`).join('')}</span>
     </div>`).join("");
   const unk=(lp.unknown||[]).map(l=>`<div class="pp-row warn"><span class="pp-ic">${ic('clock',14)}</span><span class="pp-name">${esc(l)}</span><span class="pp-qty">revisar</span></div>`).join("");
   return `<div class="parse-prev">
     <div class="pp-head">${ic('eye',14)} Lo que entendí <span class="pp-src">${lp.source==='foto'?'FOTO · IA':(lp.ai?'IA':'local')}</span></div>
     ${ok||`<div class="pp-empty">No reconocí productos en el texto.</div>`}
-    ${amb?`<div class="pp-sep amb-sep">${ic('clock',13)} Confirma de qué carne es (para que el carnicero no pregunte):</div>${amb}`:''}
+    ${amb?`<div class="pp-sep amb-sep">${ic('clock',13)} Confirmá cuál es (para que el carnicero no tenga que preguntar):</div>${amb}`:''}
     ${unk?`<div class="pp-sep">${ic('clock',13)} No estoy seguro de estas líneas — revísalas y agrégalas a mano si hace falta:</div>${unk}`:''}
     <div class="pp-note">Compara con tu mensaje de arriba. Si algo falta o quedó mal, tócalo en <b>Productos</b> o ajústalo abajo en la comanda.</div>
   </div>`;
@@ -2656,8 +3038,9 @@ function resolveAmbiguous(ambIdx, optIdx){
   const lp=draft.lastParse; if(!lp||!lp.ambiguous) return;
   const a=lp.ambiguous[ambIdx]; if(!a) return;
   const name=a.options[optIdx] && a.options[optIdx][1]; const p=prodByName(name); if(!p){ toast('Producto no encontrado'); return; }
-  const ex=draft.items.find(x=>x.prodId===p.id); if(ex) ex.qty+=a.qty; else draft.items.push({prodId:p.id, qty:a.qty});
-  lp.items=lp.items||[]; lp.items.push({name:p.name, qty:a.qty});
+  const cut=a.cutKey?OM.cutFor(p,a.cutKey,a.cutFree):(a.cut||'');
+  const ex=draft.items.find(x=>x.prodId===p.id&&(x.corte||'')===cut); if(ex) ex.qty+=a.qty; else draft.items.push({prodId:p.id, qty:a.qty, corte:cut});
+  lp.items=lp.items||[]; lp.items.push({name:p.name, qty:a.qty, cut});
   lp.ambiguous.splice(ambIdx,1);
   initNueva();
   const cart=$("#cart"); if(cart) cart.scrollIntoView({block:'center',behavior:'smooth'});
@@ -2770,15 +3153,29 @@ function initNueva(){
     nm.addEventListener('blur',()=>setTimeout(cliSugHide,150));
   }
 }
+function cutRowHtml(it,i,p){
+  const cuts=p.cuts||[]; const need=OM.cutNeeded(p); const cur=(it.corte||'').trim();
+  if(!need && !cur) return '';
+  const inList=cuts.includes(cur); const other=!!cur&&!inList || it._cutOther;
+  const chips=cuts.map((c,j)=>`<button type="button" class="cutchip ${cur===c?'on':''}" aria-pressed="${cur===c}" onclick="setCut(${i},${j})">${esc(c)}</button>`).join('');
+  const oth=need?`<button type="button" class="cutchip ${other?'on':''}" aria-pressed="${other}" onclick="cutOther(${i})">Otro</button>`:'';
+  const free=(other||(!need&&cur))?`<input class="cut-free" id="cutFree${i}" value="${esc(inList?'':cur)}" placeholder="Ej: bistec delgado" aria-label="Instrucción de corte para ${esc(p.name)}" oninput="setCutFree(${i},this.value)">`:'';
+  return `<div class="cutrow ${need&&!cur?'need':''}"><span class="cut-lbl">${ic('knife',14)} Corte${need?' <b>*</b>':''}</span><div class="cut-opts">${chips}${oth}${free}</div>${need&&!cur?`<span class="cut-msg">Elegí cómo va cortado: el carnicero lo necesita.</span>`:''}</div>`;
+}
+function setCut(i,j){ const it=draft.items[i], p=prodById(it.prodId); it.corte=(p.cuts||[])[j]||''; it._cutOther=false; renderCart(); }
+function cutOther(i){ const it=draft.items[i]; if(!(it.corte&&!(prodById(it.prodId).cuts||[]).includes(it.corte))) it.corte=''; it._cutOther=true; renderCart(); setTimeout(()=>{ const e=$("#cutFree"+i); if(e) e.focus(); },30); }
+function setCutFree(i,v){ draft.items[i].corte=v; const row=$("#cutFree"+i); const cl=row&&row.closest('.cartline'); if(cl){ const need=OM.cutNeeded(prodById(draft.items[i].prodId)); cl.classList.toggle('needcut',need&&!v.trim()); } }
 function renderCart(){
   const c=$("#cart"); if(!c) return;
   const cc=$("#cartCount"); if(cc) cc.textContent=draft.items.length;
   if(!draft.items.length){ c.innerHTML=`<div class="cart-empty">Toca un producto para agregarlo</div>`; return; }
   c.innerHTML=draft.items.map((it,i)=>{const p=prodById(it.prodId);
-    return `<div class="cartline">
+    const needCut=OM.cutNeeded(p)&&!(it.corte||'').trim();
+    return `<div class="cartline ${needCut?'needcut':''}" data-i="${i}">
       <div class="cn"><b>${esc(p.name)}</b><small>${p.price==null?'por encargo':money(p.price)+' / '+(p.unit==='Libra'?'lb':p.unit)}${p.weigh?' · validar peso':''}</small></div>
-      <div class="qty"><button onclick="chQty(${i},-1)">–</button><input value="${it.qty}" inputmode="decimal" onchange="setQty(${i},this.value)"><button onclick="chQty(${i},1)">+</button></div>
-      <button class="rm" onclick="rmItem(${i})">${ic('x',16)}</button></div>`;}).join("");
+      <div class="qty"><button onclick="chQty(${i},-1)" aria-label="Menos">–</button><input value="${it.qty}" inputmode="decimal" onchange="setQty(${i},this.value)" aria-label="Cantidad de ${esc(p.name)}"><button onclick="chQty(${i},1)" aria-label="Más">+</button></div>
+      <button class="rm" onclick="rmItem(${i})" aria-label="Quitar ${esc(p.name)}">${ic('x',16)}</button>
+      ${cutRowHtml(it,i,p)}</div>`;}).join("");
   const dt=$("#draftTotal"); if(dt) dt.textContent=money(draftGrand());
 }
 function addItem(id){ const ex=draft.items.find(it=>it.prodId===id); if(ex){ex.qty++;} else draft.items.push({prodId:id,qty:1}); renderCart(); }
@@ -2789,12 +3186,16 @@ function submitOrder(){
   syncDraft();
   if(!draft.clientName.trim()){ toast("Falta el nombre del cliente"); return; }
   if(!draft.items.length){ toast("Agrega al menos un producto"); return; }
+  // Los productos con opciones de corte (hígado, costilla, bolita…) NO pasan sin decir cómo van cortados.
+  const miss=draft.items.findIndex(it=>OM.cutNeeded(prodById(it.prodId))&&!(it.corte||'').trim());
+  if(miss>=0){ const mp=prodById(draft.items[miss].prodId); renderCart(); toast('Falta el corte de '+mp.name+'. Elegí cómo va cortado.');
+    const el=$('.cartline[data-i="'+miss+'"]'); if(el) el.scrollIntoView({block:'center',behavior:'smooth'}); return; }
   const folio=String(state.seq++).padStart(4,"0");
   // ID único por dispositivo: si dos dispositivos crean comanda al mismo tiempo, ninguna pisa a la otra.
   const o={ id:"o"+folio+"-"+Math.random().toString(36).slice(2,7), folio, clientName:draft.clientName.trim(), phone:draft.phone, zone:draft.zone, addr:draft.addr,
     delivery:draft.delivery, shipping:draft.delivery==='envio'?(+draft.shipping||0):0, note:draft.note, status:"cotizar", createdAt:Date.now(), paid:false,
     items:draft.items.map(it=>{const p=prodById(it.prodId);
-      return {prodId:p.id,name:p.name,unit:p.unit,price:p.price,weigh:p.weigh,qty:it.qty,available:true,weight:null,note:""};}),
+      return {prodId:p.id,name:p.name,unit:p.unit,price:p.price,weigh:p.weigh,qty:it.qty,available:true,weight:null,note:"",...((it.corte||'').trim()?{corte:it.corte.trim()}:{})};}),
     hist:[{s:"cotizar",at:Date.now()}] };
   state.orders.unshift(o); save(o);
   upsertClient({phone:draft.phone, name:draft.clientName.trim(), zone:draft.zone, addr:draft.addr});
@@ -2855,12 +3256,12 @@ function nameWebSave(){
 }
 // IA (Claude/OpenAI vía Edge Function). Timeout 7s. Si falla → throw y caemos al parser local.
 async function aiParse(text){
-  const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),7000);
+  const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),9000);
   try{
     const r=await fetch(SUPA_URL+'/functions/v1/parse-order',{
       method:'POST',
       headers: await fnHeaders(),
-      body:JSON.stringify({text, catalog:PRODUCTS.filter(p=>!p.disabled).map(p=>p.canon||p.name)}),
+      body:JSON.stringify({text, catalog:omCatalog()}), // catálogo REAL con id, categoría y cortes (no solo nombres)
       signal:ctrl.signal
     });
     clearTimeout(to);
@@ -2868,11 +3269,13 @@ async function aiParse(text){
     const d=await r.json();
     if(d.error) throw new Error(d.error);
     const items=(d.items||[]).filter(it=>prodByName(it.name)); // solo nombres válidos del catálogo
-    if(!items.length && (d.items||[]).length) throw new Error('sin coincidencias'); // respuesta inútil → fallback
-    const ambiguous=(d.ambiguous||[]).filter(a=>Array.isArray(a.options)&&a.options.length);
+    const ambiguous=(d.ambiguous||[]).filter(a=>Array.isArray(a.options)&&a.options.length&&a.options.every(o=>prodByName(o[1])));
     return {items, unknown:d.unknown||[], ambiguous};
   }catch(e){ clearTimeout(to); throw e; }
 }
+// Suma items (mismo producto + mismo corte).
+function mergeParsed(base,extra){ (extra||[]).forEach(it=>{ const ex=base.find(x=>x.name===it.name&&(x.cut||'')===(it.cut||'')); if(ex) ex.qty=Math.round((ex.qty+it.qty)*100)/100; else base.push({...it}); }); return base; }
+const draftFromParsed=items=>items.map(it=>{const p=prodByName(it.name); return p?{prodId:p.id,qty:it.qty,corte:it.cut||''}:null;}).filter(Boolean);
 async function autollenarPedido(btn){
   const text=($("#dPaste")||{}).value||'';
   const phone=(($("#dPastePhone")||{}).value||'').trim();
@@ -2881,25 +3284,30 @@ async function autollenarPedido(btn){
   let items=[], unknown=[], ambiguous=[], usedAI=false;
   if(text.trim()){
     const old=btn?btn.innerHTML:''; if(btn){ btn.disabled=true; btn.innerHTML=ic('clock',17)+' Leyendo…'; }
-    // Las líneas AMBIGUAS (res/cerdo/pollo) se detectan local (determinista) y NO se mandan a la IA → SIEMPRE se confirman (la IA tiende a adivinar res).
-    const lines=text.split(/[\n\r]+/).map(l=>l.trim()).filter(Boolean);
-    const ambLocal=[], clearLines=[];
-    for(const raw of lines){ const {qty,rest}=_extractQty(raw); const a=_ambig(rest); if(a) ambLocal.push({line:raw,qty,options:a.options}); else clearLines.push(raw); }
-    const clearText=clearLines.join('\n');
-    try{ const r = clearText.trim()? await aiParse(clearText) : {items:[],unknown:[],ambiguous:[]};
-      items=r.items; unknown=r.unknown; ambiguous=(r.ambiguous||[]).concat(ambLocal); usedAI=true; }
-    catch(e){ const r=parseOrderText(text); items=r.items; unknown=r.unknown; ambiguous=r.ambiguous||[]; } // fallback local (todo)
+    // 1) Lector DETERMINISTA (instantáneo, sin IA): nombres, alias, cantidades, cortes. Solo pregunta con 2+ productos reales.
+    const det=OM.parseText(text,omCatalog());
+    items=det.items; ambiguous=det.ambiguous; unknown=det.unknown;
+    // 2) La IA SOLO ve lo que el lector no pudo resolver (y su respuesta se valida contra el catálogo).
+    const residual=unknown.filter(u=>!/\(agotado:/.test(u));
+    if(residual.length && USE_SUPA){
+      try{ const r=await aiParse(residual.join('\n'));
+        mergeParsed(items,r.items); ambiguous=ambiguous.concat(r.ambiguous||[]);
+        unknown=unknown.filter(u=>!residual.includes(u)).concat(r.unknown||[]); usedAI=!!(r.items.length||r.ambiguous.length||(r.unknown||[]).length!==residual.length); }
+      catch(e){ /* sin IA: queda lo determinista, y lo no resuelto va a "revisar" */ }
+    }
     if(btn){ btn.disabled=false; btn.innerHTML=old; }
     draft.lastParse={items, unknown, ambiguous, ai:usedAI}; // alimenta el panel de validación
   }
   // fusionar con lo que ya estaba (no pisar productos agregados a mano): los del texto se vuelven la base
-  if(items.length){ draft.items=items.map(it=>{const p=prodByName(it.name); return p?{prodId:p.id,qty:it.qty}:null;}).filter(Boolean); }
+  if(items.length){ draft.items=draftFromParsed(items); }
   let foundClient=false;
   if(phone){ draft.phone=phone; const c=clientByPhone(phone); if(c){ draft.clientName=c.name||draft.clientName; draft.zone=c.zone||draft.zone; draft.addr=c.addr||draft.addr; foundClient=true; } }
   initNueva(); shipAutoQueue(); // la dirección del cliente ya conocida también dispara el cálculo del envío
   const cart=$("#cart"); if(cart) cart.scrollIntoView({block:'center',behavior:'smooth'});
   let msg=items.length? (items.length+" productos cargados"+(usedAI?" (IA)":"")) : "No reconocí productos";
-  if(ambiguous.length) msg+=" · "+ambiguous.length+" por confirmar (res/cerdo)";
+  const sinCorte=draft.items.filter(it=>OM.cutNeeded(prodById(it.prodId))&&!(it.corte||'').trim()).length;
+  if(sinCorte) msg+=" · "+sinCorte+" sin corte";
+  if(ambiguous.length) msg+=" · "+ambiguous.length+" por confirmar";
   if(unknown.length) msg+=" · "+unknown.length+" por revisar";
   if(foundClient) msg+=" · cliente identificado";
   else if(phone) msg+=" · cliente nuevo";
@@ -2921,12 +3329,12 @@ async function aiParseImage(dataUrl){
   try{
     const r=await fetch(SUPA_URL+'/functions/v1/parse-order',{ method:'POST',
       headers: await fnHeaders(),
-      body:JSON.stringify({image:dataUrl, catalog:PRODUCTS.filter(p=>!p.disabled).map(p=>p.canon||p.name)}), signal:ctrl.signal });
+      body:JSON.stringify({image:dataUrl, catalog:omCatalog()}), signal:ctrl.signal });
     clearTimeout(to);
     if(!r.ok) throw new Error('http '+r.status);
     const d=await r.json(); if(d.error) throw new Error(d.error);
     const items=(d.items||[]).filter(it=>prodByName(it.name));
-    const ambiguous=(d.ambiguous||[]).filter(a=>Array.isArray(a.options)&&a.options.length);
+    const ambiguous=(d.ambiguous||[]).filter(a=>Array.isArray(a.options)&&a.options.length&&a.options.every(o=>prodByName(o[1])));
     return {items, unknown:d.unknown||[], ambiguous};
   }catch(e){ clearTimeout(to); throw e; }
 }
@@ -2939,7 +3347,7 @@ async function tomarFotoPedido(input){
     const dataUrl=await _resizeImage(file, 1280, 0.72);
     const r=await aiParseImage(dataUrl);
     draft.lastParse={items:r.items, unknown:r.unknown, ambiguous:r.ambiguous, ai:true, source:'foto'};
-    if(r.items.length){ draft.items=r.items.map(it=>{const p=prodByName(it.name); return p?{prodId:p.id,qty:it.qty}:null;}).filter(Boolean); }
+    if(r.items.length){ draft.items=draftFromParsed(r.items); }
     initNueva();
     const cart=$("#cart"); if(cart) cart.scrollIntoView({block:'center',behavior:'smooth'});
     let msg=r.items.length? (r.items.length+" productos leídos de la foto (IA)") : "No reconocí productos en la foto";
@@ -4546,6 +4954,7 @@ function renderCarnicero(){
       <button class="ctop-snd" onclick="openSoundSheet()" aria-label="Ajustes">${ic('gear',19)}</button>
       <button class="ctop-push ${pushOn?'on':''}" onclick="togglePush()" aria-label="${pushOn?'Avisos activados':'Activar avisos'}">${ic(pushOn?'bell':'belloff',18)}<span class="cp-lbl">${pushOn?'Avisos ON':'Activar avisos'}</span></button>
       <button class="ctop-sync" id="syncBtn" onclick="manualSync()" aria-label="Actualizar tablero">${ic('sync',16)}<span id="syncClock">actualizado ahora</span></button>
+      <button class="out-btn" onclick="askLogout()" aria-label="Cerrar sesión" title="Cerrar sesión">${ic('logout',20)}<span class="out-lbl">Salir</span></button>
    </div>
    <div class="carn-tabs" id="carnTabs">${carnTabsHtml()}</div>
    <div class="kanban-wrap">
@@ -4569,6 +4978,39 @@ function cardItemsHtml(o,big){ const its=o.items||[]; if(!its.length) return '';
 function cardTotalHtml(o){ return `<div class="ktotrow"><span class="tl">Total${o.shipping?' · con envío':''}</span><span class="tv">${money(fullTotal(o))}</span></div>`; }
 // Chip de método de pago (solo admin: el carnicero no maneja el cobro).
 function cardPayChip(o){ const m=payMethodOf(o); return `<span class="kpaychip ${m==='efectivo'?'efec':'tran'}">${ic(m==='efectivo'?'cash':'send',12)} ${payMethodLabel(m)}</span>`; }
+
+/* ===== ENTREGA A LA VISTA DEL CARNICERO: ¿domicilio o recoge?, ¿a dónde?, ¿cuánto y cuándo se cobra el envío? ===== */
+function cleanAddr(a){ return String(a||'').replace(/https?:\/\/\S+/gi,' ').replace(/📍\s*Ubicaci[oó]n:?/gi,' ').replace(/\s{2,}/g,' ').replace(/^[\s·,\-–]+|[\s·,\-–]+$/g,'').trim(); }
+function mapUrlOf(o){ const g=shipParseGeo(o&&o.addr)||shipParseGeo(o&&o.note); return g?`https://www.google.com/maps?q=${g.lat},${g.lng}`:null; }
+// Estado del envío según los datos reales: sin precio / ya pagado / por cobrar (al entregar si ya va en camino).
+function shipState(o){
+  const fee=+o.shipping||0, amt=money(fee);
+  if(isRetiro(o)) return null;
+  if(fee<=0) return {cls:'warn', t:'Envío sin precio · a convenir', s:'Ponele precio antes de cobrar'};
+  if(o.paid) return {cls:'ok', t:'Envío ya pagado', s:amt+' incluido en el pago del pedido'};
+  if(['preparacion','lista','en_ruta'].includes(o.status)) return {cls:'due', t:'Cobrar envío '+amt+' al entregar', s:'Aún sin pagar'};
+  return {cls:'due', t:'Envío '+amt, s:'Pendiente de pago con el pedido'};
+}
+function deliveryPanelHtml(o){
+  if(isRetiro(o)){ const h=retiroHora(o);
+    return `<section class="dpanel retiro" aria-label="Entrega: recoge en local"><div class="dp-mode">${ic('store',20)}<b>Recoge en el local</b>${h?`<span class="dp-time">${ic('clock',14)} ${esc(h)}</span>`:''}</div>
+      <div class="dp-pay ${o.paid?'ok':'due'}">${ic(o.paid?'check':'cash',15)} ${o.paid?'Pedido pagado':'Por cobrar al retirar · '+money(fullTotal(o))}</div></section>`; }
+  const addr=cleanAddr(o.addr), zone=(o.zone||'').trim(), url=mapUrlOf(o), ss=shipState(o);
+  const q=encodeURIComponent([addr,zone,'Tegucigalpa'].filter(Boolean).join(', '));
+  const mapBtn=url?`<a class="dp-map" href="${url}" target="_blank" rel="noopener">${ic('pin',16)} Abrir mapa</a>`
+     :((addr||zone)?`<a class="dp-map ghost" href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">${ic('search',16)} Buscar en mapa</a>`:'');
+  return `<section class="dpanel domi" aria-label="Entrega: a domicilio"><div class="dp-mode">${ic('truck',20)}<b>A domicilio</b>${zone?`<span class="dp-zone">${esc(zone)}</span>`:''}</div>
+    <div class="dp-where"><div class="dp-addr">${addr?esc(addr):'<i>Sin dirección escrita</i>'}</div>${mapBtn}</div>
+    <div class="dp-fee ${ss.cls}"><div class="dp-fee-t">${ic(ss.cls==='ok'?'check':(ss.cls==='warn'?'clock':'cash'),16)} ${ss.t}</div><div class="dp-fee-s">${ss.s}</div></div>
+    <div class="dp-pay ${o.paid?'ok':'due'}">${ic(o.paid?'check':'clock',15)} ${o.paid?'Pedido pagado':'Por cobrar · total '+money(fullTotal(o))}</div></section>`;
+}
+// Versión compacta para las tarjetas del tablero.
+function deliveryCardHtml(o){
+  if(isRetiro(o)) return '';
+  const addr=cleanAddr(o.addr), ss=shipState(o), loc=[addr||'',].join('')||((o.zone||'').trim());
+  return `<div class="kdel"><div class="kdel-w">${ic('pin',15)}<span>${loc?esc(loc):'Sin dirección'}</span></div>
+    <div class="kdel-f ${ss.cls}">${ic(ss.cls==='ok'?'check':(ss.cls==='warn'?'clock':'cash'),14)} ${ss.t}</div></div>`;
+}
 function kcard(o,st){
   let footer='';
   if(st==='cotizar') footer=`<button class="kmv fwd" onclick="event.stopPropagation();openCarniceroOrder('${o.id}')">${ic('edit',17)} Cotizar</button>`;
@@ -4588,6 +5030,7 @@ function kcard(o,st){
     <div class="kf"><span class="kfolio">#${o.folio}</span>${timeHtml}</div>
     <div class="kname">${esc(o.clientName)}</div>
     <div class="kdtag">${deliveryTag(o)}</div>
+    ${deliveryCardHtml(o)}
     ${o.held?`<div class="khold">${ic('clock',18)} NO PREPARAR · recoge ${esc(retiroHora(o)||'—')}</div>`:''}
     ${o.note?`<div class="knote">${ic('note',15)} ${esc(o.note)}</div>`:""}
     ${cardItemsHtml(o,big)}
@@ -4665,7 +5108,7 @@ function oitemRow(it,i,vo){
     <div class="oitem-r1">
       ${leftCtl}
       <div class="oitem-main"><div class="oitem-name">${esc(it.name)}${it.available?'':'<span class="tag-nohay">No hay</span>'}${it.weigh&&it.available?'<span class="line-tag">Validar peso</span>':''}</div>
-        ${it.corte?`<div class="oitem-corte"><small>Corte</small> ${esc(it.corte)}</div>`:''}
+        ${it.corte?`<div class="oitem-corte"><small>Corte</small> ${esc(it.corte)}</div>`:(OM.cutNeeded(prodById(it.prodId))?`<div class="oitem-corte miss"><small>Corte</small> sin indicar</div>`:'')}
         <div class="oitem-sub">Pedido: ${it.qty} ${it.unit==='Libra'?'lb':unit} · ${priceTxt}</div></div>
       <div class="oitem-amt" id="amt${i}">${it.available?money(itemAmt(it)):'—'}</div>
       ${(vo||session.role!=='admin')?'':`<button class="oitem-del" onclick="removeEditItem(${i})" aria-label="Quitar producto">${ic('trash',17)}</button>`}
@@ -4714,6 +5157,7 @@ function renderCarnOrder(o,vo){
       <button class="x" onclick="closeCarn()" aria-label="Cerrar">${ic('x',16)}</button></div>
       <div class="sheet-body" id="carnBody">
         <div id="coEditWarn"></div>
+        ${deliveryPanelHtml(o)}
         ${vo
           ? (o.note?`<div class="note-banner">${ic('note',16)} <b>Indicación:</b> ${esc(o.note)}</div>`:'')
           : `<div class="cmt-field"><label class="cmt-label">${ic('note',15)} Indicación para el carnicero <span class="cmt-opt">(opcional)</span></label>
